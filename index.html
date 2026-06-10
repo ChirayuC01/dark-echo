@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>RESONANCE</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="canvas"></canvas>
+
+  <!-- ── Overlay screens ─────────────────────────────────────── -->
+  <div id="overlay">
+
+    <!-- Title -->
+    <div id="screen-title" class="screen">
+      <h1>RESONANCE</h1>
+      <p>You are blind in the dark.<br>
+         Sound is the only light.<br>
+         Every step echoes. Every echo betrays you.</p>
+      <button class="btn" data-action="start">Begin</button>
+      <span class="hint">WASD / arrows · SPACE = pulse · P / ESC = pause</span>
+    </div>
+
+    <!-- Pause -->
+    <div id="screen-pause" class="screen">
+      <h2>Paused</h2>
+      <button class="btn" data-action="resume">Resume</button>
+      <button class="btn" data-action="restart">Restart Level</button>
+      <button class="btn btn-danger" data-action="title">Main Menu</button>
+    </div>
+
+    <!-- Death -->
+    <div id="screen-dead" class="screen">
+      <h2>Dead</h2>
+      <p id="death-msg">Caught.</p>
+      <button class="btn" data-action="restart">Try Again</button>
+      <button class="btn btn-danger" data-action="title">Main Menu</button>
+    </div>
+
+    <!-- Level up -->
+    <div id="screen-levelup" class="screen">
+      <h2>Level Clear</h2>
+      <p id="level-name-display"></p>
+      <p id="hint-text" class="hint"></p>
+      <button class="btn" data-action="next-level">Continue</button>
+    </div>
+
+    <!-- Win -->
+    <div id="screen-win" class="screen">
+      <h2>You Escaped</h2>
+      <p>Silence reclaims the dark.<br>You found your way through.</p>
+      <button class="btn" data-action="restart-from-1">Play Again</button>
+      <button class="btn btn-danger" data-action="title">Main Menu</button>
+    </div>
+
+  </div>
+
+  <!-- ── HUD ─────────────────────────────────────────────────── -->
+  <div id="hud">
+    <div id="pulse-bar-wrap">
+      <span>PULSE</span>
+      <div id="pulse-bar"><div id="pulse-fill"></div></div>
+    </div>
+    <span id="level-label">LEVEL 1 / 5</span>
+  </div>
+
+  <!-- ── Mobile controls ─────────────────────────────────────── -->
+  <div id="touch-controls">
+    <div id="joystick-zone">
+      <div id="joystick-knob"></div>
+    </div>
+    <button id="pulse-btn">PULSE</button>
+  </div>
+</div>
+
+<script type="module">
+  import { init } from './js/game.js';
+  init();
+</script>
+</body>
+</html>
