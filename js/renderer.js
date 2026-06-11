@@ -1,6 +1,6 @@
 import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
          RAY_TRAIL_MS, IMPACT_FADE_MS,
-         HEARING_NEAR, HEARING_FAR } from './constants.js';
+         HEARING_NEAR, HEARING_FAR, CELL } from './constants.js';
 import { segPtDist } from './utils.js';
 
 // How loudly the player "hears" something at distance d:
@@ -37,12 +37,13 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, exit, playerInWater } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, exit, playerInWater, grid } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
   // Walls are intentionally never drawn — the world exists only as sound,
   // and all sound is rendered relative to how close the player is to it.
+  drawWaterTiles(grid);
   drawEchoTrails(echoTrails, now, px, py);
   drawImpacts(impacts, now, px, py);
   drawExit(exit, now);
@@ -259,16 +260,31 @@ function rayColor(type, alpha) {
   return                        `rgba(155,195,235,${alpha.toFixed(3)})`;
 }
 
-// ─── Water zone teal wash — drawn under player when on water tile ─────────────
+// ─── Water tiles — faint teal fill on all CELL.WATER cells ───────────────────
+function drawWaterTiles(grid) {
+  if (!grid) return;
+  ctx.save();
+  ctx.fillStyle = 'rgba(50,150,160,0.12)';
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      if (grid[r][c] === CELL.WATER) {
+        ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+      }
+    }
+  }
+  ctx.restore();
+}
+
+// ─── Water zone glow — stronger teal pulse at player position when in water ───
 function drawWaterZone(player) {
   if (!player) return;
   ctx.save();
-  const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 80);
-  grd.addColorStop(0, 'rgba(50,150,160,0.08)');
+  const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 100);
+  grd.addColorStop(0, 'rgba(50,150,160,0.25)');
   grd.addColorStop(1, 'rgba(50,150,160,0)');
   ctx.fillStyle = grd;
   ctx.beginPath();
-  ctx.arc(player.x, player.y, 80, 0, Math.PI * 2);
+  ctx.arc(player.x, player.y, 100, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
