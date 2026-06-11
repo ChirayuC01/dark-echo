@@ -34,6 +34,11 @@ export const MIN_ENERGY       = 0.06;  // ray dies below this energy after bounc
 export const RAY_TRAIL_MS     = 4200;  // echo trail persistence (ms)
 export const IMPACT_FADE_MS   = 3600;  // wall impact glint persistence (ms)
 
+// Hearing attenuation: sounds render at full intensity within NEAR px of the
+// player and fade to silence beyond FAR px
+export const HEARING_NEAR = 130;
+export const HEARING_FAR  = 420;
+
 export const CHASER_SPEED_IDLE = 35;
 export const CHASER_SPEED_HUNT = 80;
 export const PATROL_SPEED = 52;

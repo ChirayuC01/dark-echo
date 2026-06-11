@@ -80,9 +80,10 @@ export function playLevelComplete() {
   } catch (_) {}
 }
 
-export function playHazardPulse() {
+export function playHazardPulse(volume = 1) {
+  if (volume <= 0.01) return;
   try {
-    osc(420, 'triangle', 0.18, 0.08, 400);
+    osc(420, 'triangle', 0.18, 0.08 * volume, 400);
   } catch (_) {}
 }
 

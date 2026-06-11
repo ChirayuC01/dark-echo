@@ -1,9 +1,9 @@
 import { TILE, COLS, ROWS,
          STEP_INTERVAL, PULSE_COOLDOWN,
          PLAYER_RADIUS, ENEMY_RADIUS,
-         IMPACT_FADE_MS,
+         IMPACT_FADE_MS, HEARING_NEAR, HEARING_FAR,
          CELL } from './constants.js';
-import { dist } from './utils.js';
+import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
 import * as Renderer from './renderer.js';
@@ -99,15 +99,6 @@ function applyWallHits(hits, now) {
 }
 
 // ─── Ray segments → entity reveal + hearing ──────────────────────────────────
-// Returns distance from point (px,py) to segment (x1,y1)→(x2,y2)
-function segPtDist(px, py, x1, y1, x2, y2) {
-  const dx = x2 - x1, dy = y2 - y1;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq < 1e-6) return Math.hypot(px - x1, py - y1);
-  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
-  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
-}
-
 function processRayEntities(now) {
   const allEntities = [...G.enemies, ...G.hazards];
   const isStepLevel  = G.levelIndex >= 3;
@@ -221,10 +212,15 @@ function update(dt, now) {
     Audio.playPulse();
   }
 
-  // Hazard pulses
+  // Hazard pulses — audio volume falls off with distance from the player
   for (const hz of G.hazards) {
     const ev = hz.update(dt);
-    if (ev) { G.raySystem.burst(ev.x, ev.y, 'hazard', G.castFn); Audio.playHazardPulse(); }
+    if (ev) {
+      G.raySystem.burst(ev.x, ev.y, 'hazard', G.castFn);
+      const d = dist(ev.x, ev.y, G.player.x, G.player.y);
+      const vol = Math.max(0, 1 - (d - HEARING_NEAR) / (HEARING_FAR - HEARING_NEAR));
+      Audio.playHazardPulse(Math.min(1, vol));
+    }
   }
 
   // Advance rays → collect wall hits

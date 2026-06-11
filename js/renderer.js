@@ -1,5 +1,16 @@
 import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
-         RAY_TRAIL_MS, IMPACT_FADE_MS } from './constants.js';
+         RAY_TRAIL_MS, IMPACT_FADE_MS,
+         HEARING_NEAR, HEARING_FAR } from './constants.js';
+import { segPtDist } from './utils.js';
+
+// How loudly the player "hears" something at distance d:
+// 1 inside HEARING_NEAR, smoothstep down to 0 at HEARING_FAR
+function hearing(d) {
+  if (d <= HEARING_NEAR) return 1;
+  if (d >= HEARING_FAR) return 0;
+  const t = 1 - (d - HEARING_NEAR) / (HEARING_FAR - HEARING_NEAR);
+  return t * t * (3 - 2 * t);
+}
 
 let canvas, ctx;
 
@@ -27,14 +38,17 @@ export function draw(state, now) {
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
   const { impacts, rays, echoTrails, player, enemies, hazards, exit } = state;
+  const px = player ? player.x : W / 2;
+  const py = player ? player.y : H / 2;
 
-  // Walls are intentionally never drawn — the world exists only as sound.
-  drawEchoTrails(echoTrails, now);
-  drawImpacts(impacts, now);
+  // Walls are intentionally never drawn — the world exists only as sound,
+  // and all sound is rendered relative to how close the player is to it.
+  drawEchoTrails(echoTrails, now, px, py);
+  drawImpacts(impacts, now, px, py);
   drawExit(exit, now);
-  drawHazards(hazards, now);
-  drawEnemies(enemies, now);
-  drawActiveRays(rays);
+  drawHazards(hazards, now, px, py);
+  drawEnemies(enemies, now, px, py);
+  drawActiveRays(rays, px, py);
   drawPlayer(player);
   drawVignette();
 }
@@ -42,7 +56,7 @@ export function draw(state, now) {
 // ─── Wall impact glints ───────────────────────────────────────────────────────
 // A short bright line along the wall surface where a ray struck,
 // fading slowly — this is the only way the player ever "sees" a wall.
-function drawImpacts(impacts, now) {
+function drawImpacts(impacts, now, px, py) {
   if (!impacts || impacts.length === 0) return;
   ctx.save();
   ctx.lineCap = 'round';
@@ -50,9 +64,11 @@ function drawImpacts(impacts, now) {
   for (const im of impacts) {
     const age = now - im.createdAt;
     if (age >= IMPACT_FADE_MS) continue;
+    const heard = hearing(Math.hypot(im.x - px, im.y - py));
+    if (heard <= 0) continue;
     const t = 1 - age / IMPACT_FADE_MS;
     const fade = t * t * (3 - 2 * t); // smoothstep out
-    const alpha = im.energy * fade;
+    const alpha = im.energy * fade * heard;
     if (alpha < 0.008) continue;
 
     // Tangent of the wall face = perpendicular to the normal
@@ -96,10 +112,12 @@ function drawExit(exit, now) {
 }
 
 // ─── Hazards ──────────────────────────────────────────────────────────────────
-function drawHazards(hazards, now) {
+function drawHazards(hazards, now, px, py) {
   ctx.save();
   for (const h of hazards) {
-    const alpha = revealAlpha(h.revealedAt, now);
+    const heard = hearing(Math.hypot(h.x - px, h.y - py));
+    if (heard <= 0) continue;
+    const alpha = revealAlpha(h.revealedAt, now) * heard;
     if (alpha < 0.004) continue;
     ctx.shadowBlur = 10 * alpha;
     ctx.shadowColor = `rgba(220,80,40,${alpha * 0.5})`;
@@ -115,10 +133,12 @@ function drawHazards(hazards, now) {
 }
 
 // ─── Enemies ──────────────────────────────────────────────────────────────────
-function drawEnemies(enemies, now) {
+function drawEnemies(enemies, now, px, py) {
   ctx.save();
   for (const e of enemies) {
-    const alpha = revealAlpha(e.revealedAt, now);
+    const heard = hearing(Math.hypot(e.x - px, e.y - py));
+    if (heard <= 0) continue;
+    const alpha = revealAlpha(e.revealedAt, now) * heard;
     if (alpha < 0.004) continue;
     const hunting = e.state === 'hunting';
     const base = hunting ? '230,45,45' : '185,55,55';
@@ -151,7 +171,7 @@ function drawEnemies(enemies, now) {
 }
 
 // ─── Echo trails — long, slow fade so the map lingers in memory ──────────────
-function drawEchoTrails(trails, now) {
+function drawEchoTrails(trails, now, px, py) {
   if (!trails || trails.length === 0) return;
   ctx.save();
   ctx.lineCap = 'round';
@@ -159,9 +179,11 @@ function drawEchoTrails(trails, now) {
   for (const t of trails) {
     const age = now - t.createdAt;
     if (age >= RAY_TRAIL_MS) continue;
+    const heard = hearing(segPtDist(px, py, t.x1, t.y1, t.x2, t.y2));
+    if (heard <= 0) continue;
     const p = 1 - age / RAY_TRAIL_MS;
     const fade = p * p * (3 - 2 * p); // smooth ease-out
-    const alpha = t.energy * fade * 0.34;
+    const alpha = t.energy * fade * 0.34 * heard;
     if (alpha < 0.005) continue;
 
     if (t.type === 'hazard') {
@@ -180,7 +202,7 @@ function drawEchoTrails(trails, now) {
 }
 
 // ─── Active rays ──────────────────────────────────────────────────────────────
-function drawActiveRays(rays) {
+function drawActiveRays(rays, px, py) {
   if (!rays || rays.length === 0) return;
   ctx.save();
   ctx.lineCap = 'round';
@@ -206,7 +228,8 @@ function drawActiveRays(rays) {
       if (ray.type !== type) continue;
 
       for (const seg of ray.segments) {
-        const alpha = seg.energy * 0.72;
+        const heard = hearing(segPtDist(px, py, seg.x1, seg.y1, seg.x2, seg.y2));
+        const alpha = seg.energy * 0.72 * heard;
         if (alpha < 0.01) continue;
         ctx.strokeStyle = rayColor(type, alpha);
         ctx.beginPath();
@@ -215,7 +238,8 @@ function drawActiveRays(rays) {
         ctx.stroke();
       }
 
-      const liveAlpha = ray.energy * 0.88;
+      const heard = hearing(segPtDist(px, py, ray.segX, ray.segY, ray.tipX, ray.tipY));
+      const liveAlpha = ray.energy * 0.88 * heard;
       if (liveAlpha < 0.01) continue;
       ctx.strokeStyle = rayColor(type, liveAlpha);
       ctx.beginPath();
