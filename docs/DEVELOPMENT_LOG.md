@@ -4,6 +4,38 @@
 
 ---
 
+## [Phase 2 — Complete] Water Zones
+
+**Date:** 2026-06-11  
+**Commit:** `e65bf1b`  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/entities.js`**: `Player.move()` gains 6th param `inWater = false`; sets `this.inWater`; speed is `PLAYER_SPEED * (crouching ? CROUCH_SPEED_MULT : 1) * (inWater ? WATER_SPEED_MULT : 1)`. Import line extended to include `WATER_SPEED_MULT`.
+
+**`js/game.js`**:
+- `G.playerInWater: false` added to state object
+- Imports extended: `WATER_INTERVAL_MULT`, `WATER_RAY_MULT`
+- `update()`: tile under player detected before `player.move()` (`Math.floor(player.x / TILE)`, same for row); `G.playerInWater = G.grid[row]?.[col] === CELL.WATER`
+- `player.move()` now passes `G.playerInWater` as 6th arg
+- Step interval: `STEP_INTERVAL * (crouching ? CROUCH_INTERVAL_MULT : 1) * (G.playerInWater ? WATER_INTERVAL_MULT : 1)` — multipliers stack
+- Ray count: `ceil(RAY_COUNT_STEP * crouchMult * waterMult)`, capped at 64
+- Plays `Audio.playFootstepWater()` when in water, `Audio.playFootstep()` otherwise
+
+**`js/renderer.js`**: Added `drawWaterZone(player)` — `createRadialGradient` teal wash (0 → 80px radius, `rgba(50,150,160,0.08)` → transparent). Called in `draw()` before `drawPlayer()` only when `state.playerInWater`.
+
+**`js/levels.js`**: Level 7 "Flooded" — 20×15 grid; rows 6–8 cols 2–17 are `CELL.WATER = 5`; walls at cols 0, 1, 18, 19 of water rows force the player to cross entirely through water; two hazards at cols 5 and 14 in row 7.
+
+### Design decisions
+
+- Water detection uses the player's position BEFORE move() is called — 1 frame "late" on entry/exit but imperceptible at water-zone crossing speeds.
+- Ray count cap at 64 prevents extreme bursts when crouching in water (0.5 × 1.6 = 0.8 × default; normal in water = 1.6 × default = ~35 rays, within budget).
+- Level 7 forces water crossing at cols 2–17 (walls at cols 0, 1, 18, 19) so the player cannot simply run along the edges.
+- Hazards placed at cols 5 and 14 (row 7) to bracket the crossing without making it impassable — player path at cols 9–10 is equidistant from both.
+
+---
+
 ## [Phase 1 — Complete] Crouch / Stealth Mechanic
 
 **Date:** 2026-06-11  

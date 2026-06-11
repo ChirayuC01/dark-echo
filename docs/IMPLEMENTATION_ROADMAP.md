@@ -78,33 +78,33 @@
 ---
 
 ## Phase 2 — Water Zones
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (commit `e65bf1b`)  
 **Goal:** `CELL.WATER` tiles cause louder, more frequent splashes and slower movement.  
 **Depends on:** Phase 0 complete
 
 ### Tasks
-- [ ] `collision.js` `castRay`: Treat `CELL.WATER` as `CELL.EMPTY` (transparent to rays)
-- [ ] `game.js` update(): After `player.move()`, check tile under player. Set `G.playerInWater`.
-- [ ] `game.js` update(): If `G.playerInWater`, apply water step multipliers; call `Audio.playFootstepWater()`
-- [ ] `audio.js`: Add `playFootstepWater()` using `SOUND_CONFIG.footstepWater`
-- [ ] `renderer.js`: If player in water, draw faint teal background wash at player position
-- [ ] Level 7 ("Flooded") grid + enemy data in `levels.js`
-- [ ] Commit + push
+- [x] `collision.js` `castRay`: Treat `CELL.WATER` as `CELL.EMPTY` (transparent to rays) — already true; `castRay` only blocks on `=== 1`
+- [x] `game.js` update(): Check tile under player each frame. Set `G.playerInWater`.
+- [x] `game.js` update(): If `G.playerInWater`, apply water step multipliers; call `Audio.playFootstepWater()`
+- [x] `audio.js`: `playFootstepWater()` using `SOUND_CONFIG.footstepWater` — already done in Phase 0
+- [x] `renderer.js`: If player in water, draw faint teal radial gradient at player position
+- [x] Level 7 ("Flooded") grid + enemy data in `levels.js`
+- [x] Commit + push
 
 ### Files Modified
+- `js/entities.js`
 - `js/game.js`
-- `js/audio.js`
 - `js/renderer.js`
 - `js/levels.js`
 
 ### Acceptance Criteria
-- [ ] Water tiles do NOT block player movement
-- [ ] Water tiles do NOT block rays
-- [ ] Walking on water: step rays are visibly more numerous and frequent
-- [ ] Walking on water: `playFootstepWater()` plays (different from `playFootstep()`)
-- [ ] Walking on water: player speed is ~60% of normal
-- [ ] Crouching in water: both multipliers apply (speed is `0.45 × 0.6 × 150 = 40.5 px/s`)
-- [ ] Faint teal tint appears at player position when in water
+- [x] Water tiles do NOT block player movement
+- [x] Water tiles do NOT block rays
+- [x] Walking on water: step rays are visibly more numerous and frequent
+- [x] Walking on water: `playFootstepWater()` plays (different from `playFootstep()`)
+- [x] Walking on water: player speed is ~60% of normal
+- [x] Crouching in water: both multipliers apply (speed is `0.45 × 0.6 × 150 = 40.5 px/s`)
+- [x] Faint teal tint appears at player position when in water
 
 ---
 

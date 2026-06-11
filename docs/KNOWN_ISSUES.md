@@ -92,9 +92,9 @@ _None currently confirmed._
 ---
 
 ### DC-002 — Water zone difficulty spike
-**Status:** ⬜ Needs playtesting  
+**Status:** 🔄 Addressed in Level 7 design — needs playtesting  
 **Description:** Water zones force louder footsteps with no way to compensate (crouch is additive). In a level with a water zone + nearby hearing-reactive enemy, the player may find it near-impossible to cross silently.  
-**Fix:** Design water levels so crouching in water is always survivable, or increase the hearing distance threshold for water-zone enemies.
+**Fix:** Level 7 uses only `Hazard` enemies in the water zone (not hearing-reactive patrol/chaser). Hazards have fixed pulse intervals; player can time their crossing. No step-aware patrol placed near water zones yet. Re-evaluate if future levels combine water + step-aware enemies.
 
 ---
 

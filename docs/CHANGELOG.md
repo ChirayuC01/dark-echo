@@ -5,7 +5,24 @@
 
 ---
 
-## [Unreleased] — Phase 2 pending
+## [Unreleased] — Phase 3 pending
+
+---
+
+## [v0.7.0] — 2026-06-11 — Phase 2
+
+### Added
+- **Water zone mechanic**: `CELL.WATER = 5` tiles affect player movement and step sound
+  - Speed: 60% of normal (`WATER_SPEED_MULT = 0.6`), stacks multiplicatively with crouch
+  - Step interval: 60% of normal (`WATER_INTERVAL_MULT = 0.6`) — more frequent splashes
+  - Step ray count: 160% of normal (`WATER_RAY_MULT = 1.6`) — louder, more visible splash
+  - Crouch + water combined: speed = 150 × 0.45 × 0.6 = 40.5 px/s
+- `Player.move()` now accepts 6th param `inWater = false`; applies `WATER_SPEED_MULT`
+- `Player.inWater` field set each frame from tile under player
+- `G.playerInWater` state flag in `game.js`; checked before every step burst
+- `drawWaterZone()` in `renderer.js` — radial teal gradient (`rgba(50,150,160)`) at player position when on water tile
+- `Audio.playFootstepWater()` called when stepping on water (replaces `playFootstep()`)
+- Level 7 "Flooded" — upper maze → forced 3-row water crossing (cols 2–17) → lower maze; two hazards inside the flood zone
 
 ---
 
