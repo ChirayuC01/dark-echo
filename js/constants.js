@@ -21,7 +21,7 @@ export const WALL_FADE_MS = 2800;
 export const WAVE_RING_W = 12; // kept for backward compat (unused by new ray system)
 
 // ─── Ray echo system ─────────────────────────────────────────────────────────
-export const RAY_SPEED        = 340;   // px / s
+export const RAY_SPEED        = 160;   // px / s — slow enough to watch propagate
 export const RAY_COUNT_STEP   = 22;    // rays per footstep
 export const RAY_COUNT_PULSE  = 64;    // rays per pulse
 export const RAY_COUNT_HAZARD = 28;    // rays per hazard tick
@@ -31,7 +31,8 @@ export const HAZARD_RAY_MAX   = 110;   // max travel distance for hazard rays (p
 export const MAX_BOUNCES      = 3;     // max wall reflections per ray
 export const ENERGY_DECAY     = 0.55;  // energy multiplied on each bounce
 export const MIN_ENERGY       = 0.06;  // ray dies below this energy after bounce
-export const RAY_TRAIL_MS     = 1600;  // echo trail persistence (ms)
+export const RAY_TRAIL_MS     = 4200;  // echo trail persistence (ms)
+export const IMPACT_FADE_MS   = 3600;  // wall impact glint persistence (ms)
 
 export const CHASER_SPEED_IDLE = 35;
 export const CHASER_SPEED_HUNT = 80;

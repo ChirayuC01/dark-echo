@@ -1,6 +1,7 @@
 import { TILE, COLS, ROWS,
          STEP_INTERVAL, PULSE_COOLDOWN,
          PLAYER_RADIUS, ENEMY_RADIUS,
+         IMPACT_FADE_MS,
          CELL } from './constants.js';
 import { dist } from './utils.js';
 import * as Audio from './audio.js';
@@ -17,12 +18,11 @@ const G = {
   screen: 'title',
   levelIndex: 0,
   grid: null,
-  wallReveal: null,
-  wallRevealEnergy: null,
+  impacts: [],        // wall impact glints: {x,y,nx,ny,energy,type,createdAt}
   player: null,
   enemies: [],
   hazards: [],
-  exit: null,
+  exit: null,         // { x, y, revealedAt }
   raySystem: null,
   castFn: null,
   pulseCooldown: 0,
@@ -39,15 +39,13 @@ function loadLevel(idx) {
   G.grid = def.grid;
   G.raySystem = new RaySystem();
   G.castFn = (ox, oy, dx, dy, maxDist) => castRay(G.grid, ox, oy, dx, dy, maxDist);
-  G.wallReveal = Renderer.makeRevealMap(ROWS, COLS);
-  G.wallRevealEnergy = Renderer.makeEnergyMap(ROWS, COLS);
+  G.impacts = [];
   G.enemies = [];
   G.hazards = [];
   G.player = null;
   G.exit = null;
   G.pulseCooldown = 0;
   G.lastStepTime = 0;
-  Renderer.precomputeWallFaces(def.grid);
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -55,7 +53,7 @@ function loadLevel(idx) {
       const cx = col * TILE + TILE / 2;
       const cy = row * TILE + TILE / 2;
       if (cell === CELL.START) G.player = new Player(cx, cy);
-      if (cell === CELL.EXIT)  G.exit = { x: cx, y: cy };
+      if (cell === CELL.EXIT)  G.exit = { x: cx, y: cy, revealedAt: -Infinity };
     }
   }
 
@@ -80,17 +78,24 @@ function loadLevel(idx) {
   UI.setHint(def.hint);
 }
 
-// ─── Ray hit → wall reveal ────────────────────────────────────────────────────
+// ─── Ray hit → wall impact glint ──────────────────────────────────────────────
+// Walls are never drawn; the player infers them from where rays strike.
 function applyWallHits(hits, now) {
   for (const h of hits) {
-    const { col, row } = h;
-    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) continue;
-    G.wallReveal[row][col] = now;
-    // Track peak energy for brightness
-    if (h.energy > G.wallRevealEnergy[row][col]) {
-      G.wallRevealEnergy[row][col] = h.energy;
-    }
+    G.impacts.push({
+      x: h.x, y: h.y,
+      nx: h.nx, ny: h.ny,
+      energy: h.energy,
+      type: h.type,
+      createdAt: now,
+    });
   }
+  // Prune expired glints in place
+  let wi = 0;
+  for (let i = 0; i < G.impacts.length; i++) {
+    if (now - G.impacts[i].createdAt < IMPACT_FADE_MS) G.impacts[wi++] = G.impacts[i];
+  }
+  G.impacts.length = wi;
 }
 
 // ─── Ray segments → entity reveal + hearing ──────────────────────────────────
@@ -116,6 +121,12 @@ function processRayEntities(now) {
     for (const ent of allEntities) {
       const d = segPtDist(ent.x, ent.y, sx, sy, tx, ty);
       if (d < ent.radius + REVEAL_D) ent.revealedAt = now;
+    }
+
+    // ── Exit reveal (player rays only — hazard scans shouldn't help) ────────
+    if (G.exit && ray.type !== 'hazard') {
+      const d = segPtDist(G.exit.x, G.exit.y, sx, sy, tx, ty);
+      if (d < REVEAL_D) G.exit.revealedAt = now;
     }
 
     // ── Enemy hearing (one-shot per ray) ─────────────────────────────────────

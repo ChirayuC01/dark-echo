@@ -1,49 +1,21 @@
-import { TILE, COLS, ROWS, W, H, WALL_FADE_MS, RAY_TRAIL_MS } from './constants.js';
+import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
+         RAY_TRAIL_MS, IMPACT_FADE_MS } from './constants.js';
 
 let canvas, ctx;
-let exposedFaces = null; // Uint8Array[row][col] bitmask: top=1 right=2 bottom=4 left=8
 
 export function init(canvasEl) {
   canvas = canvasEl;
   ctx = canvas.getContext('2d');
   canvas.width = W; canvas.height = H;
-  // Enable sub-pixel antialiasing
   ctx.imageSmoothingEnabled = true;
 }
 
-// ─── Wall reveal maps ─────────────────────────────────────────────────────────
-export function makeRevealMap(rows, cols) {
-  return Array.from({ length: rows }, () => new Float64Array(cols).fill(-Infinity));
-}
-
-export function makeEnergyMap(rows, cols) {
-  return Array.from({ length: rows }, () => new Float32Array(cols).fill(0));
-}
-
-// Precompute which faces of each wall tile are exposed to open space.
-// Call once per level load.
-export function precomputeWallFaces(grid) {
-  const rows = grid.length, cols = grid[0].length;
-  exposedFaces = Array.from({ length: rows }, () => new Uint8Array(cols));
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (grid[r][c] !== 1) continue;
-      let bits = 0;
-      if (r === 0          || grid[r-1][c] !== 1) bits |= 1;  // top
-      if (c === cols - 1   || grid[r][c+1] !== 1) bits |= 2;  // right
-      if (r === rows - 1   || grid[r+1][c] !== 1) bits |= 4;  // bottom
-      if (c === 0          || grid[r][c-1] !== 1) bits |= 8;  // left
-      exposedFaces[r][c] = bits;
-    }
-  }
-}
-
-function wallAlpha(revealTime, now) {
+// Smoothstep fade used for entity reveals
+function revealAlpha(revealTime, now) {
   const age = now - revealTime;
   if (age >= WALL_FADE_MS) return 0;
-  // Ease-out: brighter on fresh hit, smooth tail
   const t = 1 - age / WALL_FADE_MS;
-  return t * t * (3 - 2 * t); // smoothstep
+  return t * t * (3 - 2 * t);
 }
 
 // ─── Main draw ────────────────────────────────────────────────────────────────
@@ -54,70 +26,71 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { grid, wallReveal, wallRevealEnergy, rays, echoTrails,
-          player, enemies, hazards, exit } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, exit } = state;
 
-  drawWalls(grid, wallReveal, wallRevealEnergy, now);
+  // Walls are intentionally never drawn — the world exists only as sound.
+  drawEchoTrails(echoTrails, now);
+  drawImpacts(impacts, now);
   drawExit(exit, now);
   drawHazards(hazards, now);
   drawEnemies(enemies, now);
-  drawEchoTrails(echoTrails, now);
   drawActiveRays(rays);
   drawPlayer(player);
   drawVignette();
 }
 
-// ─── Wall edge lines ──────────────────────────────────────────────────────────
-function drawWalls(grid, wallReveal, wallRevealEnergy, now) {
-  if (!exposedFaces) return;
+// ─── Wall impact glints ───────────────────────────────────────────────────────
+// A short bright line along the wall surface where a ray struck,
+// fading slowly — this is the only way the player ever "sees" a wall.
+function drawImpacts(impacts, now) {
+  if (!impacts || impacts.length === 0) return;
   ctx.save();
   ctx.lineCap = 'round';
-  ctx.lineWidth = 1.3;
-  ctx.shadowBlur = 7;
-  ctx.shadowColor = 'rgba(120,165,240,0.35)';
 
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      if (grid[row][col] !== 1) continue;
-      const alpha = wallAlpha(wallReveal[row][col], now);
-      if (alpha < 0.004) continue;
+  for (const im of impacts) {
+    const age = now - im.createdAt;
+    if (age >= IMPACT_FADE_MS) continue;
+    const t = 1 - age / IMPACT_FADE_MS;
+    const fade = t * t * (3 - 2 * t); // smoothstep out
+    const alpha = im.energy * fade;
+    if (alpha < 0.008) continue;
 
-      const faces = exposedFaces[row][col];
-      if (!faces) continue;
+    // Tangent of the wall face = perpendicular to the normal
+    const txv = -im.ny, tyv = im.nx;
+    const len = 3 + im.energy * 6; // brighter hits leave longer marks
 
-      // Tint brighter for high-energy hits (pulse vs footstep)
-      const en  = wallRevealEnergy ? wallRevealEnergy[row][col] : 0.5;
-      const r   = Math.round(145 + 70 * en);
-      const g   = Math.round(170 + 45 * en);
-      const b   = Math.round(235 + 20 * en);
-
-      ctx.strokeStyle = `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
-      const x = col * TILE, y = row * TILE;
-
-      ctx.beginPath();
-      if (faces & 1) { ctx.moveTo(x,        y);        ctx.lineTo(x + TILE, y);        }
-      if (faces & 2) { ctx.moveTo(x + TILE,  y);        ctx.lineTo(x + TILE, y + TILE); }
-      if (faces & 4) { ctx.moveTo(x,        y + TILE); ctx.lineTo(x + TILE, y + TILE); }
-      if (faces & 8) { ctx.moveTo(x,        y);        ctx.lineTo(x,        y + TILE); }
-      ctx.stroke();
+    if (im.type === 'hazard') {
+      ctx.strokeStyle = `rgba(225,100,50,${(alpha * 0.85).toFixed(3)})`;
+      ctx.shadowColor = 'rgba(225,100,50,0.5)';
+    } else {
+      ctx.strokeStyle = `rgba(225,238,255,${(alpha * 0.95).toFixed(3)})`;
+      ctx.shadowColor = 'rgba(170,205,255,0.55)';
     }
+    ctx.shadowBlur = 6 * fade;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(im.x - txv * len, im.y - tyv * len);
+    ctx.lineTo(im.x + txv * len, im.y + tyv * len);
+    ctx.stroke();
   }
   ctx.restore();
 }
 
-// ─── Exit marker ─────────────────────────────────────────────────────────────
+// ─── Exit marker — only visible after sound has touched it ──────────────────
 function drawExit(exit, now) {
   if (!exit) return;
-  const pulse = 0.35 + 0.18 * Math.sin(now / 600);
+  const alpha = revealAlpha(exit.revealedAt, now);
+  if (alpha < 0.004) return;
+  const pulse = (0.5 + 0.25 * Math.sin(now / 500)) * alpha;
   ctx.save();
-  ctx.shadowBlur = 14;
+  ctx.shadowBlur = 14 * alpha;
   ctx.shadowColor = 'rgba(60,220,110,0.5)';
-  const grd = ctx.createRadialGradient(exit.x, exit.y, 2, exit.x, exit.y, 22);
-  grd.addColorStop(0, `rgba(80,220,120,${pulse})`);
+  const grd = ctx.createRadialGradient(exit.x, exit.y, 2, exit.x, exit.y, 20);
+  grd.addColorStop(0, `rgba(80,220,120,${pulse.toFixed(3)})`);
   grd.addColorStop(1, 'rgba(80,220,120,0)');
   ctx.fillStyle = grd;
-  ctx.beginPath(); ctx.arc(exit.x, exit.y, 22, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = `rgba(160,255,180,${pulse * 0.9})`;
+  ctx.beginPath(); ctx.arc(exit.x, exit.y, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = `rgba(160,255,180,${(pulse * 0.95).toFixed(3)})`;
   ctx.beginPath(); ctx.arc(exit.x, exit.y, 3.5, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
@@ -126,7 +99,7 @@ function drawExit(exit, now) {
 function drawHazards(hazards, now) {
   ctx.save();
   for (const h of hazards) {
-    const alpha = wallAlpha(h.revealedAt, now);
+    const alpha = revealAlpha(h.revealedAt, now);
     if (alpha < 0.004) continue;
     ctx.shadowBlur = 10 * alpha;
     ctx.shadowColor = `rgba(220,80,40,${alpha * 0.5})`;
@@ -145,7 +118,7 @@ function drawHazards(hazards, now) {
 function drawEnemies(enemies, now) {
   ctx.save();
   for (const e of enemies) {
-    const alpha = wallAlpha(e.revealedAt, now);
+    const alpha = revealAlpha(e.revealedAt, now);
     if (alpha < 0.004) continue;
     const hunting = e.state === 'hunting';
     const base = hunting ? '230,45,45' : '185,55,55';
@@ -158,7 +131,6 @@ function drawEnemies(enemies, now) {
     ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 9, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = `rgba(${base},${alpha * 0.92})`;
     ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
-    // Direction tick
     if (e.waypoints) {
       const wp = e.waypoints[e.wpIdx || 0];
       if (wp) {
@@ -178,26 +150,26 @@ function drawEnemies(enemies, now) {
   ctx.restore();
 }
 
-// ─── Echo trails (fading ray paths after a ray completes) ────────────────────
+// ─── Echo trails — long, slow fade so the map lingers in memory ──────────────
 function drawEchoTrails(trails, now) {
   if (!trails || trails.length === 0) return;
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineWidth = 0.7;
-  // No shadow on trails – they should be subtle
   for (const t of trails) {
     const age = now - t.createdAt;
     if (age >= RAY_TRAIL_MS) continue;
-    const fade = 1 - age / RAY_TRAIL_MS;
-    const alpha = t.energy * fade * 0.38;
+    const p = 1 - age / RAY_TRAIL_MS;
+    const fade = p * p * (3 - 2 * p); // smooth ease-out
+    const alpha = t.energy * fade * 0.34;
     if (alpha < 0.005) continue;
 
     if (t.type === 'hazard') {
-      ctx.strokeStyle = `rgba(215,95,45,${alpha})`;
+      ctx.strokeStyle = `rgba(215,95,45,${alpha.toFixed(3)})`;
     } else if (t.type === 'pulse') {
-      ctx.strokeStyle = `rgba(175,210,255,${alpha})`;
+      ctx.strokeStyle = `rgba(175,210,255,${alpha.toFixed(3)})`;
     } else {
-      ctx.strokeStyle = `rgba(145,180,225,${alpha})`;
+      ctx.strokeStyle = `rgba(145,180,225,${alpha.toFixed(3)})`;
     }
     ctx.beginPath();
     ctx.moveTo(t.x1, t.y1);
@@ -207,13 +179,12 @@ function drawEchoTrails(trails, now) {
   ctx.restore();
 }
 
-// ─── Active rays (live, bright) ───────────────────────────────────────────────
+// ─── Active rays ──────────────────────────────────────────────────────────────
 function drawActiveRays(rays) {
   if (!rays || rays.length === 0) return;
   ctx.save();
   ctx.lineCap = 'round';
 
-  // Batch by type to minimize shadow state changes
   for (let pass = 0; pass < 3; pass++) {
     const type = pass === 0 ? 'step' : pass === 1 ? 'pulse' : 'hazard';
 
@@ -234,7 +205,6 @@ function drawActiveRays(rays) {
     for (const ray of rays) {
       if (ray.type !== type) continue;
 
-      // Draw sealed segments (bounced portions)
       for (const seg of ray.segments) {
         const alpha = seg.energy * 0.72;
         if (alpha < 0.01) continue;
@@ -245,7 +215,6 @@ function drawActiveRays(rays) {
         ctx.stroke();
       }
 
-      // Draw live segment (tip currently advancing)
       const liveAlpha = ray.energy * 0.88;
       if (liveAlpha < 0.01) continue;
       ctx.strokeStyle = rayColor(type, liveAlpha);
