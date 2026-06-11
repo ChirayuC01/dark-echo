@@ -5,7 +5,29 @@
 
 ---
 
-## [Unreleased] — Phase 0 in progress
+## [Unreleased] — Phase 2 pending
+
+---
+
+## [v0.6.0] — 2026-06-11 — Phase 1
+
+### Added
+- **Crouch / stealth mechanic**: Hold Shift or C (keyboard) or tap CROUCH button (mobile)
+  - Speed: 45% of normal (`CROUCH_SPEED_MULT = 0.45`)
+  - Step interval: 2.5× longer (`CROUCH_INTERVAL_MULT = 2.5`)
+  - Step ray count: 50% fewer (`CROUCH_RAY_MULT = 0.5`)
+  - Step ray max distance: 70% shorter (`CROUCH_DIST_MULT = 0.7`)
+- `Input.isCrouching()` export
+- `#crouch-btn` mobile touch button (bottom-center)
+- `#crouch-indicator` HUD element — lights up when crouching
+- `PatrolEnemy.stepAware` flag + `hearStep()` investigation behavior (3.5s)
+- `RaySystem.burst()` optional `countOverride`/`maxDistOverride` parameters
+- Level 6 "The Whisper" — introduces crouch mechanic via step-aware patrol
+- `loadLevel()` now deep-copies grid (prep for Phase 3 collapsible walls)
+
+---
+
+## [v0.5.1] — 2026-06-11 — Phase 0
 
 ### Added
 - `/docs/` directory with 6 project documentation files:

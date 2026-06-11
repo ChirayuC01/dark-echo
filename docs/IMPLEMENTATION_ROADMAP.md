@@ -45,19 +45,19 @@
 ---
 
 ## Phase 1 — Crouch / Stealth Mechanic
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (commit `3933d22`)  
 **Goal:** Player can hold Shift/C to move quietly with fewer, shorter rays.  
 **Depends on:** Phase 0 complete
 
 ### Tasks
-- [ ] `input.js`: Add `isCrouching()` — returns true if Shift or C is held
-- [ ] `input.js`: Add mobile crouch button handling (touch element `#crouch-btn`)
-- [ ] `entities.js` Player: Add `crouching` field; `move()` accepts crouch flag and adjusts speed
-- [ ] `game.js` update(): Read `Input.isCrouching()` → pass to `player.move()` → override step interval, ray count, ray maxDist for step burst
-- [ ] `index.html`: Add `#crouch-btn` touch button (bottom-center)
-- [ ] `css/style.css`: Style `#crouch-btn`
-- [ ] Level 6 ("The Whisper") grid + enemy data in `levels.js`
-- [ ] Commit + push
+- [x] `input.js`: Add `isCrouching()` — returns true if Shift or C is held
+- [x] `input.js`: Add mobile crouch button handling (touch element `#crouch-btn`)
+- [x] `entities.js` Player: Add `crouching` field; `move()` accepts crouch flag and adjusts speed
+- [x] `game.js` update(): Read `Input.isCrouching()` → pass to `player.move()` → override step interval, ray count, ray maxDist for step burst
+- [x] `index.html`: Add `#crouch-btn` touch button (bottom-center)
+- [x] `css/style.css`: Style `#crouch-btn`
+- [x] Level 6 ("The Whisper") grid + enemy data in `levels.js`
+- [x] Commit + push
 
 ### Files Modified
 - `js/input.js`
