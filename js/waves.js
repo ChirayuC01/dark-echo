@@ -1,7 +1,7 @@
 import { RAY_SPEED, MAX_BOUNCES, ENERGY_DECAY, MIN_ENERGY,
          STEP_RAY_MAX, PULSE_RAY_MAX, HAZARD_RAY_MAX,
          RAY_COUNT_STEP, RAY_COUNT_PULSE, RAY_COUNT_HAZARD,
-         RAY_TRAIL_MS } from './constants.js';
+         RAY_TRAIL_MS, ECHO_TRAIL_CAP } from './constants.js';
 
 const NUDGE = 0.8; // px to offset after bounce to avoid re-collision
 
@@ -177,7 +177,7 @@ export class RaySystem {
     }
     this.active.length = wi;
 
-    // Prune stale echo trails
+    // Prune stale echo trails (time-based) then enforce hard cap
     if (this.echoTrails.length > 0) {
       let ri = 0;
       for (let i = 0; i < this.echoTrails.length; i++) {
@@ -186,6 +186,10 @@ export class RaySystem {
         }
       }
       this.echoTrails.length = ri;
+      // If still over cap after time prune, drop oldest (front of array)
+      if (this.echoTrails.length > ECHO_TRAIL_CAP) {
+        this.echoTrails.splice(0, this.echoTrails.length - ECHO_TRAIL_CAP);
+      }
     }
 
     return hits;

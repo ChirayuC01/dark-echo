@@ -1,0 +1,410 @@
+# IMPLEMENTATION ROADMAP — RESONANCE
+
+> Phases are executed sequentially unless marked as parallelizable.  
+> Each phase must pass its acceptance criteria before the next begins.  
+> Architecture changes require spec update + explicit user approval before implementation.
+
+---
+
+## Phase Status Legend
+
+| Symbol | Meaning |
+|---|---|
+| ✅ | Complete |
+| 🔄 | In Progress |
+| ⬜ | Pending |
+| ⚠️ | Blocked |
+| ❌ | Cancelled / Descoped |
+
+---
+
+## Phase 0 — Cleanup & Foundation
+**Status:** 🔄 In Progress  
+**Goal:** Clean up legacy code, add new cell types, centralize audio config, fix echo trail memory leak.
+
+### Tasks
+- [x] Remove unused constants (`STEP_WAVE_*`, `PULSE_WAVE_*`, `WAVE_RING_W`, `HAZARD_PULSE_MAX`, `HAZARD_PULSE_SPEED`) from `constants.js`
+- [x] Add `CELL.COLLAPSIBLE = 4`, `CELL.WATER = 5` to `constants.js`
+- [x] Add crouch/water/collapse constants to `constants.js`
+- [x] Add `ECHO_TRAIL_CAP = 500` to `constants.js`
+- [ ] Add `SOUND_CONFIG` object to `audio.js`; wire all existing `play*()` to use it
+- [ ] Add `ECHO_TRAIL_CAP` enforcement in `waves.js` `RaySystem.update()`
+- [ ] Commit + push to `claude/sound-vision-game-7pvbo1`
+
+### Files Modified
+- `js/constants.js` ← partially done
+- `js/audio.js` ← pending
+- `js/waves.js` ← pending
+
+### Acceptance Criteria
+- [ ] No console errors on any of the 5 existing levels
+- [ ] `SOUND_CONFIG` exported from `audio.js`; all play functions use it
+- [ ] Echo trail array never exceeds 500 entries (verify via debug overlay once built)
+- [ ] No references to removed constants anywhere in codebase
+
+---
+
+## Phase 1 — Crouch / Stealth Mechanic
+**Status:** ⬜ Pending  
+**Goal:** Player can hold Shift/C to move quietly with fewer, shorter rays.  
+**Depends on:** Phase 0 complete
+
+### Tasks
+- [ ] `input.js`: Add `isCrouching()` — returns true if Shift or C is held
+- [ ] `input.js`: Add mobile crouch button handling (touch element `#crouch-btn`)
+- [ ] `entities.js` Player: Add `crouching` field; `move()` accepts crouch flag and adjusts speed
+- [ ] `game.js` update(): Read `Input.isCrouching()` → pass to `player.move()` → override step interval, ray count, ray maxDist for step burst
+- [ ] `index.html`: Add `#crouch-btn` touch button (bottom-center)
+- [ ] `css/style.css`: Style `#crouch-btn`
+- [ ] Level 6 ("The Whisper") grid + enemy data in `levels.js`
+- [ ] Commit + push
+
+### Files Modified
+- `js/input.js`
+- `js/entities.js`
+- `js/game.js`
+- `js/levels.js`
+- `index.html`
+- `css/style.css`
+
+### Acceptance Criteria
+- [ ] Hold Shift: movement speed ~45% of normal
+- [ ] Hold Shift: footstep rays are visibly fewer and shorter
+- [ ] PatrolEnemy in Level 6 does NOT react to crouched footsteps at patrol range
+- [ ] PatrolEnemy DOES react to normal footsteps at patrol range
+- [ ] Mobile crouch button visible and functional
+- [ ] Crouch + pulse still works (pulse is always loud)
+
+---
+
+## Phase 2 — Water Zones
+**Status:** ⬜ Pending  
+**Goal:** `CELL.WATER` tiles cause louder, more frequent splashes and slower movement.  
+**Depends on:** Phase 0 complete
+
+### Tasks
+- [ ] `collision.js` `castRay`: Treat `CELL.WATER` as `CELL.EMPTY` (transparent to rays)
+- [ ] `game.js` update(): After `player.move()`, check tile under player. Set `G.playerInWater`.
+- [ ] `game.js` update(): If `G.playerInWater`, apply water step multipliers; call `Audio.playFootstepWater()`
+- [ ] `audio.js`: Add `playFootstepWater()` using `SOUND_CONFIG.footstepWater`
+- [ ] `renderer.js`: If player in water, draw faint teal background wash at player position
+- [ ] Level 7 ("Flooded") grid + enemy data in `levels.js`
+- [ ] Commit + push
+
+### Files Modified
+- `js/game.js`
+- `js/audio.js`
+- `js/renderer.js`
+- `js/levels.js`
+
+### Acceptance Criteria
+- [ ] Water tiles do NOT block player movement
+- [ ] Water tiles do NOT block rays
+- [ ] Walking on water: step rays are visibly more numerous and frequent
+- [ ] Walking on water: `playFootstepWater()` plays (different from `playFootstep()`)
+- [ ] Walking on water: player speed is ~60% of normal
+- [ ] Crouching in water: both multipliers apply (speed is `0.45 × 0.6 × 150 = 40.5 px/s`)
+- [ ] Faint teal tint appears at player position when in water
+
+---
+
+## Phase 3 — Collapsible Walls
+**Status:** ⬜ Pending  
+**Goal:** Pulse rays can destroy `CELL.COLLAPSIBLE` walls, permanently opening paths.  
+**Depends on:** Phase 0 complete
+
+### Tasks
+- [ ] `collision.js` `castRay`: Treat `CELL.COLLAPSIBLE` as `CELL.WALL`
+- [ ] `game.js` `applyWallHits()`: On hit where `G.grid[row][col] === CELL.COLLAPSIBLE` and `energy > COLLAPSE_ENERGY_THRESHOLD`:
+  - Mutate `G.grid[row][col] = CELL.EMPTY`
+  - Fire `G.raySystem.burst(hit.x, hit.y, 'pulse', G.castFn)` with a reduced maxDist for visual burst
+  - Call `Audio.playCollapse()`
+- [ ] `audio.js`: Add `playCollapse()` using `SOUND_CONFIG.collapse`
+- [ ] Level 8 ("The Collapse") partial grid data with `CELL.COLLAPSIBLE = 4`
+- [ ] Commit + push
+
+### Files Modified
+- `js/collision.js`
+- `js/game.js`
+- `js/audio.js`
+- `js/levels.js`
+
+### Acceptance Criteria
+- [ ] Collapsible cells block movement and rays before pulse
+- [ ] Strong pulse ray (energy > 0.3) at a collapsible cell destroys it
+- [ ] After collapse: cell is passable; subsequent rays pass through
+- [ ] Collapse triggers visible glint burst at the cell
+- [ ] Collapse audio plays
+- [ ] Weak rays (bounced, low energy) do NOT trigger collapse
+
+---
+
+## Phase 4 — Crushers
+**Status:** ⬜ Pending  
+**Goal:** Moving wall segments that kill the player on contact.  
+**Depends on:** Phase 0 complete
+
+### Tasks
+- [ ] `entities.js`: Add `Crusher` class — sinusoidal movement, `blocking` bool, `revealedAt`
+- [ ] `game.js` `loadLevel()`: Spawn `Crusher` instances from `def.enemies[]` type `'crusher'`
+- [ ] `game.js` update(): Call `crusher.update(dt)` for each crusher. Check player bounding box overlap → `die('Crushed.')`.
+- [ ] `collision.js` / `castRay`: Accept optional `crushers[]` and check segment intersection before grid DDA
+- [ ] `renderer.js`: `drawCrushers(crushers, now, px, py)` — short thick line of glints at current crusher position, hearing-attenuated
+- [ ] Level 9 ("The Corridor") partial data
+- [ ] Commit + push
+
+### Files Modified
+- `js/entities.js`
+- `js/game.js`
+- `js/collision.js`
+- `js/renderer.js`
+- `js/levels.js`
+
+### Acceptance Criteria
+- [ ] Crusher oscillates back and forth smoothly on defined axis
+- [ ] Crusher blocks player movement (player cannot walk through it)
+- [ ] Player caught by crusher movement → dies with reason 'Crushed.'
+- [ ] Crusher blocks rays (rays reflect off crusher face)
+- [ ] Crusher revealed by sound (same reveal fade as enemies)
+- [ ] Timing the crusher path is the puzzle (survives by waiting)
+
+---
+
+## Phase 5 — Doors & Keys
+**Status:** ⬜ Pending  
+**Goal:** Collect keys to open doors. Both hidden until sound reveals them.  
+**Depends on:** Phase 0 complete
+
+### Tasks
+- [ ] `game.js` `loadLevel()`: Populate `G.doors` and `G.keys` Maps from `def.doors[]` and `def.keys[]`
+- [ ] `game.js` `castFn`: Check `G.doors` — treat closed door cell as WALL
+- [ ] `game.js` update(): Check player proximity (12px) to uncollected keys → collect → open door
+- [ ] `audio.js`: Add `playKeyPickup()`, `playDoorOpen()` using `SOUND_CONFIG`
+- [ ] `renderer.js`: `drawDoors(doors, now, px, py)` — amber glint cluster when revealed and closed; faint green when open. `drawKeys(keys, now, px, py)` — pulsing gold dot.
+- [ ] `processRayEntities()` in `game.js`: Reveal keys and doors by ray proximity (same radius as exit)
+- [ ] Level 8 extended with doors/keys
+- [ ] Commit + push
+
+### Files Modified
+- `js/game.js`
+- `js/audio.js`
+- `js/renderer.js`
+- `js/levels.js`
+
+### Acceptance Criteria
+- [ ] Door blocks movement and rays when closed
+- [ ] Door is not visible until a ray passes within 28px
+- [ ] Key is not visible until a ray passes within 28px
+- [ ] Collecting key plays audio + opens matching door
+- [ ] Open door is traversable and transparent to rays
+- [ ] Level 8 requires collecting a key to reach exit
+
+---
+
+## Phase 6 — Switches / Triggers
+**Status:** ⬜ Pending  
+**Goal:** Floor-level trigger zones that fire one-shot actions on player proximity.  
+**Depends on:** Phase 5 complete
+
+### Tasks
+- [ ] `game.js` `loadLevel()`: Populate `G.triggers[]` from `def.triggers[]`
+- [ ] `game.js` update(): For each unfired trigger, check player dist < 10px → fire action → mark fired
+- [ ] Actions: `'open_door'`, `'remove_wall'`, `'spawn_enemy'`
+- [ ] `renderer.js`: `drawTriggers(triggers, now, px, py)` — small pulsing blue dot, revealed by sound
+- [ ] `processRayEntities()`: Reveal triggers by ray proximity
+- [ ] Level 9 extended with switch
+- [ ] Commit + push
+
+### Files Modified
+- `js/game.js`
+- `js/renderer.js`
+- `js/levels.js`
+
+### Acceptance Criteria
+- [ ] Trigger not visible until sound reveals it
+- [ ] Walking over trigger fires its action exactly once
+- [ ] `open_door` trigger opens the target door
+- [ ] `remove_wall` trigger clears target cell to EMPTY
+
+---
+
+## Phase 7 — Sentry Enemy
+**Status:** ⬜ Pending  
+**Goal:** A stationary enemy with a rotating scan cone. Detects player via line-of-sight, not sound.  
+**Depends on:** Phase 0 complete
+
+### Tasks
+- [ ] `entities.js`: Add `Sentry` class — rotating scan angle, cone LOS check using `castFn`, state machine `idle`/`alert`
+- [ ] `game.js` `loadLevel()`: Spawn `Sentry` from level def type `'sentry'`
+- [ ] `game.js` update(): Pass `G.castFn` to `sentry.update(dt, castFn, player)` — sentry checks LOS to player each frame
+- [ ] `audio.js`: Add `playSentryAlert()` — distinct tone from ChaserEnemy alert
+- [ ] `renderer.js`: Reveal sentry same as other enemies (sound reveal radius, `revealedAt` fade)
+- [ ] Level 9 uses Sentry
+- [ ] Commit + push
+
+### Files Modified
+- `js/entities.js`
+- `js/game.js`
+- `js/audio.js`
+- `js/renderer.js`
+- `js/levels.js`
+
+### Acceptance Criteria
+- [ ] Sentry scan cone rotates visibly when revealed by sound
+- [ ] Player outside cone at any range → not detected
+- [ ] Player inside cone + no wall between → sentry alerts, pursues for 8s
+- [ ] Pulse hit → sentry stunned 0.6s
+- [ ] Sentry alert audio is distinct from ChaserEnemy alert
+
+---
+
+## Phase 8 — BlindStalker Enemy
+**Status:** ⬜ Pending  
+**Goal:** Fast enemy that navigates purely by sound; re-acquires instantly on any sound.  
+**Depends on:** Phase 0 complete
+
+### Tasks
+- [ ] `entities.js`: Add `BlindStalker` class (extend/copy ChaserEnemy with different speed/timer constants)
+- [ ] `game.js` `loadLevel()`: Spawn from `type: 'stalker'`
+- [ ] `game.js` `processRayEntities()`: Handle BlindStalker hearing (same path as ChaserEnemy)
+- [ ] Level 10 ("The Gauntlet II") data
+- [ ] Commit + push
+
+### Files Modified
+- `js/entities.js`
+- `js/game.js`
+- `js/levels.js`
+
+### Acceptance Criteria
+- [ ] BlindStalker faster than ChaserEnemy in hunt mode (104 vs 80 px/s)
+- [ ] Hunt timer shorter (4s vs 6s)
+- [ ] Re-acquires target immediately on any sound that reaches it
+- [ ] Balanced: beatable by staying completely still
+
+---
+
+## Phase 9 — Levels 6–10
+**Status:** ⬜ Pending  
+**Goal:** Complete level content for all 10 levels.  
+**Depends on:** Phases 1–8 complete (each level depends on its mechanic phase)
+
+### Tasks
+- [ ] Level 6 "The Whisper" — full grid, enemies
+- [ ] Level 7 "Flooded" — full grid with `CELL.WATER = 5` areas, enemies
+- [ ] Level 8 "The Collapse" — full grid with `CELL.COLLAPSIBLE = 4` walls, keys, doors, enemies
+- [ ] Level 9 "The Corridor" — full grid, crushers, sentry, switches
+- [ ] Level 10 "The Gauntlet II" — full grid, all mechanic types, BlindStalker
+- [ ] `LEVELS.length` auto-updates `TOTAL` in game.js
+- [ ] Commit + push
+
+### Acceptance Criteria
+- [ ] All 10 levels completable without dying
+- [ ] Each level's new mechanic is taught through design (no text needed)
+- [ ] Level hints updated for new mechanics
+
+---
+
+## Phase 10 — Ambient Audio
+**Status:** ⬜ Pending  
+**Goal:** Continuous low-frequency background drone during gameplay.  
+**Depends on:** Phase 0 complete
+
+### Tasks
+- [ ] `audio.js`: Add `startAmbient()` — creates looping 55Hz oscillator, stores node
+- [ ] `audio.js`: Add `stopAmbient()` — ramps gain to 0, disconnects
+- [ ] `game.js` `handleAction()`: Call `startAmbient()` on `'start'` and `'resume'`
+- [ ] `game.js` `die()`: Call `stopAmbient()`
+- [ ] `game.js` win check: Call `stopAmbient()` before showing win screen
+- [ ] Commit + push
+
+### Files Modified
+- `js/audio.js`
+- `js/game.js`
+
+### Acceptance Criteria
+- [ ] Drone audible (barely) during gameplay
+- [ ] Drone stops immediately on death and win
+- [ ] Drone resumes on 'resume' from pause
+- [ ] Drone does not stack (only one instance at a time)
+
+---
+
+## Phase 11 — Debug Overlay
+**Status:** ⬜ Pending  
+**Goal:** Backtick-toggled overlay showing FPS, ray counts, enemy states, player position.  
+**Depends on:** Phase 0 complete
+
+### Tasks
+- [ ] `js/debug.js` (NEW): `isEnabled()`, `toggle()`, `draw(ctx, state, fps)`
+- [ ] `input.js`: Add backtick key toggle → `consumeDebugToggle()`
+- [ ] `game.js` loop: Track FPS (rolling average). Call `Input.consumeDebugToggle()` → `Debug.toggle()`.
+- [ ] `renderer.js` `draw()`: If `Debug.isEnabled()`, call `Debug.draw(ctx, state, fps)` last
+- [ ] Debug display: FPS, active rays, echo trails, impacts, `G.screen`, player x/y tile, player water/crouch state, enemy states
+- [ ] Commit + push
+
+### Files Modified
+- `js/debug.js` (new)
+- `js/input.js`
+- `js/game.js`
+- `js/renderer.js`
+
+### Acceptance Criteria
+- [ ] Backtick toggles overlay on/off in-game
+- [ ] FPS counter updates every frame
+- [ ] Echo trail count never exceeds 500 (visible in overlay)
+- [ ] Enemy states (idle/hunting/alert) shown
+
+---
+
+## Phase 12 — Audio Polish
+**Status:** ⬜ Pending  
+**Goal:** All sounds use `SOUND_CONFIG`. Surface-type dispatcher. Pitch variation. Optional reverb.  
+**Depends on:** Phase 10 complete
+
+### Tasks
+- [ ] Verify all `play*()` functions read from `SOUND_CONFIG` (no hardcoded values)
+- [ ] Add `playFootstepSurface(surface)` dispatcher in `audio.js`
+- [ ] Add subtle pitch variation to footstep (±5% lowpass freq)
+- [ ] Commit + push
+
+### Acceptance Criteria
+- [ ] Modifying any `SOUND_CONFIG` value changes the audio behavior
+- [ ] Footstep sound varies slightly on each step
+
+---
+
+## Phase 13 — Mobile Polish
+**Status:** ⬜ Pending  
+**Goal:** All controls work on 375px viewport; crouch button functional on mobile.  
+**Depends on:** Phase 1 complete
+
+### Tasks
+- [ ] Test at 375px width (iPhone SE)
+- [ ] Verify joystick, pulse btn, crouch btn all functional
+- [ ] Verify canvas scales correctly
+- [ ] Fix any layout issues
+- [ ] Commit + push
+
+### Acceptance Criteria
+- [ ] All 10 levels completable on mobile touch controls
+- [ ] No UI overflow or clipped elements
+
+---
+
+## Phase 14 — Final Polish & Balance
+**Status:** ⬜ Pending  
+**Goal:** Playtest, balance, title screen demo, performance validation.  
+**Depends on:** Phases 1–13 complete
+
+### Tasks
+- [ ] Playtest all 10 levels; tune enemy speeds, hazard intervals, collapsible thresholds
+- [ ] Title screen: fire a demo pulse from center on load (shows mechanic before play)
+- [ ] Screen transitions: brief CSS opacity fade on level-up screen
+- [ ] Verify echo trail cap holds under stress (rapid pulse spam)
+- [ ] Commit + push tagged release
+
+### Acceptance Criteria
+- [ ] All 10 levels completable by a new player within 3 attempts
+- [ ] No frame drops below 30fps during heavy pulse
+- [ ] No console errors in any level
+- [ ] Title screen demo pulse plays on load

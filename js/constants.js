@@ -8,20 +8,12 @@ export const PLAYER_SPEED = 150;
 export const PLAYER_RADIUS = 7;
 
 export const STEP_INTERVAL = 240;
-export const STEP_WAVE_MAX = 130;
-export const STEP_WAVE_SPEED = 110;
-export const STEP_WAVE_ALPHA = 0.45;
-
-export const PULSE_WAVE_MAX = 280;
-export const PULSE_WAVE_SPEED = 190;
-export const PULSE_WAVE_ALPHA = 0.9;
 export const PULSE_COOLDOWN = 3500;
 
 export const WALL_FADE_MS = 2800;
-export const WAVE_RING_W = 12; // kept for backward compat (unused by new ray system)
 
 // ─── Ray echo system ─────────────────────────────────────────────────────────
-export const RAY_SPEED        = 160;   // px / s — slow enough to watch propagate
+export const RAY_SPEED        = 160;   // px / s
 export const RAY_COUNT_STEP   = 22;    // rays per footstep
 export const RAY_COUNT_PULSE  = 64;    // rays per pulse
 export const RAY_COUNT_HAZARD = 28;    // rays per hazard tick
@@ -32,10 +24,10 @@ export const MAX_BOUNCES      = 3;     // max wall reflections per ray
 export const ENERGY_DECAY     = 0.55;  // energy multiplied on each bounce
 export const MIN_ENERGY       = 0.06;  // ray dies below this energy after bounce
 export const RAY_TRAIL_MS     = 4200;  // echo trail persistence (ms)
+export const ECHO_TRAIL_CAP   = 500;   // hard cap to prevent unbounded growth
 export const IMPACT_FADE_MS   = 3600;  // wall impact glint persistence (ms)
 
-// Hearing attenuation: sounds render at full intensity within NEAR px of the
-// player and fade to silence beyond FAR px
+// Hearing attenuation: full intensity within NEAR px, silent beyond FAR px
 export const HEARING_NEAR = 130;
 export const HEARING_FAR  = 420;
 
@@ -46,13 +38,30 @@ export const ENEMY_RADIUS = 11;
 
 export const HAZARD_RADIUS = 28;
 export const HAZARD_PULSE_INTERVAL = 2400;
-export const HAZARD_PULSE_MAX = 80;
-export const HAZARD_PULSE_SPEED = 55;
 
+// ─── Crouch / stealth ────────────────────────────────────────────────────────
+export const CROUCH_SPEED_MULT    = 0.45;
+export const CROUCH_INTERVAL_MULT = 2.5;
+export const CROUCH_RAY_MULT      = 0.5;
+export const CROUCH_DIST_MULT     = 0.7;
+
+// ─── Water zone ──────────────────────────────────────────────────────────────
+export const WATER_SPEED_MULT    = 0.6;
+export const WATER_INTERVAL_MULT = 0.6;
+export const WATER_RAY_MULT      = 1.6;
+export const WATER_ENERGY_DRAIN  = 0.2; // extra energy loss per water cell traversed
+
+// ─── Collapsible walls ───────────────────────────────────────────────────────
+export const COLLAPSE_ENERGY_THRESHOLD = 0.3;
+export const COLLAPSE_BURST_RAYS       = 12;
+
+// ─── Cell types ──────────────────────────────────────────────────────────────
 export const CELL = {
-  EMPTY: 0,
-  WALL:  1,
-  START: 2,
-  EXIT:  3,
-  HAZARD: 6,
+  EMPTY:       0,
+  WALL:        1,
+  START:       2,
+  EXIT:        3,
+  COLLAPSIBLE: 4,
+  WATER:       5,
+  HAZARD:      6,
 };
