@@ -19,7 +19,7 @@
 ---
 
 ## Phase 0 — Cleanup & Foundation
-**Status:** 🔄 In Progress  
+**Status:** ✅ Complete (commit `cbc1694`)  
 **Goal:** Clean up legacy code, add new cell types, centralize audio config, fix echo trail memory leak.
 
 ### Tasks

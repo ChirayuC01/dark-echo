@@ -7,8 +7,8 @@
 
 ## Active Phase
 
-**Phase 0 — Cleanup & Foundation**  
-Status: 🔄 In Progress
+**Phase 1 — Crouch / Stealth Mechanic**  
+Status: ⬜ Pending (ready to begin)
 
 ---
 
@@ -35,16 +35,15 @@ Status: 🔄 In Progress
 
 ---
 
-## In Progress
+## Phase 0 — Complete ✅
 
-| Task | File | Notes |
-|---|---|---|
-| Remove unused constants | `js/constants.js` | ✅ Done in this session |
-| Add CELL.COLLAPSIBLE, CELL.WATER | `js/constants.js` | ✅ Done in this session |
-| Add crouch/water/collapse constants | `js/constants.js` | ✅ Done in this session |
-| Add ECHO_TRAIL_CAP | `js/constants.js` | ✅ Done in this session |
-| Add SOUND_CONFIG to audio.js | `js/audio.js` | ⬜ Pending |
-| Enforce ECHO_TRAIL_CAP in waves.js | `js/waves.js` | ⬜ Pending |
+All Phase 0 tasks done and pushed (commit `cbc1694`):
+- Removed 9 unused legacy constants from `constants.js`
+- Added `CELL.COLLAPSIBLE=4`, `CELL.WATER=5`, `ECHO_TRAIL_CAP=500`, crouch/water/collapse constants
+- Added `SOUND_CONFIG` to `audio.js`; refactored all `play*()` to use it
+- Added `playFootstepWater`, `playSentryAlert`, `playCollapse`, `playDoorOpen`, `playKeyPickup`, `startAmbient`, `stopAmbient`
+- Enforced `ECHO_TRAIL_CAP` in `waves.js` after time-based prune
+- Created all 6 docs files
 
 ---
 
