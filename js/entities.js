@@ -1,11 +1,9 @@
 import { TILE, PLAYER_SPEED, PLAYER_RADIUS, ENEMY_RADIUS,
          CHASER_SPEED_IDLE, CHASER_SPEED_HUNT,
          PATROL_SPEED, HAZARD_RADIUS,
-         HAZARD_PULSE_INTERVAL, HAZARD_PULSE_MAX, HAZARD_PULSE_SPEED,
-         PULSE_WAVE_MAX } from './constants.js';
-import { dist, normalize } from './utils.js';
+         HAZARD_PULSE_INTERVAL } from './constants.js';
+import { dist } from './utils.js';
 import { resolveWalls } from './collision.js';
-import { Wave } from './waves.js';
 
 // ─── Player ─────────────────────────────────────────────────────────────────
 export class Player {
@@ -122,12 +120,12 @@ export class Hazard {
     this.revealedAt = -Infinity;
   }
 
-  // Returns a Wave if it's time to pulse, null otherwise
+  // Returns {x,y} when it fires, null otherwise
   update(dt) {
     this.pulseTimer -= dt * 1000;
     if (this.pulseTimer <= 0) {
       this.pulseTimer = HAZARD_PULSE_INTERVAL;
-      return new Wave(this.x, this.y, HAZARD_PULSE_MAX, HAZARD_PULSE_SPEED, 0.55, 'hazard');
+      return { x: this.x, y: this.y };
     }
     return null;
   }

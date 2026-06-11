@@ -1,5 +1,63 @@
 import { TILE, PLAYER_RADIUS } from './constants.js';
 
+// ─── DDA ray-vs-grid cast ─────────────────────────────────────────────────────
+// Returns { x, y, t, nx, ny, col, row } of first wall hit within maxDist, or null.
+// nx/ny is the outward-facing normal of the wall face that was struck.
+export function castRay(grid, ox, oy, dx, dy, maxDist) {
+  const COLS = grid[0].length;
+  const ROWS = grid.length;
+
+  let col = Math.floor(ox / TILE);
+  let row = Math.floor(oy / TILE);
+  col = Math.max(0, Math.min(COLS - 1, col));
+  row = Math.max(0, Math.min(ROWS - 1, row));
+
+  const stepC = dx > 0 ? 1 : dx < 0 ? -1 : 0;
+  const stepR = dy > 0 ? 1 : dy < 0 ? -1 : 0;
+
+  const tDC = Math.abs(dx) < 1e-9 ? Infinity : TILE / Math.abs(dx);
+  const tDR = Math.abs(dy) < 1e-9 ? Infinity : TILE / Math.abs(dy);
+
+  // Distance from origin to first vertical / horizontal grid line
+  let tC = stepC > 0 ? ((col + 1) * TILE - ox) / dx
+         : stepC < 0 ? (col * TILE - ox) / dx   // dx<0 → positive result
+         : Infinity;
+  let tR = stepR > 0 ? ((row + 1) * TILE - oy) / dy
+         : stepR < 0 ? (row * TILE - oy) / dy
+         : Infinity;
+
+  // If origin sits exactly on a boundary moving away from it, skip the zero step
+  if (tC < 1e-6) tC += tDC;
+  if (tR < 1e-6) tR += tDR;
+
+  for (let guard = 0; guard < 48; guard++) {
+    let t, nc, nr, nx, ny;
+    if (tC <= tR) {
+      t = tC; nc = col + stepC; nr = row;
+      nx = -stepC; ny = 0;
+      tC += tDC;
+    } else {
+      t = tR; nc = col; nr = row + stepR;
+      nx = 0; ny = -stepR;
+      tR += tDR;
+    }
+
+    if (t > maxDist + 1e-6) break;
+
+    // Out of bounds → treat as solid boundary
+    if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) {
+      return { x: ox + dx * t, y: oy + dy * t, t, nx, ny, col: nc, row: nr };
+    }
+
+    if (grid[nr][nc] === 1) {
+      return { x: ox + dx * t, y: oy + dy * t, t, nx, ny, col: nc, row: nr };
+    }
+
+    col = nc; row = nr;
+  }
+  return null;
+}
+
 export function isWallAt(grid, px, py) {
   const col = Math.floor(px / TILE);
   const row = Math.floor(py / TILE);

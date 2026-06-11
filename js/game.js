@@ -1,7 +1,6 @@
-import { TILE, COLS, ROWS, W, H,
-         STEP_INTERVAL, STEP_WAVE_MAX, STEP_WAVE_SPEED, STEP_WAVE_ALPHA,
-         PULSE_WAVE_MAX, PULSE_WAVE_SPEED, PULSE_WAVE_ALPHA, PULSE_COOLDOWN,
-         WAVE_RING_W, PLAYER_RADIUS, ENEMY_RADIUS, HAZARD_PULSE_INTERVAL,
+import { TILE, COLS, ROWS,
+         STEP_INTERVAL, PULSE_COOLDOWN,
+         PLAYER_RADIUS, ENEMY_RADIUS,
          CELL } from './constants.js';
 import { dist } from './utils.js';
 import * as Audio from './audio.js';
@@ -9,21 +8,23 @@ import * as Input from './input.js';
 import * as Renderer from './renderer.js';
 import * as UI from './ui.js';
 import { LEVELS } from './levels.js';
-import { Wave, WaveManager } from './waves.js';
-import { circlesOverlap } from './collision.js';
+import { RaySystem } from './waves.js';
+import { castRay, circlesOverlap } from './collision.js';
 import { Player, PatrolEnemy, ChaserEnemy, Hazard } from './entities.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const G = {
-  screen: 'title',   // title | playing | paused | dead | win
+  screen: 'title',
   levelIndex: 0,
   grid: null,
   wallReveal: null,
+  wallRevealEnergy: null,
   player: null,
   enemies: [],
   hazards: [],
   exit: null,
-  waveManager: null,
+  raySystem: null,
+  castFn: null,
   pulseCooldown: 0,
   lastStepTime: 0,
   lastTime: 0,
@@ -36,14 +37,17 @@ const TOTAL = LEVELS.length;
 function loadLevel(idx) {
   const def = LEVELS[idx];
   G.grid = def.grid;
-  G.waveManager = new WaveManager();
+  G.raySystem = new RaySystem();
+  G.castFn = (ox, oy, dx, dy, maxDist) => castRay(G.grid, ox, oy, dx, dy, maxDist);
   G.wallReveal = Renderer.makeRevealMap(ROWS, COLS);
+  G.wallRevealEnergy = Renderer.makeEnergyMap(ROWS, COLS);
   G.enemies = [];
   G.hazards = [];
   G.player = null;
   G.exit = null;
   G.pulseCooldown = 0;
   G.lastStepTime = 0;
+  Renderer.precomputeWallFaces(def.grid);
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -76,69 +80,57 @@ function loadLevel(idx) {
   UI.setHint(def.hint);
 }
 
-// ─── Wave-wall interaction ────────────────────────────────────────────────────
-function updateWallReveal(now) {
-  for (const wave of G.waveManager.waves) {
-    if (wave.radius <= 0) continue;
-    const innerR = Math.max(0, wave.radius - WAVE_RING_W);
-    for (let row = 0; row < ROWS; row++) {
-      for (let col = 0; col < COLS; col++) {
-        if (G.grid[row][col] !== 1) continue;
-        const cx = col * TILE + TILE / 2;
-        const cy = row * TILE + TILE / 2;
-        const d = dist(wave.x, wave.y, cx, cy);
-        if (d <= wave.radius && d >= innerR) {
-          G.wallReveal[row][col] = now;
-        }
-      }
+// ─── Ray hit → wall reveal ────────────────────────────────────────────────────
+function applyWallHits(hits, now) {
+  for (const h of hits) {
+    const { col, row } = h;
+    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) continue;
+    G.wallReveal[row][col] = now;
+    // Track peak energy for brightness
+    if (h.energy > G.wallRevealEnergy[row][col]) {
+      G.wallRevealEnergy[row][col] = h.energy;
     }
   }
 }
 
-// ─── Wave-entity reveal ───────────────────────────────────────────────────────
-function updateEntityReveal(now) {
+// ─── Ray segments → entity reveal + hearing ──────────────────────────────────
+// Returns distance from point (px,py) to segment (x1,y1)→(x2,y2)
+function segPtDist(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-6) return Math.hypot(px - x1, py - y1);
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+function processRayEntities(now) {
   const allEntities = [...G.enemies, ...G.hazards];
-  for (const wave of G.waveManager.waves) {
-    const innerR = Math.max(0, wave.radius - WAVE_RING_W);
-    for (const ent of allEntities) {
-      const d = dist(wave.x, wave.y, ent.x, ent.y);
-      if (d <= wave.radius + ent.radius && d >= innerR - ent.radius) {
-        ent.revealedAt = now;
-      }
-    }
-    // Also reveal exit
-    if (G.exit) {
-      const d = dist(wave.x, wave.y, G.exit.x, G.exit.y);
-      if (d <= wave.radius && d >= innerR) {
-        // Exit doesn't need reveal – it's always drawn with faint glow
-      }
-    }
-  }
-}
+  const isStepLevel  = G.levelIndex >= 3;
+  const REVEAL_D = 28; // px – entity reveal radius around ray path
 
-// ─── Enemy AI hearing ────────────────────────────────────────────────────────
-function processEnemyHearing() {
-  for (const wave of G.waveManager.waves) {
-    if (wave.type !== 'pulse' && wave.type !== 'step') continue;
-    for (const en of G.enemies) {
-      if (!(en instanceof ChaserEnemy)) continue;
-      // Chasers hear pulse waves; hear step waves on level 4+ (index 3+)
-      const isStepLevel = G.levelIndex >= 3;
-      if (wave.type === 'step' && !isStepLevel) continue;
-      const d = dist(wave.x, wave.y, en.x, en.y);
-      // Only trigger when the ring's leading edge first crosses the enemy
-      if (d <= wave.radius && d > wave.prevRadius) {
-        en.hearSound(wave.x, wave.y);
-        Audio.playAlert();
-      }
+  for (const ray of G.raySystem.active) {
+    const sx = ray.segX, sy = ray.segY;
+    const tx = ray.tipX, ty = ray.tipY;
+
+    // ── Entity reveal ────────────────────────────────────────────────────────
+    for (const ent of allEntities) {
+      const d = segPtDist(ent.x, ent.y, sx, sy, tx, ty);
+      if (d < ent.radius + REVEAL_D) ent.revealedAt = now;
     }
-    // Patrol enemies pause when hit by pulse wave (one-shot)
-    if (wave.type === 'pulse') {
+
+    // ── Enemy hearing (one-shot per ray) ─────────────────────────────────────
+    if (ray.type === 'pulse' || (ray.type === 'step' && isStepLevel)) {
       for (const en of G.enemies) {
-        if (!(en instanceof PatrolEnemy)) continue;
-        const d = dist(wave.x, wave.y, en.x, en.y);
-        if (d <= wave.radius && d > wave.prevRadius) {
-          en.onPulseHit();
+        if (ray.heardEntities.has(en)) continue;
+        const d = segPtDist(en.x, en.y, sx, sy, tx, ty);
+        if (d < en.radius + 18) {
+          ray.heardEntities.add(en);
+          if (en instanceof ChaserEnemy) {
+            en.hearSound(ray.burstX, ray.burstY);
+            Audio.playAlert();
+          } else if (en instanceof PatrolEnemy && ray.type === 'pulse') {
+            en.onPulseHit();
+          }
         }
       }
     }
@@ -162,7 +154,7 @@ function checkDeath() {
       return;
     }
   }
-  // (Hazard scan waves reveal the hazard; proximity is the kill condition above)
+  // (Hazard ray-bursts reveal the hazard; proximity is the kill condition above)
 }
 
 function die(reason) {
@@ -203,39 +195,31 @@ function update(dt, now) {
   // Player movement
   G.player.move(move.dx, move.dy, dt, G.grid);
 
-  // Footstep waves
+  // Footstep rays
   if (moving && now - G.lastStepTime > STEP_INTERVAL) {
     G.lastStepTime = now;
-    G.waveManager.add(new Wave(
-      G.player.x, G.player.y,
-      STEP_WAVE_MAX, STEP_WAVE_SPEED, STEP_WAVE_ALPHA, 'step'
-    ));
+    G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn);
     Audio.playFootstep();
   }
 
-  // Pulse
+  // Pulse rays
   G.pulseCooldown = Math.max(0, G.pulseCooldown - dt * 1000);
   if (Input.consumePulse() && G.pulseCooldown === 0) {
     G.pulseCooldown = PULSE_COOLDOWN;
-    G.waveManager.add(new Wave(
-      G.player.x, G.player.y,
-      PULSE_WAVE_MAX, PULSE_WAVE_SPEED, PULSE_WAVE_ALPHA, 'pulse'
-    ));
+    G.raySystem.burst(G.player.x, G.player.y, 'pulse', G.castFn);
     Audio.playPulse();
   }
 
   // Hazard pulses
   for (const hz of G.hazards) {
-    const w = hz.update(dt);
-    if (w) { G.waveManager.add(w); Audio.playHazardPulse(); }
+    const ev = hz.update(dt);
+    if (ev) { G.raySystem.burst(ev.x, ev.y, 'hazard', G.castFn); Audio.playHazardPulse(); }
   }
 
-  G.waveManager.update(dt);
-
-  // Reveal walls + entities
-  updateWallReveal(now);
-  updateEntityReveal(now);
-  processEnemyHearing();
+  // Advance rays → collect wall hits
+  const hits = G.raySystem.update(dt, G.castFn, now);
+  applyWallHits(hits, now);
+  processRayEntities(now);
 
   // Enemy movement
   for (const en of G.enemies) en.update(dt, G.grid);
@@ -262,7 +246,11 @@ function loop(timestamp) {
     update(dt, timestamp);
   }
 
-  Renderer.draw({ ...G, waves: G.waveManager ? G.waveManager.waves : [] }, timestamp);
+  Renderer.draw({
+    ...G,
+    rays:       G.raySystem ? G.raySystem.active     : [],
+    echoTrails: G.raySystem ? G.raySystem.echoTrails : [],
+  }, timestamp);
   requestAnimationFrame(loop);
 }
 
