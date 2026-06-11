@@ -4,7 +4,8 @@ import { TILE, COLS, ROWS,
          IMPACT_FADE_MS, HEARING_NEAR, HEARING_FAR,
          CELL,
          RAY_COUNT_STEP, STEP_RAY_MAX,
-         CROUCH_INTERVAL_MULT, CROUCH_RAY_MULT, CROUCH_DIST_MULT } from './constants.js';
+         CROUCH_INTERVAL_MULT, CROUCH_RAY_MULT, CROUCH_DIST_MULT,
+         WATER_INTERVAL_MULT, WATER_RAY_MULT } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -31,6 +32,7 @@ const G = {
   lastStepTime: 0,
   lastTime: 0,
   deathReason: '',
+  playerInWater: false,
 };
 
 const TOTAL = LEVELS.length;
@@ -198,21 +200,29 @@ function update(dt, now) {
   const moving = move.dx !== 0 || move.dy !== 0;
   const crouching = Input.isCrouching();
 
-  // Player movement — crouch adjusts speed via entity
-  G.player.move(move.dx, move.dy, dt, G.grid, crouching);
+  // Water tile detection — check BEFORE moving so the tile under feet is current
+  const tileCol = Math.floor(G.player.x / TILE);
+  const tileRow = Math.floor(G.player.y / TILE);
+  G.playerInWater = G.grid[tileRow]?.[tileCol] === CELL.WATER;
 
-  // Footstep rays — fewer and shorter when crouching
-  const stepInterval = STEP_INTERVAL * (crouching ? CROUCH_INTERVAL_MULT : 1);
+  // Player movement — crouch + water both adjust speed
+  G.player.move(move.dx, move.dy, dt, G.grid, crouching, G.playerInWater);
+
+  // Footstep rays — crouch and water multipliers stack
+  const stepInterval = STEP_INTERVAL
+    * (crouching        ? CROUCH_INTERVAL_MULT : 1)
+    * (G.playerInWater  ? WATER_INTERVAL_MULT  : 1);
   if (moving && now - G.lastStepTime > stepInterval) {
     G.lastStepTime = now;
-    if (crouching) {
-      const count   = Math.max(1, Math.ceil(RAY_COUNT_STEP * CROUCH_RAY_MULT));
-      const maxDist = STEP_RAY_MAX * CROUCH_DIST_MULT;
-      G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn, count, maxDist);
+    const countMult = (crouching ? CROUCH_RAY_MULT : 1) * (G.playerInWater ? WATER_RAY_MULT : 1);
+    const count   = Math.max(1, Math.min(64, Math.ceil(RAY_COUNT_STEP * countMult)));
+    const maxDist = STEP_RAY_MAX * (crouching ? CROUCH_DIST_MULT : 1);
+    G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn, count, maxDist);
+    if (G.playerInWater) {
+      Audio.playFootstepWater();
     } else {
-      G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn);
+      Audio.playFootstep();
     }
-    Audio.playFootstep();
   }
 
   // Pulse rays

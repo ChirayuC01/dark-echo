@@ -2,7 +2,8 @@ import { TILE, PLAYER_SPEED, PLAYER_RADIUS, ENEMY_RADIUS,
          CHASER_SPEED_IDLE, CHASER_SPEED_HUNT,
          PATROL_SPEED, HAZARD_RADIUS,
          HAZARD_PULSE_INTERVAL,
-         CROUCH_SPEED_MULT } from './constants.js';
+         CROUCH_SPEED_MULT,
+         WATER_SPEED_MULT } from './constants.js';
 import { dist } from './utils.js';
 import { resolveWalls } from './collision.js';
 
@@ -15,9 +16,12 @@ export class Player {
     this.dead = false;
   }
 
-  move(dx, dy, dt, grid, crouching = false) {
+  move(dx, dy, dt, grid, crouching = false, inWater = false) {
     this.crouching = crouching;
-    const speed = PLAYER_SPEED * (crouching ? CROUCH_SPEED_MULT : 1);
+    this.inWater = inWater;
+    const speed = PLAYER_SPEED
+      * (crouching ? CROUCH_SPEED_MULT : 1)
+      * (inWater   ? WATER_SPEED_MULT  : 1);
     this.x += dx * speed * dt;
     this.y += dy * speed * dt;
     const r = resolveWalls(grid, this.x, this.y, this.radius);

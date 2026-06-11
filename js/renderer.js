@@ -37,7 +37,7 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, exit } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, exit, playerInWater } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
@@ -49,6 +49,7 @@ export function draw(state, now) {
   drawHazards(hazards, now, px, py);
   drawEnemies(enemies, now, px, py);
   drawActiveRays(rays, px, py);
+  if (playerInWater) drawWaterZone(player);
   drawPlayer(player);
   drawVignette();
 }
@@ -256,6 +257,20 @@ function rayColor(type, alpha) {
   if (type === 'hazard') return `rgba(230,105,55,${alpha.toFixed(3)})`;
   if (type === 'pulse')  return `rgba(185,220,255,${alpha.toFixed(3)})`;
   return                        `rgba(155,195,235,${alpha.toFixed(3)})`;
+}
+
+// ─── Water zone teal wash — drawn under player when on water tile ─────────────
+function drawWaterZone(player) {
+  if (!player) return;
+  ctx.save();
+  const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 80);
+  grd.addColorStop(0, 'rgba(50,150,160,0.08)');
+  grd.addColorStop(1, 'rgba(50,150,160,0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, 80, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 // ─── Player ───────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-// Each level: 20 cols x 15 rows. Cell values: 0=empty 1=wall 2=start 3=exit 6=hazard
+// Each level: 20 cols x 15 rows. Cell values: 0=empty 1=wall 2=start 3=exit 4=collapsible 5=water 6=hazard
 // Enemies defined separately so waypoints can reference grid coords.
 
 export const LEVELS = [
@@ -167,6 +167,36 @@ export const LEVELS = [
     enemies: [
       // stepAware: true — this patrol hears footsteps and investigates
       { type: 'patrol', col: 2, row: 7, stepAware: true, waypoints: [[2,7],[17,7]] },
+    ],
+  },
+
+  // ─── Level 7 ─── "Flooded"  (water zones)
+  // The mid-section is flooded — water tiles slow movement AND amplify every step.
+  // Two hazards patrol the flood. The player must cross to reach the lower maze.
+  // Crouching still helps (fewer rays), but the splash noise is louder regardless.
+  {
+    name: 'Flooded',
+    hint: 'Water slows your steps — but every splash is louder · Cross the flood carefully',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start (col 1)
+      [1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,0,1], // 2: upper maze
+      [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1], // 3: upper maze
+      [1,1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,0,1], // 4: upper maze
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5: open approach row
+      [1,1,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,1], // 6: WATER — walls force water crossing
+      [1,1,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,1], // 7: WATER — two hazards here
+      [1,1,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,1], // 8: WATER
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9: open exit row
+      [1,1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,0,1], // 10: lower maze
+      [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1], // 11: lower maze
+      [1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,0,1], // 12: lower maze
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13: exit (col 18)
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'hazard', col: 5,  row: 7 },
+      { type: 'hazard', col: 14, row: 7 },
     ],
   },
 ];
