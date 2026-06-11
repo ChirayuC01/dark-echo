@@ -33,6 +33,7 @@ const G = {
   lastTime: 0,
   deathReason: '',
   playerInWater: false,
+  waterReveals: new Map(),  // "row,col" → timestamp of last ray hit
 };
 
 const TOTAL = LEVELS.length;
@@ -50,6 +51,8 @@ function loadLevel(idx) {
   G.exit = null;
   G.pulseCooldown = 0;
   G.lastStepTime = 0;
+  G.playerInWater = false;
+  G.waterReveals = new Map();
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -143,6 +146,17 @@ function processRayEntities(now) {
           }
         }
       }
+    }
+  }
+}
+
+// ─── Water tile reveals via ray tips ─────────────────────────────────────────
+function processWaterReveals(now) {
+  for (const ray of G.raySystem.active) {
+    const tc = Math.floor(ray.tipX / TILE);
+    const tr = Math.floor(ray.tipY / TILE);
+    if (G.grid[tr]?.[tc] === CELL.WATER) {
+      G.waterReveals.set(`${tr},${tc}`, now);
     }
   }
 }
@@ -248,6 +262,7 @@ function update(dt, now) {
   const hits = G.raySystem.update(dt, G.castFn, now);
   applyWallHits(hits, now);
   processRayEntities(now);
+  processWaterReveals(now);
 
   // Enemy movement
   for (const en of G.enemies) en.update(dt, G.grid);

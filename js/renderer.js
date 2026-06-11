@@ -37,13 +37,13 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, exit, playerInWater, grid } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, exit, playerInWater, grid, waterReveals } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
   // Walls are intentionally never drawn — the world exists only as sound,
   // and all sound is rendered relative to how close the player is to it.
-  drawWaterTiles(grid);
+  drawRevealedWater(grid, waterReveals, now);
   drawEchoTrails(echoTrails, now, px, py);
   drawImpacts(impacts, now, px, py);
   drawExit(exit, now);
@@ -260,31 +260,30 @@ function rayColor(type, alpha) {
   return                        `rgba(155,195,235,${alpha.toFixed(3)})`;
 }
 
-// ─── Water tiles — faint teal fill on all CELL.WATER cells ───────────────────
-function drawWaterTiles(grid) {
-  if (!grid) return;
+// ─── Revealed water tiles — faint teal where sound waves have passed ─────────
+function drawRevealedWater(grid, waterReveals, now) {
+  if (!waterReveals || !waterReveals.size) return;
   ctx.save();
-  ctx.fillStyle = 'rgba(50,150,160,0.12)';
-  for (let r = 0; r < grid.length; r++) {
-    for (let c = 0; c < grid[r].length; c++) {
-      if (grid[r][c] === CELL.WATER) {
-        ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
-      }
-    }
+  for (const [key, revealTime] of waterReveals) {
+    const alpha = revealAlpha(revealTime, now);
+    if (alpha < 0.004) continue;
+    const [r, c] = key.split(',').map(Number);
+    ctx.fillStyle = `rgba(50,150,160,${(alpha * 0.4).toFixed(3)})`;
+    ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
   }
   ctx.restore();
 }
 
-// ─── Water zone glow — stronger teal pulse at player position when in water ───
+// ─── Player water ambient — tiny glow from the player's own splash ────────────
 function drawWaterZone(player) {
   if (!player) return;
   ctx.save();
-  const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 100);
-  grd.addColorStop(0, 'rgba(50,150,160,0.25)');
+  const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 28);
+  grd.addColorStop(0, 'rgba(50,180,190,0.45)');
   grd.addColorStop(1, 'rgba(50,150,160,0)');
   ctx.fillStyle = grd;
   ctx.beginPath();
-  ctx.arc(player.x, player.y, 100, 0, Math.PI * 2);
+  ctx.arc(player.x, player.y, 28, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
