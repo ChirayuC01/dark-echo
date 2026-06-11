@@ -1,6 +1,7 @@
 const keys = new Set();
-let _pulsePressed = false;
-let _pausePressed = false;
+let _pulsePressed  = false;
+let _pausePressed  = false;
+let _crouching     = false;
 
 // Touch joystick state
 const touch = {
@@ -15,19 +16,21 @@ export function init() {
     keys.add(e.code);
     if (e.code === 'Space') { e.preventDefault(); _pulsePressed = true; }
     if (e.code === 'Escape' || e.code === 'KeyP') _pausePressed = true;
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyC') _crouching = true;
   });
   window.addEventListener('keyup', e => {
     keys.delete(e.code);
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyC') _crouching = false;
   });
 
-  const zone = document.getElementById('joystick-zone');
-  const knob = document.getElementById('joystick-knob');
-  const pulseBtn = document.getElementById('pulse-btn');
+  const zone      = document.getElementById('joystick-zone');
+  const knob      = document.getElementById('joystick-knob');
+  const pulseBtn  = document.getElementById('pulse-btn');
+  const crouchBtn = document.getElementById('crouch-btn');
 
   if (zone) {
     zone.addEventListener('touchstart', e => {
       e.preventDefault();
-      const t = e.touches[0];
       const r = zone.getBoundingClientRect();
       touch.active = true;
       touch.startX = r.left + r.width / 2;
@@ -64,7 +67,17 @@ export function init() {
       e.preventDefault();
       touch.pulseBtn = true; _pulsePressed = true;
     }, { passive: false });
-    pulseBtn.addEventListener('touchend', () => { touch.pulseBtn = false; });
+    pulseBtn.addEventListener('touchend',   () => { touch.pulseBtn = false; });
+    pulseBtn.addEventListener('touchcancel', () => { touch.pulseBtn = false; });
+  }
+
+  if (crouchBtn) {
+    crouchBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      _crouching = true;
+    }, { passive: false });
+    crouchBtn.addEventListener('touchend',    () => { _crouching = false; });
+    crouchBtn.addEventListener('touchcancel', () => { _crouching = false; });
   }
 }
 
@@ -82,6 +95,8 @@ export function getMove() {
   if (len > 1) { dx /= len; dy /= len; }
   return { dx, dy };
 }
+
+export function isCrouching() { return _crouching; }
 
 export function consumePulse() {
   const v = _pulsePressed; _pulsePressed = false; return v;

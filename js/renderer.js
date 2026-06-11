@@ -284,13 +284,15 @@ function drawVignette() {
 }
 
 // ─── HUD ──────────────────────────────────────────────────────────────────────
-export function updateHUD(pulseCooldown, maxCooldown, levelIndex, totalLevels) {
-  const fill  = document.getElementById('pulse-fill');
-  const label = document.getElementById('level-label');
+export function updateHUD(pulseCooldown, maxCooldown, levelIndex, totalLevels, crouching = false) {
+  const fill      = document.getElementById('pulse-fill');
+  const label     = document.getElementById('level-label');
+  const crouchInd = document.getElementById('crouch-indicator');
   if (!fill || !label) return;
   const progress = 1 - pulseCooldown / maxCooldown;
   fill.style.right = `${(1 - Math.max(0, Math.min(1, progress))) * 100}%`;
   label.textContent = `LEVEL ${levelIndex + 1} / ${totalLevels}`;
+  if (crouchInd) crouchInd.classList.toggle('active', crouching);
 }
 
 export function setHUDVisible(visible) {

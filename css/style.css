@@ -109,6 +109,13 @@ canvas {
   font-size: 0.68rem; letter-spacing: 0.12em; color: #444;
 }
 
+#crouch-indicator {
+  font-size: 0.62rem; letter-spacing: 0.12em; color: #333;
+  transition: color 0.1s;
+}
+
+#crouch-indicator.active { color: rgba(200,220,255,0.7); }
+
 /* Mobile touch controls */
 #touch-controls {
   display: none;
@@ -140,6 +147,18 @@ canvas {
   display: flex; align-items: center; justify-content: center;
   font-family: inherit; font-size: 0.6rem; letter-spacing: 0.08em;
   color: rgba(160,180,255,0.6); cursor: pointer;
+  text-transform: uppercase;
+}
+
+#crouch-btn {
+  position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(180,180,180,0.06);
+  border: 1px solid rgba(180,180,180,0.18);
+  pointer-events: all;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; font-size: 0.55rem; letter-spacing: 0.08em;
+  color: rgba(180,180,180,0.45); cursor: pointer;
   text-transform: uppercase;
 }
 

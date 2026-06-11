@@ -122,16 +122,17 @@ export class RaySystem {
   }
 
   // Emit a burst of rays from (x,y).
-  burst(x, y, type, castFn) {
-    const count   = type === 'pulse'  ? RAY_COUNT_PULSE
-                  : type === 'step'   ? RAY_COUNT_STEP
-                  : RAY_COUNT_HAZARD;
+  // countOverride and maxDistOverride let callers reduce output (e.g. when crouching).
+  burst(x, y, type, castFn, countOverride, maxDistOverride) {
+    const count   = countOverride  ?? (type === 'pulse'  ? RAY_COUNT_PULSE
+                                     : type === 'step'   ? RAY_COUNT_STEP
+                                     : RAY_COUNT_HAZARD);
     const energy  = type === 'pulse'  ? 1.0
                   : type === 'step'   ? 0.42
                   : 0.58;
-    const maxDist = type === 'pulse'  ? PULSE_RAY_MAX
-                  : type === 'step'   ? STEP_RAY_MAX
-                  : HAZARD_RAY_MAX;
+    const maxDist = maxDistOverride ?? (type === 'pulse'  ? PULSE_RAY_MAX
+                                      : type === 'step'   ? STEP_RAY_MAX
+                                      : HAZARD_RAY_MAX);
 
     // Random phase offset so successive bursts don't align
     const phase = Math.random() * Math.PI * 2;

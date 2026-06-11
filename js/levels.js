@@ -137,4 +137,36 @@ export const LEVELS = [
       { type: 'hazard',  col: 14, row: 11 },
     ],
   },
+
+  // ─── Level 6 ─── "The Whisper"  (crouch required)
+  // The guard now hears footsteps — not just pulse.
+  // A wide open patrol corridor (row 7) splits the level in half.
+  // The only crossing points are at col 1 and col 18 (row 6/8 gaps).
+  // Normal steps from row 7 reach the patrol anywhere on the corridor;
+  // crouched steps (shorter ray range) do not — giving a safe crossing window.
+  {
+    name: 'The Whisper',
+    hint: 'Hold SHIFT (or C) to crouch · The guard hears every footstep · Silence is survival',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start, wide open
+      [1,0,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,0,1], // 2: upper maze
+      [1,0,0,0,1,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1], // 3: upper maze
+      [1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1], // 4: upper maze
+      [1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1], // 5: open connector
+      [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1], // 6: wall — gaps at col 1 & 18
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7: PATROL CORRIDOR (fully open)
+      [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1], // 8: wall — gaps at col 1 & 18
+      [1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1], // 9: open connector
+      [1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1], // 10: lower maze
+      [1,0,0,0,1,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1], // 11: lower maze
+      [1,0,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1,1,0,1], // 12: lower maze
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13: exit col 18
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      // stepAware: true — this patrol hears footsteps and investigates
+      { type: 'patrol', col: 2, row: 7, stepAware: true, waypoints: [[2,7],[17,7]] },
+    ],
+  },
 ];

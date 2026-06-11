@@ -2,7 +2,9 @@ import { TILE, COLS, ROWS,
          STEP_INTERVAL, PULSE_COOLDOWN,
          PLAYER_RADIUS, ENEMY_RADIUS,
          IMPACT_FADE_MS, HEARING_NEAR, HEARING_FAR,
-         CELL } from './constants.js';
+         CELL,
+         RAY_COUNT_STEP, STEP_RAY_MAX,
+         CROUCH_INTERVAL_MULT, CROUCH_RAY_MULT, CROUCH_DIST_MULT } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -36,7 +38,7 @@ const TOTAL = LEVELS.length;
 // ─── Level loading ────────────────────────────────────────────────────────────
 function loadLevel(idx) {
   const def = LEVELS[idx];
-  G.grid = def.grid;
+  G.grid = def.grid.map(row => [...row]); // mutable copy (for future collapsibles)
   G.raySystem = new RaySystem();
   G.castFn = (ox, oy, dx, dy, maxDist) => castRay(G.grid, ox, oy, dx, dy, maxDist);
   G.impacts = [];
@@ -49,7 +51,7 @@ function loadLevel(idx) {
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
-      const cell = def.grid[row][col];
+      const cell = G.grid[row][col];
       const cx = col * TILE + TILE / 2;
       const cy = row * TILE + TILE / 2;
       if (cell === CELL.START) G.player = new Player(cx, cy);
@@ -66,7 +68,9 @@ function loadLevel(idx) {
         x: c * TILE + TILE / 2,
         y: r * TILE + TILE / 2,
       }));
-      G.enemies.push(new PatrolEnemy(ex, ey, wps));
+      const patrol = new PatrolEnemy(ex, ey, wps);
+      patrol.stepAware = !!e.stepAware;
+      G.enemies.push(patrol);
     } else if (e.type === 'chaser') {
       G.enemies.push(new ChaserEnemy(ex, ey));
     } else if (e.type === 'hazard') {
@@ -78,8 +82,7 @@ function loadLevel(idx) {
   UI.setHint(def.hint);
 }
 
-// ─── Ray hit → wall impact glint ──────────────────────────────────────────────
-// Walls are never drawn; the player infers them from where rays strike.
+// ─── Ray hit → wall impact glint ─────────────────────────────────────────────
 function applyWallHits(hits, now) {
   for (const h of hits) {
     G.impacts.push({
@@ -90,7 +93,6 @@ function applyWallHits(hits, now) {
       createdAt: now,
     });
   }
-  // Prune expired glints in place
   let wi = 0;
   for (let i = 0; i < G.impacts.length; i++) {
     if (now - G.impacts[i].createdAt < IMPACT_FADE_MS) G.impacts[wi++] = G.impacts[i];
@@ -98,29 +100,29 @@ function applyWallHits(hits, now) {
   G.impacts.length = wi;
 }
 
-// ─── Ray segments → entity reveal + hearing ──────────────────────────────────
+// ─── Ray segments → entity reveal + hearing ───────────────────────────────────
 function processRayEntities(now) {
   const allEntities = [...G.enemies, ...G.hazards];
-  const isStepLevel  = G.levelIndex >= 3;
-  const REVEAL_D = 28; // px – entity reveal radius around ray path
+  const isStepLevel = G.levelIndex >= 3;
+  const REVEAL_D = 28;
 
   for (const ray of G.raySystem.active) {
     const sx = ray.segX, sy = ray.segY;
     const tx = ray.tipX, ty = ray.tipY;
 
-    // ── Entity reveal ────────────────────────────────────────────────────────
+    // Entity reveal
     for (const ent of allEntities) {
       const d = segPtDist(ent.x, ent.y, sx, sy, tx, ty);
       if (d < ent.radius + REVEAL_D) ent.revealedAt = now;
     }
 
-    // ── Exit reveal (player rays only — hazard scans shouldn't help) ────────
+    // Exit reveal (player rays only)
     if (G.exit && ray.type !== 'hazard') {
       const d = segPtDist(G.exit.x, G.exit.y, sx, sy, tx, ty);
       if (d < REVEAL_D) G.exit.revealedAt = now;
     }
 
-    // ── Enemy hearing (one-shot per ray) ─────────────────────────────────────
+    // Enemy hearing (one-shot per ray)
     if (ray.type === 'pulse' || (ray.type === 'step' && isStepLevel)) {
       for (const en of G.enemies) {
         if (ray.heardEntities.has(en)) continue;
@@ -130,8 +132,12 @@ function processRayEntities(now) {
           if (en instanceof ChaserEnemy) {
             en.hearSound(ray.burstX, ray.burstY);
             Audio.playAlert();
-          } else if (en instanceof PatrolEnemy && ray.type === 'pulse') {
-            en.onPulseHit();
+          } else if (en instanceof PatrolEnemy) {
+            if (ray.type === 'pulse') {
+              en.onPulseHit();
+            } else if (ray.type === 'step' && en.stepAware) {
+              en.hearStep(ray.burstX, ray.burstY);
+            }
           }
         }
       }
@@ -139,24 +145,21 @@ function processRayEntities(now) {
   }
 }
 
-// ─── Death check ─────────────────────────────────────────────────────────────
+// ─── Death check ──────────────────────────────────────────────────────────────
 function checkDeath() {
   const p = G.player;
-  // Enemy contact
   for (const en of G.enemies) {
     if (circlesOverlap(p.x, p.y, PLAYER_RADIUS, en.x, en.y, ENEMY_RADIUS)) {
       die('Caught.');
       return;
     }
   }
-  // Hazard proximity (always active – no wave needed)
   for (const hz of G.hazards) {
     if (hz.killsPlayer(p.x, p.y)) {
       die('Disintegrated.');
       return;
     }
   }
-  // (Hazard ray-bursts reveal the hazard; proximity is the kill condition above)
 }
 
 function die(reason) {
@@ -168,7 +171,7 @@ function die(reason) {
   Renderer.setHUDVisible(false);
 }
 
-// ─── Win check ───────────────────────────────────────────────────────────────
+// ─── Win check ────────────────────────────────────────────────────────────────
 function checkExit() {
   if (!G.exit) return;
   if (dist(G.player.x, G.player.y, G.exit.x, G.exit.y) < TILE * 0.6) {
@@ -193,14 +196,22 @@ function checkExit() {
 function update(dt, now) {
   const move = Input.getMove();
   const moving = move.dx !== 0 || move.dy !== 0;
+  const crouching = Input.isCrouching();
 
-  // Player movement
-  G.player.move(move.dx, move.dy, dt, G.grid);
+  // Player movement — crouch adjusts speed via entity
+  G.player.move(move.dx, move.dy, dt, G.grid, crouching);
 
-  // Footstep rays
-  if (moving && now - G.lastStepTime > STEP_INTERVAL) {
+  // Footstep rays — fewer and shorter when crouching
+  const stepInterval = STEP_INTERVAL * (crouching ? CROUCH_INTERVAL_MULT : 1);
+  if (moving && now - G.lastStepTime > stepInterval) {
     G.lastStepTime = now;
-    G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn);
+    if (crouching) {
+      const count   = Math.max(1, Math.ceil(RAY_COUNT_STEP * CROUCH_RAY_MULT));
+      const maxDist = STEP_RAY_MAX * CROUCH_DIST_MULT;
+      G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn, count, maxDist);
+    } else {
+      G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn);
+    }
     Audio.playFootstep();
   }
 
@@ -212,7 +223,7 @@ function update(dt, now) {
     Audio.playPulse();
   }
 
-  // Hazard pulses — audio volume falls off with distance from the player
+  // Hazard pulses
   for (const hz of G.hazards) {
     const ev = hz.update(dt);
     if (ev) {
@@ -236,7 +247,7 @@ function update(dt, now) {
   if (G.screen === 'playing') checkExit();
 
   // HUD
-  Renderer.updateHUD(G.pulseCooldown, PULSE_COOLDOWN, G.levelIndex, TOTAL);
+  Renderer.updateHUD(G.pulseCooldown, PULSE_COOLDOWN, G.levelIndex, TOTAL, crouching);
 }
 
 // ─── Game loop ────────────────────────────────────────────────────────────────
