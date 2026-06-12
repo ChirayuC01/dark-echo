@@ -137,6 +137,34 @@ export class ChaserEnemy {
   }
 }
 
+// ─── Crusher ─────────────────────────────────────────────────────────────────
+export class Crusher {
+  constructor(x, y, axis, range, period) {
+    this.originX = x; this.originY = y;
+    this.x = x; this.y = y;
+    this.axis    = axis;
+    this.range   = range * TILE;   // tiles → px
+    this.period  = period;
+    this.elapsed = Math.random() * period;
+    this.revealedAt = -Infinity;
+    this.radius  = TILE * 0.5;
+  }
+
+  update(dt) {
+    this.elapsed += dt;
+    const offset = Math.sin((this.elapsed / this.period) * Math.PI * 2) * this.range;
+    if (this.axis === 'h') { this.x = this.originX + offset; }
+    else                   { this.y = this.originY + offset; }
+  }
+
+  bounds() {
+    return {
+      x1: this.x - TILE / 2, y1: this.y - TILE / 2,
+      x2: this.x + TILE / 2, y2: this.y + TILE / 2,
+    };
+  }
+}
+
 // ─── Hazard ──────────────────────────────────────────────────────────────────
 export class Hazard {
   constructor(x, y) {

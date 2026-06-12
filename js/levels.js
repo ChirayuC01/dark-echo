@@ -230,4 +230,36 @@ export const LEVELS = [
       { type: 'chaser', col: 14, row: 3 },
     ],
   },
+
+  // ─── Level 9 ─── "The Corridor"  (crushers)
+  // Three horizontal corridors split by walls. Each corridor has a crusher
+  // sweeping back and forth. The player must time their crossing.
+  // Path: start (row 1) → right to col 18 → drop → cross left → drop → cross
+  // right → drop → navigate lower maze to exit col 18 row 13.
+  {
+    name: 'The Corridor',
+    hint: 'The walls move · Wait for the gap · Time your crossing',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1, open row
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1], // 2: wall — gap at col 18 only
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 3: CORRIDOR 1 (cross left)
+      [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 4: wall — gap at col 1 only
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5: CORRIDOR 2 (cross right)
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1], // 6: wall — gap at col 18 only
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7: CORRIDOR 3 (cross left)
+      [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 8: wall — gap at col 1 only
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9: open exit approach
+      [1,1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,0,1], // 10: lower maze
+      [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1], // 11: lower maze
+      [1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,0,1], // 12: lower maze
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13: exit col 18
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'crusher', col: 9, row: 3, axis: 'h', range: 5, period: 5.0 },
+      { type: 'crusher', col: 9, row: 5, axis: 'h', range: 5, period: 3.5 },
+      { type: 'crusher', col: 9, row: 7, axis: 'h', range: 5, period: 2.5 },
+    ],
+  },
 ];

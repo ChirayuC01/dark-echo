@@ -14,8 +14,8 @@ import * as Renderer from './renderer.js';
 import * as UI from './ui.js';
 import { LEVELS } from './levels.js';
 import { RaySystem } from './waves.js';
-import { castRay, circlesOverlap } from './collision.js';
-import { Player, PatrolEnemy, ChaserEnemy, Hazard } from './entities.js';
+import { castRay, circlesOverlap, castRayCrushers, circleOverlapsAABB } from './collision.js';
+import { Player, PatrolEnemy, ChaserEnemy, Hazard, Crusher } from './entities.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const G = {
@@ -36,6 +36,7 @@ const G = {
   playerInWater: false,
   waterReveals: new Map(),        // "row,col" → timestamp of last ray hit
   collapsibleReveals: new Map(),  // "row,col" → timestamp of last ray hit
+  crushers: [],
 };
 
 const TOTAL = LEVELS.length;
@@ -45,10 +46,18 @@ function loadLevel(idx) {
   const def = LEVELS[idx];
   G.grid = def.grid.map(row => [...row]); // mutable copy (for future collapsibles)
   G.raySystem = new RaySystem();
-  G.castFn = (ox, oy, dx, dy, maxDist) => castRay(G.grid, ox, oy, dx, dy, maxDist);
+  G.castFn = (ox, oy, dx, dy, maxDist) => {
+    const gridHit  = castRay(G.grid, ox, oy, dx, dy, maxDist);
+    const crushHit = castRayCrushers(G.crushers, ox, oy, dx, dy, maxDist);
+    if (!gridHit && !crushHit) return null;
+    if (!gridHit) return crushHit;
+    if (!crushHit) return gridHit;
+    return gridHit.t <= crushHit.t ? gridHit : crushHit;
+  };
   G.impacts = [];
   G.enemies = [];
   G.hazards = [];
+  G.crushers = [];
   G.player = null;
   G.exit = null;
   G.pulseCooldown = 0;
@@ -83,6 +92,8 @@ function loadLevel(idx) {
       G.enemies.push(new ChaserEnemy(ex, ey));
     } else if (e.type === 'hazard') {
       G.hazards.push(new Hazard(ex, ey));
+    } else if (e.type === 'crusher') {
+      G.crushers.push(new Crusher(ex, ey, e.axis, e.range, e.period));
     }
   }
 
@@ -94,13 +105,15 @@ function loadLevel(idx) {
 function applyWallHits(hits, now) {
   for (const h of hits) {
     const isCollapsible = G.grid[h.row]?.[h.col] === CELL.COLLAPSIBLE;
+    const isCrusher = !!h.crusher;
     if (isCollapsible) G.collapsibleReveals.set(`${h.row},${h.col}`, now);
+    if (isCrusher) h.crusher.revealedAt = now;
     G.impacts.push({
       x: h.x, y: h.y,
       nx: h.nx, ny: h.ny,
       energy: h.energy,
       type: h.type,
-      cellType: isCollapsible ? 'collapsible' : null,
+      cellType: isCollapsible ? 'collapsible' : isCrusher ? 'crusher' : null,
       createdAt: now,
     });
 
@@ -131,6 +144,12 @@ function processRayEntities(now) {
     for (const ent of allEntities) {
       const d = segPtDist(ent.x, ent.y, sx, sy, tx, ty);
       if (d < ent.radius + REVEAL_D) ent.revealedAt = now;
+    }
+
+    // Crusher reveal by ray proximity
+    for (const cr of G.crushers) {
+      const d = segPtDist(cr.x, cr.y, sx, sy, tx, ty);
+      if (d < cr.radius + REVEAL_D) cr.revealedAt = now;
     }
 
     // Exit reveal (player rays only)
@@ -187,6 +206,13 @@ function checkDeath() {
   for (const hz of G.hazards) {
     if (hz.killsPlayer(p.x, p.y)) {
       die('Disintegrated.');
+      return;
+    }
+  }
+  for (const cr of G.crushers) {
+    const b = cr.bounds();
+    if (circleOverlapsAABB(p.x, p.y, PLAYER_RADIUS, b.x1, b.y1, b.x2, b.y2)) {
+      die('Crushed.');
       return;
     }
   }
@@ -281,6 +307,7 @@ function update(dt, now) {
 
   // Enemy movement
   for (const en of G.enemies) en.update(dt, G.grid);
+  for (const cr of G.crushers) cr.update(dt);
 
   // Death & exit
   checkDeath();

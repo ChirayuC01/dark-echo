@@ -37,7 +37,7 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, exit, playerInWater, grid, waterReveals, collapsibleReveals } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, crushers, exit, playerInWater, grid, waterReveals, collapsibleReveals } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
@@ -48,6 +48,7 @@ export function draw(state, now) {
   drawEchoTrails(echoTrails, now, px, py);
   drawImpacts(impacts, now, px, py);
   drawExit(exit, now);
+  drawCrushers(crushers, now, px, py);
   drawHazards(hazards, now, px, py);
   drawEnemies(enemies, now, px, py);
   drawActiveRays(rays, px, py);
@@ -78,7 +79,10 @@ function drawImpacts(impacts, now, px, py) {
     const txv = -im.ny, tyv = im.nx;
     const len = 3 + im.energy * 6; // brighter hits leave longer marks
 
-    if (im.cellType === 'collapsible') {
+    if (im.cellType === 'crusher') {
+      ctx.strokeStyle = `rgba(230,105,55,${(alpha * 0.95).toFixed(3)})`;
+      ctx.shadowColor = 'rgba(230,105,55,0.5)';
+    } else if (im.cellType === 'collapsible') {
       ctx.strokeStyle = `rgba(200,175,120,${(alpha * 0.95).toFixed(3)})`;
       ctx.shadowColor = 'rgba(200,175,120,0.5)';
     } else if (im.type === 'hazard') {
@@ -262,6 +266,25 @@ function rayColor(type, alpha) {
   if (type === 'hazard') return `rgba(230,105,55,${alpha.toFixed(3)})`;
   if (type === 'pulse')  return `rgba(185,220,255,${alpha.toFixed(3)})`;
   return                        `rgba(155,195,235,${alpha.toFixed(3)})`;
+}
+
+// ─── Crushers — orange lethal moving blocks, revealed only by ray contact ─────
+function drawCrushers(crushers, now, px, py) {
+  if (!crushers || crushers.length === 0) return;
+  ctx.save();
+  for (const c of crushers) {
+    const alpha = revealAlpha(c.revealedAt, now) * hearing(Math.hypot(c.x - px, c.y - py));
+    if (alpha < 0.004) continue;
+    const b = c.bounds();
+    ctx.fillStyle = `rgba(230,105,55,${(alpha * 0.55).toFixed(3)})`;
+    ctx.fillRect(b.x1, b.y1, TILE, TILE);
+    ctx.strokeStyle = `rgba(240,120,65,${(alpha * 0.85).toFixed(3)})`;
+    ctx.lineWidth = 1.5;
+    ctx.shadowBlur = 8 * alpha;
+    ctx.shadowColor = 'rgba(230,105,55,0.6)';
+    ctx.strokeRect(b.x1 + 0.5, b.y1 + 0.5, TILE - 1, TILE - 1);
+  }
+  ctx.restore();
 }
 
 // ─── Revealed collapsible walls — warm tan block where sound has touched ──────

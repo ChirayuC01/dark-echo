@@ -107,3 +107,37 @@ export function circlesOverlap(ax, ay, ar, bx, by, br) {
   const d = ar + br;
   return dx * dx + dy * dy < d * d;
 }
+
+// AABB slab-method ray vs crusher bounding boxes
+export function castRayCrushers(crushers, ox, oy, dx, dy, maxDist) {
+  if (!crushers || crushers.length === 0) return null;
+  let closest = null;
+  for (const c of crushers) {
+    const b = c.bounds();
+    const invDx = Math.abs(dx) < 1e-9 ? (dx >= 0 ? 1e18 : -1e18) : 1 / dx;
+    const invDy = Math.abs(dy) < 1e-9 ? (dy >= 0 ? 1e18 : -1e18) : 1 / dy;
+    const tx1 = (b.x1 - ox) * invDx, tx2 = (b.x2 - ox) * invDx;
+    const ty1 = (b.y1 - oy) * invDy, ty2 = (b.y2 - oy) * invDy;
+    const txEnter = Math.min(tx1, tx2), txExit = Math.max(tx1, tx2);
+    const tyEnter = Math.min(ty1, ty2), tyExit = Math.max(ty1, ty2);
+    const tEnter = Math.max(txEnter, tyEnter);
+    const tExit  = Math.min(txExit,  tyExit);
+    if (tExit < 1e-6 || tEnter > tExit || tEnter > maxDist + 1e-6) continue;
+    const t = tEnter < 1e-6 ? tExit : tEnter;
+    if (t > maxDist + 1e-6) continue;
+    if (closest && t >= closest.t) continue;
+    let nx = 0, ny = 0;
+    if (txEnter > tyEnter) { nx = dx > 0 ? -1 : 1; }
+    else                   { ny = dy > 0 ? -1 : 1; }
+    closest = { x: ox + dx * t, y: oy + dy * t, t, nx, ny, col: -1, row: -1, crusher: c };
+  }
+  return closest;
+}
+
+// Circle vs AABB overlap (crusher kill check)
+export function circleOverlapsAABB(cx, cy, cr, x1, y1, x2, y2) {
+  const nearX = Math.max(x1, Math.min(cx, x2));
+  const nearY = Math.max(y1, Math.min(cy, y2));
+  const dx = cx - nearX, dy = cy - nearY;
+  return dx * dx + dy * dy < cr * cr;
+}
