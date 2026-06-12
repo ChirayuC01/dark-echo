@@ -1,4 +1,4 @@
-import { TILE, PLAYER_RADIUS } from './constants.js';
+import { TILE, PLAYER_RADIUS, CELL } from './constants.js';
 
 // ─── DDA ray-vs-grid cast ─────────────────────────────────────────────────────
 // Returns { x, y, t, nx, ny, col, row } of first wall hit within maxDist, or null.
@@ -49,7 +49,7 @@ export function castRay(grid, ox, oy, dx, dy, maxDist) {
       return { x: ox + dx * t, y: oy + dy * t, t, nx, ny, col: nc, row: nr };
     }
 
-    if (grid[nr][nc] === 1) {
+    if (grid[nr][nc] === CELL.WALL || grid[nr][nc] === CELL.COLLAPSIBLE) {
       return { x: ox + dx * t, y: oy + dy * t, t, nx, ny, col: nc, row: nr };
     }
 
@@ -84,7 +84,7 @@ export function resolveWalls(grid, x, y, radius) {
 
   for (let r = minRow; r <= maxRow; r++) {
     for (let c = minCol; c <= maxCol; c++) {
-      if (grid[r][c] !== 1) continue;
+      if (grid[r][c] !== CELL.WALL && grid[r][c] !== CELL.COLLAPSIBLE) continue;
       if (!circleOverlapsTile(x, y, radius, c, r)) continue;
 
       const tx = c * TILE, ty = r * TILE;

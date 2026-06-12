@@ -199,4 +199,35 @@ export const LEVELS = [
       { type: 'hazard', col: 14, row: 7 },
     ],
   },
+
+  // ─── Level 8 ─── "The Collapse"  (collapsible walls)
+  // Two horizontal barriers (rows 6 and 8) each have a single passage blocked by
+  // a collapsible wall (CELL = 4) at col 9. The player must fire a pulse to shatter
+  // each barrier. A patrol guards the middle zone between the barriers; a chaser
+  // roams the upper section. Both react to pulses — timing is the puzzle.
+  {
+    name: 'The Collapse',
+    hint: 'A strong pulse can shatter certain walls · Timing is everything',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1
+      [1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,0,1], // 2: upper maze
+      [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1], // 3: upper maze
+      [1,1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,0,1], // 4: upper maze
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5: open approach
+      [1,1,1,1,1,1,1,1,1,4,1,1,1,1,1,1,1,1,1,1], // 6: BARRIER — collapsible at col 9
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7: middle zone (patrol)
+      [1,1,1,1,1,1,1,1,1,4,1,1,1,1,1,1,1,1,1,1], // 8: BARRIER — collapsible at col 9
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9: open exit approach
+      [1,1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,0,1], // 10: lower maze
+      [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1], // 11: lower maze
+      [1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,0,1], // 12: lower maze
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13: exit col 18
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'patrol', col: 1,  row: 7, waypoints: [[1,7],[17,7]] },
+      { type: 'chaser', col: 14, row: 3 },
+    ],
+  },
 ];

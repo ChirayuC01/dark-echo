@@ -77,7 +77,10 @@ function drawImpacts(impacts, now, px, py) {
     const txv = -im.ny, tyv = im.nx;
     const len = 3 + im.energy * 6; // brighter hits leave longer marks
 
-    if (im.type === 'hazard') {
+    if (im.cellType === 'collapsible') {
+      ctx.strokeStyle = `rgba(200,175,120,${(alpha * 0.95).toFixed(3)})`;
+      ctx.shadowColor = 'rgba(200,175,120,0.5)';
+    } else if (im.type === 'hazard') {
       ctx.strokeStyle = `rgba(225,100,50,${(alpha * 0.85).toFixed(3)})`;
       ctx.shadowColor = 'rgba(225,100,50,0.5)';
     } else {

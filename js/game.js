@@ -5,7 +5,8 @@ import { TILE, COLS, ROWS,
          CELL,
          RAY_COUNT_STEP, STEP_RAY_MAX,
          CROUCH_INTERVAL_MULT, CROUCH_RAY_MULT, CROUCH_DIST_MULT,
-         WATER_INTERVAL_MULT, WATER_RAY_MULT } from './constants.js';
+         WATER_INTERVAL_MULT, WATER_RAY_MULT,
+         COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -90,13 +91,21 @@ function loadLevel(idx) {
 // ─── Ray hit → wall impact glint ─────────────────────────────────────────────
 function applyWallHits(hits, now) {
   for (const h of hits) {
+    const isCollapsible = G.grid[h.row]?.[h.col] === CELL.COLLAPSIBLE;
     G.impacts.push({
       x: h.x, y: h.y,
       nx: h.nx, ny: h.ny,
       energy: h.energy,
       type: h.type,
+      cellType: isCollapsible ? 'collapsible' : null,
       createdAt: now,
     });
+
+    if (isCollapsible && h.type === 'pulse' && h.energy > COLLAPSE_ENERGY_THRESHOLD) {
+      G.grid[h.row][h.col] = CELL.EMPTY;
+      G.raySystem.burst(h.x, h.y, 'pulse', G.castFn, COLLAPSE_BURST_RAYS, 80);
+      Audio.playCollapse();
+    }
   }
   let wi = 0;
   for (let i = 0; i < G.impacts.length; i++) {
