@@ -232,34 +232,38 @@ export const LEVELS = [
   },
 
   // ─── Level 9 ─── "The Corridor"  (crushers)
-  // Three horizontal corridors split by walls. Each corridor has a crusher
-  // sweeping back and forth. The player must time their crossing.
-  // Path: start (row 1) → right to col 18 → drop → cross left → drop → cross
-  // right → drop → navigate lower maze to exit col 18 row 13.
+  // Crusher at col 10, range 2 (±80px): sweeps x=340–500, i.e. cols 8–12.
+  // Left safe zone: cols 1–7 (x<320, always clear).
+  // Right safe zone: cols 14–18 (x>520, always clear).
+  // Entry gaps are at col 6 (left safe zone); exit gaps at col 14 (right safe zone).
+  // The player only needs to dart 6 tiles through the danger zone per crossing.
+  // Path: start → col 6 → corridor 1 → col 14 → walk left → col 6 → corridor 2
+  //       → col 14 → walk left → col 6 → corridor 3 → col 14 → walk right → exit.
   {
     name: 'The Corridor',
-    hint: 'The walls move · Wait for the gap · Time your crossing',
+    hint: 'Enter from the left · Wait for the gap · Dash right to the exit',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1, open row
-      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1], // 2: wall — gap at col 18 only
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 3: CORRIDOR 1 (cross left)
-      [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 4: wall — gap at col 1 only
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5: CORRIDOR 2 (cross right)
-      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1], // 6: wall — gap at col 18 only
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7: CORRIDOR 3 (cross left)
-      [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 8: wall — gap at col 1 only
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9: open exit approach
-      [1,1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,0,1], // 10: lower maze
-      [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1], // 11: lower maze
-      [1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,0,1], // 12: lower maze
+      [1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1], // 2: wall — gap at col 6 (left safe zone)
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 3: CORRIDOR 1 (crusher at col 10)
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1], // 4: wall — gap at col 14 (right safe zone)
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5: open connecting row
+      [1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1], // 6: wall — gap at col 6
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7: CORRIDOR 2 (crusher at col 10)
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1], // 8: wall — gap at col 14
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9: open connecting row
+      [1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1], // 10: wall — gap at col 6
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11: CORRIDOR 3 (crusher at col 10)
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1], // 12: wall — gap at col 14
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13: exit col 18
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
     ],
     enemies: [
-      { type: 'crusher', col: 9, row: 3, axis: 'h', range: 5, period: 10.0 },
-      { type: 'crusher', col: 9, row: 5, axis: 'h', range: 5, period: 8.0 },
-      { type: 'crusher', col: 9, row: 7, axis: 'h', range: 5, period: 6.5 },
+      // range 2 = ±80px sweep: crusher stays within cols 8–12, safe zones never blocked
+      { type: 'crusher', col: 10, row: 3,  axis: 'h', range: 2, period: 9.0 },
+      { type: 'crusher', col: 10, row: 7,  axis: 'h', range: 2, period: 7.0 },
+      { type: 'crusher', col: 10, row: 11, axis: 'h', range: 2, period: 5.5 },
     ],
   },
 ];
