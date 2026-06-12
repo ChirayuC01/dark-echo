@@ -173,33 +173,34 @@
 ---
 
 ## Phase 5 — Doors & Keys
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (commit `d1e4e23`)  
 **Goal:** Collect keys to open doors. Both hidden until sound reveals them.  
 **Depends on:** Phase 0 complete
 
 ### Tasks
-- [ ] `game.js` `loadLevel()`: Populate `G.doors` and `G.keys` Maps from `def.doors[]` and `def.keys[]`
-- [ ] `game.js` `castFn`: Check `G.doors` — treat closed door cell as WALL
-- [ ] `game.js` update(): Check player proximity (12px) to uncollected keys → collect → open door
-- [ ] `audio.js`: Add `playKeyPickup()`, `playDoorOpen()` using `SOUND_CONFIG`
-- [ ] `renderer.js`: `drawDoors(doors, now, px, py)` — amber glint cluster when revealed and closed; faint green when open. `drawKeys(keys, now, px, py)` — pulsing gold dot.
-- [ ] `processRayEntities()` in `game.js`: Reveal keys and doors by ray proximity (same radius as exit)
-- [ ] Level 8 extended with doors/keys
-- [ ] Commit + push
+- [x] `game.js` `loadLevel()`: Populate `G.doors` and `G.keys` Maps from `def.doors[]` and `def.keys[]`; set closed door grid cells to `CELL.WALL`; build `G.doorsByCell` for fast ray-hit lookup
+- [x] `game.js` `castFn`: Closed doors stored as `CELL.WALL` in mutable grid — existing `castRay` DDA handles them automatically; no separate door-cast function needed
+- [x] `game.js` update(): Key proximity check (< `KEY_PICKUP_RADIUS = 12px`) → collect → open door (`G.grid[row][col] = CELL.EMPTY`, `G.doorsByCell` entry removed) → audio
+- [x] `audio.js`: `playKeyPickup()` and `playDoorOpen()` already implemented in Phase 0 via SOUND_CONFIG
+- [x] `renderer.js`: `drawDoors()` — amber when locked, faint green when open; `drawKeys()` — pulsing gold dot with radial gradient
+- [x] `processRayEntities()` in `game.js`: Key and door proximity reveal by `segPtDist` (REVEAL_D = 28px)
+- [x] `applyWallHits()`: detects door hits via `G.doorsByCell`, updates `revealedAt`, tags impact `cellType: 'door'` (amber glints)
+- [x] Level 8 redesigned with proper key/door chokepoint: key at col 16 row 3, door at col 9 row 9, row 9 otherwise solid wall
+- [x] Commit + push
 
 ### Files Modified
+- `js/constants.js` (`KEY_PICKUP_RADIUS`)
 - `js/game.js`
-- `js/audio.js`
 - `js/renderer.js`
 - `js/levels.js`
 
 ### Acceptance Criteria
-- [ ] Door blocks movement and rays when closed
-- [ ] Door is not visible until a ray passes within 28px
-- [ ] Key is not visible until a ray passes within 28px
-- [ ] Collecting key plays audio + opens matching door
-- [ ] Open door is traversable and transparent to rays
-- [ ] Level 8 requires collecting a key to reach exit
+- [x] Door blocks movement and rays when closed
+- [x] Door is not visible until a ray passes within 28px
+- [x] Key is not visible until a ray passes within 28px
+- [x] Collecting key plays audio + opens matching door
+- [x] Open door is traversable and transparent to rays
+- [x] Level 8 requires collecting a key to reach exit (row 9 is solid except door col 9)
 
 ---
 

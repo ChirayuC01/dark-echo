@@ -4,6 +4,48 @@
 
 ---
 
+## [Phase 5 — Complete] Doors & Keys
+
+**Date:** 2026-06-12  
+**Commit:** `d1e4e23`  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/constants.js`**: Added `KEY_PICKUP_RADIUS = 12` (player must walk within 12px of key center to collect).
+
+**`js/game.js`**:
+- `G` state extended with `G.doors: new Map()`, `G.keys: new Map()`, `G.doorsByCell: new Map()`
+- `loadLevel()` resets all three maps; iterates `def.doors[]` to build door objects and set `G.grid[row][col] = CELL.WALL` (closed door becomes a real wall in the mutable grid copy); iterates `def.keys[]` to build key objects
+- Implementation decision: closed doors are written into the grid as `CELL.WALL`, so existing `castRay` DDA and `resolveWalls` block them automatically — no new `castRayDoors` function needed. `G.doorsByCell` keyed `"row,col"` allows `applyWallHits` to identify door hits without a separate ray function
+- `applyWallHits()`: checks `G.doorsByCell.get("${h.row},${h.col}")` — if door hit, updates `revealedAt`, stores `cellType: 'door'`
+- `processRayEntities()`: key reveal loop (skips collected keys), door reveal loop — both use `segPtDist` with `REVEAL_D = 28px`
+- `update()`: key pickup loop — `dist(player, key) < KEY_PICKUP_RADIUS` → mark collected, `Audio.playKeyPickup()`, open matching door: `grid[row][col] = CELL.EMPTY`, `G.doorsByCell.delete(...)`, `Audio.playDoorOpen()`
+
+**`js/renderer.js`**:
+- `draw()` destructures `doors` and `keys` from state
+- `drawDoors(doors, now, px, py)`: amber `rgba(210,160,50)` fill + stroke when locked (with glow), faint green `rgba(80,210,120)` when open; uses `revealAlpha × hearing` attenuation
+- `drawKeys(keys, now, px, py)`: gold `rgba(255,210,80)` pulsing dot with radial gradient (`sin(now/400)` pulse), same fade pattern as exit; skips collected keys
+- `drawImpacts()`: new `'door'` branch uses amber color `rgba(210,160,50)` for door-hit glints
+- Draw order: doors and keys rendered between collapsible reveals and crushers
+
+**`js/levels.js`**: Level 8 "The Collapse" redesigned to incorporate key/door:
+- Row 9 is now all walls (`1`) except col 9 (`0`, the door position) — only passage from middle zone to lower section
+- Key at col 16, row 3 (reachable from eastern corridor at col 18; near the chaser at col 14)
+- Door at col 9, row 9 — loaded as `CELL.WALL` until key collected
+- Lower section simplified: row 10 wide open, row 11 corridor (gaps at cols 1 and 18 only), row 12 wide open, row 13 exit at col 18
+- Updated hint: "Find the key · Shatter the walls · The door will open"
+- No changes to `audio.js` — `playKeyPickup()` and `playDoorOpen()` were already implemented in Phase 0 via `SOUND_CONFIG`
+
+### Design decisions
+
+- **Grid mutation for closed doors**: Writing `CELL.WALL` into the grid when a door loads means no change to `castRay` or `resolveWalls` — they already handle walls correctly. When the door opens, `CELL.EMPTY` is written back. `G.doorsByCell` is the lookup that identifies which wall hits are door hits (for visual differentiation and `revealedAt` tracking). This is simpler than a separate `castRayDoors` slab function.
+- **Level 8 redesign**: The original lower section had too many bypass paths to create a true door chokepoint. Making row 9 all-walls except the door cell creates an absolute chokepoint — the player cannot reach the lower section without having the key. The key is placed near the chaser in the upper section, combining the crouch mechanic (avoid detection while retrieving it) with the new key/door mechanic.
+- **Key proximity pickup**: 12px radius is intentionally tight — smaller than the player's footstep radius, so the player must walk toward the key, not just run past it.
+- **Open door visual**: The faint green (`rgba(80,210,120)`) for open doors reuses the exit color palette, subconsciously signaling "this is now passable." The reveal fades naturally via `revealAlpha` — no special open-door fade timer needed.
+
+---
+
 ## [Phase 4 — Complete] Crushers
 
 **Date:** 2026-06-12  

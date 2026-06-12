@@ -5,7 +5,28 @@
 
 ---
 
-## [Unreleased] — Phase 5 pending
+## [Unreleased] — Phase 6 pending
+
+---
+
+## [v0.10.0] — 2026-06-12 — Phase 5
+
+### Added
+- **Doors & keys mechanic**: hidden collectibles that unlock blocked passages
+  - `KEY_PICKUP_RADIUS = 12` in `constants.js`
+  - `G.doors: Map<id, {col, row, x, y, open, revealedAt}>` — closed doors are written into the mutable grid as `CELL.WALL`; opening restores `CELL.EMPTY`
+  - `G.keys: Map<id, {col, row, x, y, collected, doorId, revealedAt}>` — player walks within 12px to collect
+  - `G.doorsByCell: Map<"row,col", door>` — fast lookup to identify which wall hits are doors
+  - Key pickup: `Audio.playKeyPickup()` + matching door opens instantly + `Audio.playDoorOpen()`
+  - Doors and keys revealed by ray proximity (same 28px threshold as exit)
+  - Door impact glints render amber `rgba(210,160,50)` — distinct from regular wall glints
+  - `drawDoors()` in `renderer.js`: amber fill+stroke locked; faint green open; hearing-attenuated
+  - `drawKeys()` in `renderer.js`: gold `rgba(255,210,80)` pulsing radial gradient dot
+- Level 8 "The Collapse" redesigned with key/door chokepoint:
+  - Row 9 all-walls except col 9 (door) — only passage from middle zone to lower section
+  - Key at col 16, row 3 (upper section; near chaser at col 14)
+  - Door unlocks when key collected; lower section then accessible
+  - Simplified lower section: wide open rows 10 + 12, col 18 corridor to exit col 18 row 13
 
 ---
 

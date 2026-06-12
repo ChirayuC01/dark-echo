@@ -32,11 +32,10 @@ _None currently confirmed._
 ---
 
 ### TD-003 — castRay does not know about doors
-**Status:** ⬜ Planned (Phase 5)  
+**Status:** ✅ Resolved (Phase 5, commit `d1e4e23`)  
 **Severity:** Medium  
 **File:** `js/collision.js` `castRay`  
-**Description:** `castRay` reads only from the static grid. Closed doors must also block rays. Crushers now handled via `castRayCrushers` + composite `castFn` in game.js.  
-**Fix:** Extend castFn closure to also check `G.doors` (for closed doors).
+**Resolution:** Closed doors are written into the mutable grid as `CELL.WALL` when loaded. `castRay` hits them as regular walls. When a door opens, the cell is reset to `CELL.EMPTY`. `G.doorsByCell` map tracks which wall cells are doors for visual differentiation. No change to `castRay` or `resolveWalls` required.
 
 ---
 

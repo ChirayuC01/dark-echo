@@ -1,13 +1,13 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 4 complete (2026-06-12)  
+> **Last updated:** Phase 5 complete (2026-06-12)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 5 — Doors & Keys**  
+**Phase 6 — Switches / Triggers**  
 Status: ⬜ Pending
 
 ---
@@ -38,6 +38,7 @@ Status: ⬜ Pending
 | **Water zones** | `js/entities.js`, `js/game.js`, `js/renderer.js` | CELL.WATER=5: 60% speed, 160% rays, 60% interval, teal wash |
 | **Collapsible walls** | `js/collision.js`, `js/game.js`, `js/renderer.js` | CELL.COLLAPSIBLE=4: blocks until pulse (energy>0.3) destroys it |
 | **Crushers** | `js/entities.js`, `js/collision.js`, `js/game.js`, `js/renderer.js` | AABB slab-method ray hit; sinusoidal motion; kill on AABB overlap |
+| **Doors & Keys** | `js/game.js`, `js/renderer.js`, `js/levels.js` | Keys reveal gold dot; closed doors block rays/movement; pickup opens door |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
@@ -49,18 +50,19 @@ Status: ⬜ Pending
 ## Phase 2 — Complete ✅ (commit `e65bf1b`)
 ## Phase 3 — Complete ✅ (commit `e9be4d4`)
 ## Phase 4 — Complete ✅ (commit `03303ff`)
+## Phase 5 — Complete ✅ (commit `d1e4e23`)
 
-**Phase 4 summary:**
-- `Crusher` class in `entities.js`: sinusoidal axis motion (`sin((elapsed/period)×2π)×range`), TILE-sized AABB, `revealedAt`
-- `castRayCrushers()` in `collision.js`: AABB slab-method intersection, returns hit with `crusher` reference
-- `circleOverlapsAABB()` in `collision.js`: nearest-point circle vs AABB for kill check
-- `castFn` in `loadLevel()` now composites grid hit and crusher hit, returns whichever is closer
-- `applyWallHits()`: crusher hits set `h.crusher.revealedAt = now` and store `cellType: 'crusher'`
-- `processRayEntities()`: crusher proximity reveal via `segPtDist`
-- `checkDeath()`: `circleOverlapsAABB` kill check against each crusher's bounds → `die('Crushed.')`
-- `drawCrushers()` in `renderer.js`: orange `rgba(230,105,55)` filled+stroked TILE block, hearing-attenuated
-- Crusher impact glints use orange color matching hazard palette
-- Level 9 "The Corridor": 3 corridors, each with a crusher sweeping at 5.0s / 3.5s / 2.5s period
+**Phase 5 summary:**
+- `KEY_PICKUP_RADIUS = 12` added to `constants.js`
+- `G.doors` Map, `G.keys` Map, `G.doorsByCell` Map added to game state
+- `loadLevel()` populates maps from `def.doors[]`/`def.keys[]`; closed door cells are set to `CELL.WALL` in the mutable grid
+- `applyWallHits()`: checks `G.doorsByCell` to identify door hits; tags `cellType: 'door'`; updates `door.revealedAt`
+- `processRayEntities()`: key/door proximity reveal via `segPtDist` (same `REVEAL_D = 28px` as exit)
+- `update()`: key pickup loop — player within 12px → `key.collected = true`, matching door opens (`G.grid[row][col] = CELL.EMPTY`), `G.doorsByCell` entry removed, audio plays
+- `drawDoors()` in `renderer.js`: amber `rgba(210,160,50)` fill+stroke when locked, faint green `rgba(80,210,120)` when open
+- `drawKeys()` in `renderer.js`: gold `rgba(255,210,80)` pulsing dot with radial gradient, same fade pattern as exit
+- Door impact glints use amber color
+- Level 8 redesigned: row 9 is solid wall except col 9 (the door); key at col 16 row 3 (near chaser); lower section accessible only via the door; simplified lower zone with col 18 corridor to exit
 
 ---
 
@@ -71,7 +73,7 @@ Status: ⬜ Pending
 | ~~Water zones~~ | ~~Phase 2~~ | ~~High~~ |
 | ~~Collapsible walls~~ | ~~Phase 3~~ | ~~High~~ |
 | ~~Crushers~~ | ~~Phase 4~~ | ~~Medium~~ |
-| Doors & keys | Phase 5 | Medium |
+| ~~Doors & keys~~ | ~~Phase 5~~ | ~~Medium~~ |
 | Switches / triggers | Phase 6 | Medium |
 | Sentry enemy | Phase 7 | Medium |
 | BlindStalker enemy | Phase 8 | Low |
@@ -86,13 +88,13 @@ Status: ⬜ Pending
 
 ## Next Recommended Task
 
-Begin **Phase 5 — Doors & Keys**:
-1. `game.js`: add `G.doors` Map, `G.keys` Map to state; populate in `loadLevel()` from `def.keys[]` / `def.doors[]`
-2. `collision.js` / `castFn`: treat closed doors as walls (check `G.doors` before DDA)
-3. `game.js` `update()`: key pickup proximity check → open door; `resolveWalls` skips open doors
-4. `renderer.js`: `drawDoors()`, `drawKeys()` — pulsing dots with hearing attenuation
-5. `audio.js`: `playKeyPickup()`, `playDoorOpen()` (already in SOUND_CONFIG)
-6. Level in `levels.js` using keys/doors
+Begin **Phase 6 — Switches / Triggers**:
+1. `game.js`: add `G.triggers[]` to state; populate from `def.triggers[]` in `loadLevel()`
+2. `game.js` `update()`: player proximity (< 10px) to unfired trigger → fire action
+3. Actions: `'open_door'`, `'remove_wall'`, `'spawn_enemy'`
+4. `renderer.js`: `drawTriggers()` — small pulsing blue dot, revealed by sound
+5. `processRayEntities()`: trigger proximity reveal
+6. Level using triggers (extend Level 9 or add to Level 10)
 
 ---
 
