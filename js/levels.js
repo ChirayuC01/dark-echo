@@ -257,9 +257,9 @@ export const LEVELS = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
     ],
     enemies: [
-      { type: 'crusher', col: 9, row: 3, axis: 'h', range: 5, period: 5.0 },
-      { type: 'crusher', col: 9, row: 5, axis: 'h', range: 5, period: 3.5 },
-      { type: 'crusher', col: 9, row: 7, axis: 'h', range: 5, period: 2.5 },
+      { type: 'crusher', col: 9, row: 3, axis: 'h', range: 5, period: 10.0 },
+      { type: 'crusher', col: 9, row: 5, axis: 'h', range: 5, period: 8.0 },
+      { type: 'crusher', col: 9, row: 7, axis: 'h', range: 5, period: 6.5 },
     ],
   },
 ];
