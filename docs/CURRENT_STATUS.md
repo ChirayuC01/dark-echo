@@ -1,14 +1,14 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 3 complete (2026-06-12)  
+> **Last updated:** Phase 4 complete (2026-06-12)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 4 — Crushers**  
-Status: ⬜ Pending (ready to begin)
+**Phase 5 — Doors & Keys**  
+Status: ⬜ Pending
 
 ---
 
@@ -26,20 +26,21 @@ Status: ⬜ Pending (ready to begin)
 | PatrolEnemy | `js/entities.js` | Waypoint cycle, pulse-stun, step-aware hearing |
 | ChaserEnemy | `js/entities.js` | Idle wander + hunt state |
 | Hazard | `js/entities.js` | Timed pulse emitter, proximity kill |
-| 8 levels | `js/levels.js` | Levels 1–8 complete (Level 8 = The Collapse) |
+| 9 levels | `js/levels.js` | Levels 1–9 complete (Level 9 = The Corridor) |
 | Touch joystick | `js/input.js` | 110px zone, 40px max drag |
 | Touch crouch button | `js/input.js`, `index.html` | #crouch-btn, bottom-center mobile |
 | All UI screens | `js/ui.js`, `index.html` | title/pause/dead/levelup/win |
 | Web Audio sounds | `js/audio.js` | SOUND_CONFIG + all play*() |
 | Game loop & state | `js/game.js` | G state machine, 6 screens |
 | Grid collision | `js/collision.js` | castRay (DDA), resolveWalls, circlesOverlap |
-| **Crouch / stealth** | `js/input.js`, `js/entities.js`, `js/game.js` | Hold Shift/C: 45% speed, 50% rays, 70% range |
+| **Crouch / stealth** | `js/input.js`, `js/entities.js`, `js/game.js` | Hold Shift/C: 45% speed, 50% rays, 45% range |
 | **HUD crouch indicator** | `js/renderer.js`, `index.html`, `css/style.css` | Shows CROUCH in HUD when active |
 | **Water zones** | `js/entities.js`, `js/game.js`, `js/renderer.js` | CELL.WATER=5: 60% speed, 160% rays, 60% interval, teal wash |
 | **Collapsible walls** | `js/collision.js`, `js/game.js`, `js/renderer.js` | CELL.COLLAPSIBLE=4: blocks until pulse (energy>0.3) destroys it |
+| **Crushers** | `js/entities.js`, `js/collision.js`, `js/game.js`, `js/renderer.js` | AABB slab-method ray hit; sinusoidal motion; kill on AABB overlap |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
-| Mutable grid copy | `js/game.js` `loadLevel()` | Prep for Phase 3 collapsibles |
+| Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
 
 ---
 
@@ -47,21 +48,19 @@ Status: ⬜ Pending (ready to begin)
 ## Phase 1 — Complete ✅ (commit `3933d22`)
 ## Phase 2 — Complete ✅ (commit `e65bf1b`)
 ## Phase 3 — Complete ✅ (commit `e9be4d4`)
+## Phase 4 — Complete ✅ (commit `03303ff`)
 
-**Phase 3 summary:**
-- `castRay` and `resolveWalls` in `collision.js` now block on `CELL.COLLAPSIBLE (4)` in addition to `CELL.WALL (1)`
-- `applyWallHits()` in `game.js`: pulse hit on collapsible cell with energy > 0.3 → mutate grid → emit 12-ray burst → play collapse audio
-- `drawImpacts()` in `renderer.js`: collapsible wall glints render as warm tan `rgba(200,175,120)` instead of white-blue
-- Level 8 "The Collapse": two barrier rows (6 and 8), single collapsible gap at col 9 each; patrol in middle zone; chaser in upper section
-
-**Phase 2 summary:**
-- `Player.move()` accepts `inWater` param; speed × `WATER_SPEED_MULT = 0.6`, stacks with crouch
-- `G.playerInWater` detected each frame from tile under player feet (`CELL.WATER = 5`)
-- Step burst multipliers stack: count × `WATER_RAY_MULT = 1.6`, interval × `WATER_INTERVAL_MULT = 0.6`
-- `Audio.playFootstepWater()` called instead of `playFootstep()` when on water tile
-- `drawWaterZone()` in renderer: radial teal gradient (`rgba(50,150,160)`) at player position when in water
-- Level 7 "Flooded": upper maze → 3-row water crossing (cols 2–17 forced) → lower maze; two hazards in flood zone
-- Crouch + water: all multipliers apply (speed = 150 × 0.45 × 0.6 = 40.5 px/s)
+**Phase 4 summary:**
+- `Crusher` class in `entities.js`: sinusoidal axis motion (`sin((elapsed/period)×2π)×range`), TILE-sized AABB, `revealedAt`
+- `castRayCrushers()` in `collision.js`: AABB slab-method intersection, returns hit with `crusher` reference
+- `circleOverlapsAABB()` in `collision.js`: nearest-point circle vs AABB for kill check
+- `castFn` in `loadLevel()` now composites grid hit and crusher hit, returns whichever is closer
+- `applyWallHits()`: crusher hits set `h.crusher.revealedAt = now` and store `cellType: 'crusher'`
+- `processRayEntities()`: crusher proximity reveal via `segPtDist`
+- `checkDeath()`: `circleOverlapsAABB` kill check against each crusher's bounds → `die('Crushed.')`
+- `drawCrushers()` in `renderer.js`: orange `rgba(230,105,55)` filled+stroked TILE block, hearing-attenuated
+- Crusher impact glints use orange color matching hazard palette
+- Level 9 "The Corridor": 3 corridors, each with a crusher sweeping at 5.0s / 3.5s / 2.5s period
 
 ---
 
@@ -71,12 +70,12 @@ Status: ⬜ Pending (ready to begin)
 |---|---|---|
 | ~~Water zones~~ | ~~Phase 2~~ | ~~High~~ |
 | ~~Collapsible walls~~ | ~~Phase 3~~ | ~~High~~ |
-| Crushers | Phase 4 | Medium |
+| ~~Crushers~~ | ~~Phase 4~~ | ~~Medium~~ |
 | Doors & keys | Phase 5 | Medium |
 | Switches / triggers | Phase 6 | Medium |
 | Sentry enemy | Phase 7 | Medium |
 | BlindStalker enemy | Phase 8 | Low |
-| Levels 7–10 | Phase 9 | High |
+| Level 10 | Phase 9 | High |
 | Ambient audio | Phase 10 | Medium |
 | Debug overlay | Phase 11 | Low |
 | Audio polish | Phase 12 | Low |
@@ -87,14 +86,13 @@ Status: ⬜ Pending (ready to begin)
 
 ## Next Recommended Task
 
-Begin **Phase 4 — Crushers**:
-1. `entities.js`: add `Crusher` class — sinusoidal axis movement, `revealedAt`, `blocking`
-2. `game.js` `loadLevel()`: spawn `Crusher` from `def.enemies[]` type `'crusher'`
-3. `game.js` `update()`: update crushers, check player overlap → `die('Crushed.')`
-4. `collision.js` / `castFn`: pass crushers as dynamic obstacles; check segment intersection before DDA
-5. `renderer.js`: `drawCrushers()` — thick glint line at current crusher position, hearing-attenuated
-6. Level 9 "The Corridor" in `levels.js`
-7. Commit + push
+Begin **Phase 5 — Doors & Keys**:
+1. `game.js`: add `G.doors` Map, `G.keys` Map to state; populate in `loadLevel()` from `def.keys[]` / `def.doors[]`
+2. `collision.js` / `castFn`: treat closed doors as walls (check `G.doors` before DDA)
+3. `game.js` `update()`: key pickup proximity check → open door; `resolveWalls` skips open doors
+4. `renderer.js`: `drawDoors()`, `drawKeys()` — pulsing dots with hearing attenuation
+5. `audio.js`: `playKeyPickup()`, `playDoorOpen()` (already in SOUND_CONFIG)
+6. Level in `levels.js` using keys/doors
 
 ---
 

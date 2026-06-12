@@ -4,6 +4,49 @@
 
 ---
 
+## [Phase 4 — Complete] Crushers
+
+**Date:** 2026-06-12  
+**Commit:** `03303ff`  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/entities.js`**: Added `Crusher` class. Constructor takes `(x, y, axis, range, period)` where `range` is in tiles (converted to px on construction). `elapsed` starts at `Math.random() * period` for random phase so crushers in the same level don't all sync up. `update(dt)` advances elapsed, computes `sin` offset, moves `this.x` or `this.y` along the given axis. `bounds()` returns `{x1,y1,x2,y2}` TILE-sized AABB centered on current position.
+
+**`js/collision.js`**: Added two new exports:
+- `castRayCrushers(crushers, ox, oy, dx, dy, maxDist)` — AABB slab method, loops over crusher list, returns closest hit with `{ x,y,t,nx,ny,col:-1,row:-1,crusher:c }`. The `col:-1, row:-1` sentinel ensures `applyWallHits` won't misidentify it as a grid cell.
+- `circleOverlapsAABB(cx, cy, cr, x1, y1, x2, y2)` — nearest-point circle vs AABB; used for player kill check.
+
+**`js/game.js`**:
+- Imports extended: `castRayCrushers`, `circleOverlapsAABB` from collision; `Crusher` from entities
+- `G.crushers: []` added to state object; reset in `loadLevel()`
+- Crusher spawn in `loadLevel()` enemy loop: `type: 'crusher'` → `new Crusher(ex, ey, e.axis, e.range, e.period)`
+- `castFn` updated: calls both `castRay` (grid) and `castRayCrushers` (crushers), picks whichever has smaller `t`
+- `applyWallHits()`: detects `isCrusher = !!h.crusher`; if true, sets `h.crusher.revealedAt = now` and marks impact `cellType: 'crusher'`
+- `processRayEntities()`: new inner loop over `G.crushers` using `segPtDist` for proximity-based reveal (same `REVEAL_D = 28px` threshold)
+- `checkDeath()`: new loop over `G.crushers`; `circleOverlapsAABB(p.x, p.y, PLAYER_RADIUS, b.x1, b.y1, b.x2, b.y2)` → `die('Crushed.')`
+- `update()`: `for (const cr of G.crushers) cr.update(dt)` — crushers advance each frame
+
+**`js/renderer.js`**:
+- `draw()` destructures `crushers` from state
+- `drawCrushers(crushers, now, px, py)` called after `drawExit` and before `drawHazards`
+- `drawCrushers`: orange `rgba(230,105,55)` fill + stroke per crusher, `revealAlpha` + `hearing` attenuation, `shadowBlur` glow
+- `drawImpacts()`: added `cellType === 'crusher'` branch (orange, same palette as hazard/crusher) before `'collapsible'` check
+
+**`js/levels.js`**: Level 9 "The Corridor" — S-shaped zigzag path through 3 open corridors (rows 3, 5, 7) connected by single-tile gaps at alternating ends (col 18 / col 1). Three crushers with periods 5.0s / 3.5s / 2.5s sweep horizontally through each corridor. Lower maze (rows 9–13) leads to exit col 18 row 13.
+
+### Design decisions
+
+- Random `elapsed` start phase: avoids all crushers being at the same position when the level loads. Each crusher behaves independently from the start.
+- `col:-1, row:-1` in crusher hit result: sentinel that prevents `applyWallHits` from reading `G.grid[-1]?.[-1]` (undefined → not collapsible), so crusher hits never accidentally trigger collapse logic.
+- Dual reveal system: proximity reveal (rays passing near crusher) + direct hit reveal (rays bouncing off crusher). Proximity ensures the player detects approaching crushers even if no ray hits them directly.
+- Death reason 'Crushed.' — distinct from 'Caught.' (enemy) and 'Disintegrated.' (hazard).
+- Visual palette: crushers use orange `rgba(230,105,55)` matching hazard rays — both are lethal; color consistency telegraphs danger.
+- Level 9 difficulty scaling: corridor 1 (5s period = slow), corridor 2 (3.5s = medium), corridor 3 (2.5s = fast) — player learns timing before it becomes critical.
+
+---
+
 ## [Phase 3 — Complete] Collapsible Walls
 
 **Date:** 2026-06-12  

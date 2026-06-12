@@ -31,12 +31,12 @@ _None currently confirmed._
 
 ---
 
-### TD-003 — castRay does not know about doors or crushers
-**Status:** ⬜ Planned (Phase 4, 5)  
+### TD-003 — castRay does not know about doors
+**Status:** ⬜ Planned (Phase 5)  
 **Severity:** Medium  
 **File:** `js/collision.js` `castRay`  
-**Description:** `castRay` reads only from the static grid. Doors (closed) and crushers (dynamic) must also block rays, but they aren't in the grid. The current castFn closure in game.js only forwards grid.  
-**Fix:** Extend castFn closure to also check `G.doors` (for closed doors) and `G.crushers` (for current positions) as pre-checks before the DDA loop.
+**Description:** `castRay` reads only from the static grid. Closed doors must also block rays. Crushers now handled via `castRayCrushers` + composite `castFn` in game.js.  
+**Fix:** Extend castFn closure to also check `G.doors` (for closed doors).
 
 ---
 

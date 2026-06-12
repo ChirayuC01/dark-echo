@@ -5,7 +5,24 @@
 
 ---
 
-## [Unreleased] — Phase 4 pending
+## [Unreleased] — Phase 5 pending
+
+---
+
+## [v0.9.0] — 2026-06-12 — Phase 4
+
+### Added
+- **Crusher mechanic**: moving lethal wall segments
+  - `Crusher` class in `entities.js`: sinusoidal `h`/`v` axis motion, TILE-sized AABB
+  - Random start phase per crusher — avoids synchronized movement on level load
+  - `castRayCrushers()` in `collision.js`: AABB slab-method ray intersection, returns closest crusher hit
+  - `circleOverlapsAABB()` in `collision.js`: player vs crusher kill check
+  - `castFn` now composites grid DDA and crusher slab results, returns closest hit
+  - Crushers revealed by ray proximity (`processRayEntities`) and direct ray bounce (`applyWallHits`)
+  - Crusher kill: `circleOverlapsAABB` overlap → `die('Crushed.')`
+  - Crusher impacts render in orange (same palette as hazard) via `cellType: 'crusher'` on impact objects
+  - `drawCrushers()` in `renderer.js`: orange filled+stroked block, hearing-attenuated, glow
+- Level 9 "The Corridor" — 3 corridors (rows 3, 5, 7), one crusher each (5.0s / 3.5s / 2.5s period), S-shaped path to exit
 
 ---
 
