@@ -34,7 +34,8 @@ const G = {
   lastTime: 0,
   deathReason: '',
   playerInWater: false,
-  waterReveals: new Map(),  // "row,col" → timestamp of last ray hit
+  waterReveals: new Map(),        // "row,col" → timestamp of last ray hit
+  collapsibleReveals: new Map(),  // "row,col" → timestamp of last ray hit
 };
 
 const TOTAL = LEVELS.length;
@@ -54,6 +55,7 @@ function loadLevel(idx) {
   G.lastStepTime = 0;
   G.playerInWater = false;
   G.waterReveals = new Map();
+  G.collapsibleReveals = new Map();
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -92,6 +94,7 @@ function loadLevel(idx) {
 function applyWallHits(hits, now) {
   for (const h of hits) {
     const isCollapsible = G.grid[h.row]?.[h.col] === CELL.COLLAPSIBLE;
+    if (isCollapsible) G.collapsibleReveals.set(`${h.row},${h.col}`, now);
     G.impacts.push({
       x: h.x, y: h.y,
       nx: h.nx, ny: h.ny,

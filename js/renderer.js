@@ -37,14 +37,14 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, exit, playerInWater, grid, waterReveals } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, exit, playerInWater, grid, waterReveals, collapsibleReveals } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
   // Walls are intentionally never drawn — the world exists only as sound,
   // and all sound is rendered relative to how close the player is to it.
   drawRevealedWater(grid, waterReveals, now);
-  drawCollapsibleWalls(grid);
+  drawRevealedCollapsible(grid, collapsibleReveals, now);
   drawEchoTrails(echoTrails, now, px, py);
   drawImpacts(impacts, now, px, py);
   drawExit(exit, now);
@@ -264,22 +264,21 @@ function rayColor(type, alpha) {
   return                        `rgba(155,195,235,${alpha.toFixed(3)})`;
 }
 
-// ─── Collapsible walls — always-visible warm tan filled blocks ────────────────
-function drawCollapsibleWalls(grid) {
-  if (!grid) return;
+// ─── Revealed collapsible walls — warm tan block where sound has touched ──────
+function drawRevealedCollapsible(grid, collapsibleReveals, now) {
+  if (!collapsibleReveals || !collapsibleReveals.size) return;
   ctx.save();
-  for (let r = 0; r < grid.length; r++) {
-    for (let c = 0; c < grid[r].length; c++) {
-      if (grid[r][c] !== CELL.COLLAPSIBLE) continue;
-      const x = c * TILE, y = r * TILE;
-      // Fill
-      ctx.fillStyle = 'rgba(200,175,120,0.32)';
-      ctx.fillRect(x, y, TILE, TILE);
-      // Subtle inner border to reinforce block shape
-      ctx.strokeStyle = 'rgba(220,195,140,0.55)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
-    }
+  for (const [key, revealTime] of collapsibleReveals) {
+    const alpha = revealAlpha(revealTime, now);
+    if (alpha < 0.004) continue;
+    const [r, c] = key.split(',').map(Number);
+    if (grid[r]?.[c] !== CELL.COLLAPSIBLE) continue; // already collapsed
+    const x = c * TILE, y = r * TILE;
+    ctx.fillStyle = `rgba(200,175,120,${(alpha * 0.45).toFixed(3)})`;
+    ctx.fillRect(x, y, TILE, TILE);
+    ctx.strokeStyle = `rgba(220,195,140,${(alpha * 0.7).toFixed(3)})`;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
   }
   ctx.restore();
 }
