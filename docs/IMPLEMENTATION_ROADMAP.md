@@ -141,18 +141,19 @@
 ---
 
 ## Phase 4 — Crushers
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (commit `03303ff`)  
 **Goal:** Moving wall segments that kill the player on contact.  
 **Depends on:** Phase 0 complete
 
 ### Tasks
-- [ ] `entities.js`: Add `Crusher` class — sinusoidal movement, `blocking` bool, `revealedAt`
-- [ ] `game.js` `loadLevel()`: Spawn `Crusher` instances from `def.enemies[]` type `'crusher'`
-- [ ] `game.js` update(): Call `crusher.update(dt)` for each crusher. Check player bounding box overlap → `die('Crushed.')`.
-- [ ] `collision.js` / `castRay`: Accept optional `crushers[]` and check segment intersection before grid DDA
-- [ ] `renderer.js`: `drawCrushers(crushers, now, px, py)` — short thick line of glints at current crusher position, hearing-attenuated
-- [ ] Level 9 ("The Corridor") partial data
-- [ ] Commit + push
+- [x] `entities.js`: Add `Crusher` class — sinusoidal movement, `revealedAt`
+- [x] `game.js` `loadLevel()`: Spawn `Crusher` instances from `def.enemies[]` type `'crusher'`
+- [x] `game.js` update(): Call `crusher.update(dt)` for each crusher. Check player bounding box overlap → `die('Crushed.')`.
+- [x] `collision.js`: `castRayCrushers()` (AABB slab method) + `circleOverlapsAABB()`
+- [x] `game.js` `castFn`: Composites grid DDA and crusher AABB results, returns closest hit
+- [x] `renderer.js`: `drawCrushers(crushers, now, px, py)` — orange filled block, hearing-attenuated
+- [x] Level 9 ("The Corridor") — crushers at col 10, range 2, periods 9/7/5.5s; entry col 6, exit col 14
+- [x] Commit + push
 
 ### Files Modified
 - `js/entities.js`
@@ -162,12 +163,12 @@
 - `js/levels.js`
 
 ### Acceptance Criteria
-- [ ] Crusher oscillates back and forth smoothly on defined axis
-- [ ] Crusher blocks player movement (player cannot walk through it)
-- [ ] Player caught by crusher movement → dies with reason 'Crushed.'
-- [ ] Crusher blocks rays (rays reflect off crusher face)
-- [ ] Crusher revealed by sound (same reveal fade as enemies)
-- [ ] Timing the crusher path is the puzzle (survives by waiting)
+- [x] Crusher oscillates back and forth smoothly on defined axis
+- [x] Crusher blocks player movement (player cannot walk through it)
+- [x] Player caught by crusher movement → dies with reason 'Crushed.'
+- [x] Crusher blocks rays (rays reflect off crusher face)
+- [x] Crusher revealed by sound (same reveal fade as enemies)
+- [ ] ⚠️ Timing the crusher path is the puzzle (survives by waiting) — **Level 9 still too difficult; see DC-003 in KNOWN_ISSUES.md; deferred to Phase 14 balance pass**
 
 ---
 

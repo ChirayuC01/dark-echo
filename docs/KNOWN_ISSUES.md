@@ -98,6 +98,25 @@ _None currently confirmed._
 
 ---
 
+### DC-003 — Level 9 crusher difficulty still too high  
+**Status:** ⬜ Deferred — address in Phase 14 (Final Balance)  
+**Severity:** High  
+**File:** `js/levels.js` Level 9 "The Corridor"  
+**Description:** Despite two rounds of redesign (wide-range long corridors → narrow-range short corridors), Level 9 is still reported as too difficult. The crusher's sinusoidal motion is hard to read as sound alone, and the 6-tile danger zone leaves little margin for error. Players cannot reliably time the crossing using only the echo visualization.  
+**Root cause hypotheses:**
+1. The crusher's reveal radius is small — the player may not have enough sound information about where the crusher currently is before committing to a dash.
+2. The danger crossing window, while mathematically sufficient (~2.75s at period 5.5s), feels tight under the game's limited field of view.
+3. No "waiting room" safe zone within the corridor itself — the player must remain at the col 6 entry point while the crusher approaches and turns, which is uncomfortable.
+
+**Proposed fixes (to try in Phase 14):**
+- Add an additional interior alcove (single-tile notch) at the midpoint of each corridor where the player can pause mid-crossing if needed.
+- Increase crusher reveal radius from `REVEAL_D = 28px` to `48px` so the player hears the crusher from further away.
+- Slow final corridor to period 7s (from 5.5s), making the hardest window 3.5s instead of 2.75s.
+- Consider replacing the continuous-sine crusher with a "pause at extremes" motion (ease-in/ease-out or step function) so the player has a clear stationary window to cross.
+- Defer Level 9 redesign until all phases complete; playtest with fresh eyes then.
+
+---
+
 ## Future Improvements (Post v1.0)
 
 | # | Idea | Notes |

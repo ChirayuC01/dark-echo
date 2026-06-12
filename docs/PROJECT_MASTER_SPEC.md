@@ -68,7 +68,7 @@
 - **Crouch/Stealth**: Hold Shift or C. Speed multiplied by `CROUCH_SPEED_MULT = 0.45`.
   - Step interval multiplied by `CROUCH_INTERVAL_MULT = 2.5` (less frequent footsteps).
   - Step ray count multiplied by `CROUCH_RAY_MULT = 0.5`.
-  - Step ray max distance multiplied by `CROUCH_DIST_MULT = 0.7`.
+  - Step ray max distance multiplied by `CROUCH_DIST_MULT = 0.45`.
   - Audio: same `playFootstep()` (already quieter due to fewer rays).
 - **Water zone** (when on `CELL.WATER` tile): Speed `× WATER_SPEED_MULT = 0.6`.
   - Step interval `× WATER_INTERVAL_MULT = 0.6` (more frequent — harder to stay quiet).
@@ -265,7 +265,7 @@ Each ray maintains a `heardEntities` Set. On segment advance, if entity within `
 | 6 | The Whisper | Crouch mechanic | 1 patrol (react to normal steps) |
 | 7 | Flooded | Water zones | 2 hazards |
 | 8 | The Collapse | Collapsible walls + keys | 1 patrol + 1 chaser |
-| 9 | The Corridor | Crushers + switches | 2 crushers + 2 sentries |
+| 9 | The Corridor | Crushers | 3 crushers (⚠️ difficulty pending balance — see DC-003) |
 | 10 | The Gauntlet II | All mechanics + blind stalker | Mixed |
 
 ---
