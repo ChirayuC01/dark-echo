@@ -44,6 +44,7 @@ export function draw(state, now) {
   // Walls are intentionally never drawn — the world exists only as sound,
   // and all sound is rendered relative to how close the player is to it.
   drawRevealedWater(grid, waterReveals, now);
+  drawCollapsibleWalls(grid);
   drawEchoTrails(echoTrails, now, px, py);
   drawImpacts(impacts, now, px, py);
   drawExit(exit, now);
@@ -261,6 +262,26 @@ function rayColor(type, alpha) {
   if (type === 'hazard') return `rgba(230,105,55,${alpha.toFixed(3)})`;
   if (type === 'pulse')  return `rgba(185,220,255,${alpha.toFixed(3)})`;
   return                        `rgba(155,195,235,${alpha.toFixed(3)})`;
+}
+
+// ─── Collapsible walls — always-visible warm tan filled blocks ────────────────
+function drawCollapsibleWalls(grid) {
+  if (!grid) return;
+  ctx.save();
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      if (grid[r][c] !== CELL.COLLAPSIBLE) continue;
+      const x = c * TILE, y = r * TILE;
+      // Fill
+      ctx.fillStyle = 'rgba(200,175,120,0.32)';
+      ctx.fillRect(x, y, TILE, TILE);
+      // Subtle inner border to reinforce block shape
+      ctx.strokeStyle = 'rgba(220,195,140,0.55)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+    }
+  }
+  ctx.restore();
 }
 
 // ─── Revealed water tiles — faint teal where sound waves have passed ─────────
