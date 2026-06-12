@@ -55,6 +55,9 @@ export const WATER_ENERGY_DRAIN  = 0.2; // extra energy loss per water cell trav
 export const COLLAPSE_ENERGY_THRESHOLD = 0.3;
 export const COLLAPSE_BURST_RAYS       = 12;
 
+// ─── Doors / keys ────────────────────────────────────────────────────────────
+export const KEY_PICKUP_RADIUS = 12;
+
 // ─── Cell types ──────────────────────────────────────────────────────────────
 export const CELL = {
   EMPTY:       0,

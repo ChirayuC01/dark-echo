@@ -37,7 +37,7 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, crushers, exit, playerInWater, grid, waterReveals, collapsibleReveals } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, crushers, doors, keys, exit, playerInWater, grid, waterReveals, collapsibleReveals } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
@@ -48,6 +48,8 @@ export function draw(state, now) {
   drawEchoTrails(echoTrails, now, px, py);
   drawImpacts(impacts, now, px, py);
   drawExit(exit, now);
+  drawDoors(doors, now, px, py);
+  drawKeys(keys, now, px, py);
   drawCrushers(crushers, now, px, py);
   drawHazards(hazards, now, px, py);
   drawEnemies(enemies, now, px, py);
@@ -85,6 +87,9 @@ function drawImpacts(impacts, now, px, py) {
     } else if (im.cellType === 'collapsible') {
       ctx.strokeStyle = `rgba(200,175,120,${(alpha * 0.95).toFixed(3)})`;
       ctx.shadowColor = 'rgba(200,175,120,0.5)';
+    } else if (im.cellType === 'door') {
+      ctx.strokeStyle = `rgba(210,160,50,${(alpha * 0.95).toFixed(3)})`;
+      ctx.shadowColor = 'rgba(210,160,50,0.5)';
     } else if (im.type === 'hazard') {
       ctx.strokeStyle = `rgba(225,100,50,${(alpha * 0.85).toFixed(3)})`;
       ctx.shadowColor = 'rgba(225,100,50,0.5)';
@@ -266,6 +271,56 @@ function rayColor(type, alpha) {
   if (type === 'hazard') return `rgba(230,105,55,${alpha.toFixed(3)})`;
   if (type === 'pulse')  return `rgba(185,220,255,${alpha.toFixed(3)})`;
   return                        `rgba(155,195,235,${alpha.toFixed(3)})`;
+}
+
+// ─── Doors — amber when locked, faint green when open ────────────────────────
+function drawDoors(doors, now, px, py) {
+  if (!doors || !doors.size) return;
+  ctx.save();
+  for (const [, door] of doors) {
+    const alpha = revealAlpha(door.revealedAt, now) * hearing(Math.hypot(door.x - px, door.y - py));
+    if (alpha < 0.004) continue;
+    const x = door.col * TILE, y = door.row * TILE;
+    if (door.open) {
+      ctx.fillStyle = `rgba(80,210,120,${(alpha * 0.18).toFixed(3)})`;
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.strokeStyle = `rgba(80,210,120,${(alpha * 0.4).toFixed(3)})`;
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 0;
+      ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+    } else {
+      ctx.fillStyle = `rgba(210,160,50,${(alpha * 0.32).toFixed(3)})`;
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.strokeStyle = `rgba(230,175,60,${(alpha * 0.85).toFixed(3)})`;
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 8 * alpha;
+      ctx.shadowColor = 'rgba(220,160,50,0.55)';
+      ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+    }
+  }
+  ctx.restore();
+}
+
+// ─── Keys — gold pulsing dot, only visible when revealed by sound ─────────────
+function drawKeys(keys, now, px, py) {
+  if (!keys || !keys.size) return;
+  ctx.save();
+  for (const [, key] of keys) {
+    if (key.collected) continue;
+    const alpha = revealAlpha(key.revealedAt, now) * hearing(Math.hypot(key.x - px, key.y - py));
+    if (alpha < 0.004) continue;
+    const pulse = (0.5 + 0.25 * Math.sin(now / 400)) * alpha;
+    ctx.shadowBlur = 12 * alpha;
+    ctx.shadowColor = 'rgba(255,210,80,0.65)';
+    const grd = ctx.createRadialGradient(key.x, key.y, 1, key.x, key.y, 14);
+    grd.addColorStop(0, `rgba(255,225,100,${pulse.toFixed(3)})`);
+    grd.addColorStop(1, 'rgba(255,210,80,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(key.x, key.y, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `rgba(255,240,130,${(pulse * 1.1 > 1 ? 1 : pulse * 1.1).toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(key.x, key.y, 3, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
 }
 
 // ─── Crushers — orange lethal moving blocks, revealed only by ray contact ─────

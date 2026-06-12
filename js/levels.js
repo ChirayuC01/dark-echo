@@ -200,35 +200,38 @@ export const LEVELS = [
     ],
   },
 
-  // ─── Level 8 ─── "The Collapse"  (collapsible walls)
-  // Two horizontal barriers (rows 6 and 8) each have a single passage blocked by
-  // a collapsible wall (CELL = 4) at col 9. The player must fire a pulse to shatter
-  // each barrier. A patrol guards the middle zone between the barriers; a chaser
-  // roams the upper section. Both react to pulses — timing is the puzzle.
+  // ─── Level 8 ─── "The Collapse"  (collapsible walls + keys/doors)
+  // Two collapsible barriers at rows 6 and 8 (gap at col 9). A key at col 16, row 3
+  // unlocks the only door below the second barrier (col 9, row 9). Row 9 is otherwise
+  // all walls — col 9 is the sole passage to the lower section.
+  // Flow: explore upper section → collect key near chaser → pulse open both barriers
+  //       → walk through unlocked door → navigate lower section to exit.
   {
     name: 'The Collapse',
-    hint: 'A strong pulse can shatter certain walls · Timing is everything',
+    hint: 'Find the key · Shatter the walls · The door will open',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1
       [1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,0,1], // 2: upper maze
-      [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1], // 3: upper maze
+      [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1], // 3: upper maze; KEY at col 16
       [1,1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,0,1], // 4: upper maze
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5: open approach
       [1,1,1,1,1,1,1,1,1,4,1,1,1,1,1,1,1,1,1,1], // 6: BARRIER — collapsible at col 9
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7: middle zone (patrol)
       [1,1,1,1,1,1,1,1,1,4,1,1,1,1,1,1,1,1,1,1], // 8: BARRIER — collapsible at col 9
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9: open exit approach
-      [1,1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1,1,0,1], // 10: lower maze
-      [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1], // 11: lower maze
-      [1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,0,1], // 12: lower maze
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13: exit col 18
+      [1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1], // 9: DOOR at col 9; all other cols solid
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 10: wide open lower zone
+      [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1], // 11: corridor walls — gaps at cols 1, 18
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 12: wide open
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1], // 13: exit col 18
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
     ],
     enemies: [
       { type: 'patrol', col: 1,  row: 7, waypoints: [[1,7],[17,7]] },
       { type: 'chaser', col: 14, row: 3 },
     ],
+    keys:  [{ id: 'k1', col: 16, row: 3, doorId: 'd1' }],
+    doors: [{ id: 'd1', col: 9,  row: 9 }],
   },
 
   // ─── Level 9 ─── "The Corridor"  (crushers)

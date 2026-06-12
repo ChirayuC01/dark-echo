@@ -6,7 +6,8 @@ import { TILE, COLS, ROWS,
          RAY_COUNT_STEP, STEP_RAY_MAX,
          CROUCH_INTERVAL_MULT, CROUCH_RAY_MULT, CROUCH_DIST_MULT,
          WATER_INTERVAL_MULT, WATER_RAY_MULT,
-         COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS } from './constants.js';
+         COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS,
+         KEY_PICKUP_RADIUS } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -37,6 +38,9 @@ const G = {
   waterReveals: new Map(),        // "row,col" → timestamp of last ray hit
   collapsibleReveals: new Map(),  // "row,col" → timestamp of last ray hit
   crushers: [],
+  doors: new Map(),               // id → {id, col, row, x, y, open, revealedAt}
+  keys: new Map(),                // id → {id, col, row, x, y, collected, doorId, revealedAt}
+  doorsByCell: new Map(),         // "row,col" → door obj; used for fast ray-hit lookups
 };
 
 const TOTAL = LEVELS.length;
@@ -58,6 +62,9 @@ function loadLevel(idx) {
   G.enemies = [];
   G.hazards = [];
   G.crushers = [];
+  G.doors = new Map();
+  G.keys = new Map();
+  G.doorsByCell = new Map();
   G.player = null;
   G.exit = null;
   G.pulseCooldown = 0;
@@ -97,6 +104,36 @@ function loadLevel(idx) {
     }
   }
 
+  // Spawn doors — set their grid cells to CELL.WALL while closed
+  if (def.doors) {
+    for (const d of def.doors) {
+      const door = {
+        id: d.id, col: d.col, row: d.row,
+        x: d.col * TILE + TILE / 2,
+        y: d.row * TILE + TILE / 2,
+        open: false,
+        revealedAt: -Infinity,
+      };
+      G.doors.set(d.id, door);
+      G.doorsByCell.set(`${d.row},${d.col}`, door);
+      G.grid[d.row][d.col] = CELL.WALL;
+    }
+  }
+
+  // Spawn keys
+  if (def.keys) {
+    for (const k of def.keys) {
+      G.keys.set(k.id, {
+        id: k.id, col: k.col, row: k.row,
+        x: k.col * TILE + TILE / 2,
+        y: k.row * TILE + TILE / 2,
+        collected: false,
+        doorId: k.doorId,
+        revealedAt: -Infinity,
+      });
+    }
+  }
+
   UI.setLevelName(def.name);
   UI.setHint(def.hint);
 }
@@ -106,14 +143,17 @@ function applyWallHits(hits, now) {
   for (const h of hits) {
     const isCollapsible = G.grid[h.row]?.[h.col] === CELL.COLLAPSIBLE;
     const isCrusher = !!h.crusher;
-    if (isCollapsible) G.collapsibleReveals.set(`${h.row},${h.col}`, now);
+    const doorKey = `${h.row},${h.col}`;
+    const hitDoor = G.doorsByCell.get(doorKey) || null;
+    if (isCollapsible) G.collapsibleReveals.set(doorKey, now);
     if (isCrusher) h.crusher.revealedAt = now;
+    if (hitDoor) hitDoor.revealedAt = now;
     G.impacts.push({
       x: h.x, y: h.y,
       nx: h.nx, ny: h.ny,
       energy: h.energy,
       type: h.type,
-      cellType: isCollapsible ? 'collapsible' : isCrusher ? 'crusher' : null,
+      cellType: isCollapsible ? 'collapsible' : isCrusher ? 'crusher' : hitDoor ? 'door' : null,
       createdAt: now,
     });
 
@@ -150,6 +190,19 @@ function processRayEntities(now) {
     for (const cr of G.crushers) {
       const d = segPtDist(cr.x, cr.y, sx, sy, tx, ty);
       if (d < cr.radius + REVEAL_D) cr.revealedAt = now;
+    }
+
+    // Key reveal
+    for (const [, key] of G.keys) {
+      if (key.collected) continue;
+      const d = segPtDist(key.x, key.y, sx, sy, tx, ty);
+      if (d < REVEAL_D) key.revealedAt = now;
+    }
+
+    // Door reveal (closed doors only; open ones fade naturally)
+    for (const [, door] of G.doors) {
+      const d = segPtDist(door.x, door.y, sx, sy, tx, ty);
+      if (d < REVEAL_D) door.revealedAt = now;
     }
 
     // Exit reveal (player rays only)
@@ -308,6 +361,22 @@ function update(dt, now) {
   // Enemy movement
   for (const en of G.enemies) en.update(dt, G.grid);
   for (const cr of G.crushers) cr.update(dt);
+
+  // Key pickup — proximity triggers collection and opens the matching door
+  for (const [, key] of G.keys) {
+    if (key.collected) continue;
+    if (dist(G.player.x, G.player.y, key.x, key.y) < KEY_PICKUP_RADIUS) {
+      key.collected = true;
+      Audio.playKeyPickup();
+      const door = G.doors.get(key.doorId);
+      if (door) {
+        door.open = true;
+        G.grid[door.row][door.col] = CELL.EMPTY;
+        G.doorsByCell.delete(`${door.row},${door.col}`);
+        Audio.playDoorOpen();
+      }
+    }
+  }
 
   // Death & exit
   checkDeath();
