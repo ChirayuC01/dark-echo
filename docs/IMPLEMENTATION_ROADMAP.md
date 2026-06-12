@@ -109,33 +109,34 @@
 ---
 
 ## Phase 3 — Collapsible Walls
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (commit `e9be4d4`)  
 **Goal:** Pulse rays can destroy `CELL.COLLAPSIBLE` walls, permanently opening paths.  
 **Depends on:** Phase 0 complete
 
 ### Tasks
-- [ ] `collision.js` `castRay`: Treat `CELL.COLLAPSIBLE` as `CELL.WALL`
-- [ ] `game.js` `applyWallHits()`: On hit where `G.grid[row][col] === CELL.COLLAPSIBLE` and `energy > COLLAPSE_ENERGY_THRESHOLD`:
-  - Mutate `G.grid[row][col] = CELL.EMPTY`
-  - Fire `G.raySystem.burst(hit.x, hit.y, 'pulse', G.castFn)` with a reduced maxDist for visual burst
-  - Call `Audio.playCollapse()`
-- [ ] `audio.js`: Add `playCollapse()` using `SOUND_CONFIG.collapse`
-- [ ] Level 8 ("The Collapse") partial grid data with `CELL.COLLAPSIBLE = 4`
-- [ ] Commit + push
+- [x] `collision.js` `castRay`: Treat `CELL.COLLAPSIBLE` as `CELL.WALL`
+- [x] `collision.js` `resolveWalls`: Also block movement on `CELL.COLLAPSIBLE`
+- [x] `game.js` `applyWallHits()`: On hit where `G.grid[row][col] === CELL.COLLAPSIBLE` and pulse energy > 0.3: mutate grid, fire 12-ray burst, call `Audio.playCollapse()`
+- [x] `game.js`: `cellType: 'collapsible'` stored on impact objects for renderer
+- [x] `audio.js`: `playCollapse()` — already done in Phase 0
+- [x] `renderer.js`: warm tan `rgba(200,175,120)` for collapsible wall glints
+- [x] Level 8 ("The Collapse") grid + enemy data in `levels.js`
+- [x] Commit + push
 
 ### Files Modified
 - `js/collision.js`
 - `js/game.js`
-- `js/audio.js`
+- `js/renderer.js`
 - `js/levels.js`
 
 ### Acceptance Criteria
-- [ ] Collapsible cells block movement and rays before pulse
-- [ ] Strong pulse ray (energy > 0.3) at a collapsible cell destroys it
-- [ ] After collapse: cell is passable; subsequent rays pass through
-- [ ] Collapse triggers visible glint burst at the cell
-- [ ] Collapse audio plays
-- [ ] Weak rays (bounced, low energy) do NOT trigger collapse
+- [x] Collapsible cells block movement and rays before pulse
+- [x] Strong pulse ray (energy > 0.3) at a collapsible cell destroys it
+- [x] After collapse: cell is passable; subsequent rays pass through
+- [x] Collapse triggers visible glint burst at the cell
+- [x] Collapse audio plays
+- [x] Weak rays (bounced, low energy) do NOT trigger collapse
+- [x] Collapsible wall glints are warm tan (distinct from normal white-blue glints)
 
 ---
 

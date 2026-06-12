@@ -4,6 +4,36 @@
 
 ---
 
+## [Phase 3 — Complete] Collapsible Walls
+
+**Date:** 2026-06-12  
+**Commit:** `e9be4d4`  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/collision.js`**: Imported `CELL`. In `castRay`, changed the wall check from `=== 1` to `=== CELL.WALL || === CELL.COLLAPSIBLE` so collapsible cells block rays. In `resolveWalls`, changed `!== 1` guard to exclude both `CELL.WALL` and `CELL.COLLAPSIBLE` so the player cannot walk through them.
+
+**`js/game.js`**:
+- Imported `COLLAPSE_ENERGY_THRESHOLD`, `COLLAPSE_BURST_RAYS` from constants
+- `applyWallHits()` checks `G.grid[h.row]?.[h.col] === CELL.COLLAPSIBLE` *before* recording impact (reads cell type before mutation); stores `cellType: 'collapsible'` on the impact object for renderer
+- If collapsible + pulse + energy > 0.3: mutates `G.grid[row][col] = CELL.EMPTY`; fires 12-ray burst at hit point (80px maxDist) for glint effect; calls `Audio.playCollapse()`
+
+**`js/renderer.js`**: `drawImpacts()` checks `im.cellType === 'collapsible'` first; uses warm tan `rgba(200,175,120,α)` so collapsible walls are visually distinct from regular walls before and as they are destroyed.
+
+**`js/levels.js`**: Level 8 "The Collapse" — symmetric maze upper + lower, split by two full-row horizontal barriers (rows 6 and 8) each with a single collapsible wall at col 9. Patrol guards middle zone (row 7, col 1–17). Chaser in upper section (col 14, row 3). Two pulses required to break through; enemy pressure punishes hasty pulsing.
+
+**`js/audio.js`**: `playCollapse()` was already implemented in Phase 0. No changes needed.
+
+### Design decisions
+
+- `cellType` field is added to impact objects so only the renderer needs to know about collapsible cell color — `applyWallHits` reads `G.grid` before mutation to capture the correct type.
+- Collapse only triggers on `type === 'pulse'` hits — step rays and hazard rays (lower energy) cannot destroy walls. This is intentional: the player must explicitly use the loud pulse, accepting the risk.
+- Collapse burst uses 80px `maxDistOverride` — short starburst pattern that reveals the newly opened gap without flooding the screen with geometry.
+- Level 8 uses two barriers so the player experiences the mechanic twice: first to learn (row 6), second under enemy pressure (row 8, with patrol already active).
+
+---
+
 ## [Phase 2 — Complete] Water Zones
 
 **Date:** 2026-06-11  

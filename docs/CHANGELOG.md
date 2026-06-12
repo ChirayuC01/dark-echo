@@ -5,7 +5,23 @@
 
 ---
 
-## [Unreleased] — Phase 3 pending
+## [Unreleased] — Phase 4 pending
+
+---
+
+## [v0.8.0] — 2026-06-12 — Phase 3
+
+### Added
+- **Collapsible wall mechanic**: `CELL.COLLAPSIBLE = 4` tiles block rays and movement like walls
+  - Destroyed by a direct pulse ray hit with energy > `COLLAPSE_ENERGY_THRESHOLD (0.3)`
+  - Permanent: `G.grid[row][col]` mutated to `CELL.EMPTY`; path stays open for the rest of the level
+  - Collapse emits a 12-ray glint burst at hit point (`COLLAPSE_BURST_RAYS = 12`, 80px maxDist)
+  - Collapse audio: `playCollapse()` — low rumble + noise burst
+  - Step rays and hazard rays cannot trigger collapse (energy too low after bounces)
+- Collapsible wall glints render as warm tan `rgba(200,175,120,α)` — distinct from white-blue wall glints
+- `collision.js` `castRay` and `resolveWalls` now treat `CELL.COLLAPSIBLE` as solid (same as `CELL.WALL`)
+- `applyWallHits()` stores `cellType: 'collapsible'` on impact objects for renderer coloring
+- Level 8 "The Collapse" — two horizontal barriers at rows 6 and 8 (single collapsible gap each at col 9); patrol in middle zone; chaser in upper section
 
 ---
 

@@ -1,13 +1,13 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 2 complete (2026-06-11)  
+> **Last updated:** Phase 3 complete (2026-06-12)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 3 — Collapsible Walls**  
+**Phase 4 — Crushers**  
 Status: ⬜ Pending (ready to begin)
 
 ---
@@ -26,7 +26,7 @@ Status: ⬜ Pending (ready to begin)
 | PatrolEnemy | `js/entities.js` | Waypoint cycle, pulse-stun, step-aware hearing |
 | ChaserEnemy | `js/entities.js` | Idle wander + hunt state |
 | Hazard | `js/entities.js` | Timed pulse emitter, proximity kill |
-| 7 levels | `js/levels.js` | Levels 1–7 complete (Level 7 = Flooded) |
+| 8 levels | `js/levels.js` | Levels 1–8 complete (Level 8 = The Collapse) |
 | Touch joystick | `js/input.js` | 110px zone, 40px max drag |
 | Touch crouch button | `js/input.js`, `index.html` | #crouch-btn, bottom-center mobile |
 | All UI screens | `js/ui.js`, `index.html` | title/pause/dead/levelup/win |
@@ -36,6 +36,7 @@ Status: ⬜ Pending (ready to begin)
 | **Crouch / stealth** | `js/input.js`, `js/entities.js`, `js/game.js` | Hold Shift/C: 45% speed, 50% rays, 70% range |
 | **HUD crouch indicator** | `js/renderer.js`, `index.html`, `css/style.css` | Shows CROUCH in HUD when active |
 | **Water zones** | `js/entities.js`, `js/game.js`, `js/renderer.js` | CELL.WATER=5: 60% speed, 160% rays, 60% interval, teal wash |
+| **Collapsible walls** | `js/collision.js`, `js/game.js`, `js/renderer.js` | CELL.COLLAPSIBLE=4: blocks until pulse (energy>0.3) destroys it |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Prep for Phase 3 collapsibles |
@@ -45,6 +46,13 @@ Status: ⬜ Pending (ready to begin)
 ## Phase 0 — Complete ✅ (commit `cbc1694`)
 ## Phase 1 — Complete ✅ (commit `3933d22`)
 ## Phase 2 — Complete ✅ (commit `e65bf1b`)
+## Phase 3 — Complete ✅ (commit `e9be4d4`)
+
+**Phase 3 summary:**
+- `castRay` and `resolveWalls` in `collision.js` now block on `CELL.COLLAPSIBLE (4)` in addition to `CELL.WALL (1)`
+- `applyWallHits()` in `game.js`: pulse hit on collapsible cell with energy > 0.3 → mutate grid → emit 12-ray burst → play collapse audio
+- `drawImpacts()` in `renderer.js`: collapsible wall glints render as warm tan `rgba(200,175,120)` instead of white-blue
+- Level 8 "The Collapse": two barrier rows (6 and 8), single collapsible gap at col 9 each; patrol in middle zone; chaser in upper section
 
 **Phase 2 summary:**
 - `Player.move()` accepts `inWater` param; speed × `WATER_SPEED_MULT = 0.6`, stacks with crouch
@@ -62,7 +70,7 @@ Status: ⬜ Pending (ready to begin)
 | System | Phase | Priority |
 |---|---|---|
 | ~~Water zones~~ | ~~Phase 2~~ | ~~High~~ |
-| Collapsible walls | Phase 3 | High |
+| ~~Collapsible walls~~ | ~~Phase 3~~ | ~~High~~ |
 | Crushers | Phase 4 | Medium |
 | Doors & keys | Phase 5 | Medium |
 | Switches / triggers | Phase 6 | Medium |
@@ -79,12 +87,14 @@ Status: ⬜ Pending (ready to begin)
 
 ## Next Recommended Task
 
-Begin **Phase 3 — Collapsible Walls**:
-1. `collision.js` `castRay`: treat `CELL.COLLAPSIBLE` as `CELL.WALL` (no change needed — already blocks as non-zero non-water)
-2. `game.js` `applyWallHits()`: on hit where `G.grid[row][col] === CELL.COLLAPSIBLE` and `energy > COLLAPSE_ENERGY_THRESHOLD` → set cell to `CELL.EMPTY`, emit glint burst, call `Audio.playCollapse()`
-3. `audio.js`: add `playCollapse()` using `SOUND_CONFIG.collapse`
-4. Level 8 "The Collapse" grid in `levels.js`
-5. Commit + push
+Begin **Phase 4 — Crushers**:
+1. `entities.js`: add `Crusher` class — sinusoidal axis movement, `revealedAt`, `blocking`
+2. `game.js` `loadLevel()`: spawn `Crusher` from `def.enemies[]` type `'crusher'`
+3. `game.js` `update()`: update crushers, check player overlap → `die('Crushed.')`
+4. `collision.js` / `castFn`: pass crushers as dynamic obstacles; check segment intersection before DDA
+5. `renderer.js`: `drawCrushers()` — thick glint line at current crusher position, hearing-attenuated
+6. Level 9 "The Corridor" in `levels.js`
+7. Commit + push
 
 ---
 
