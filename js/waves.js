@@ -9,22 +9,24 @@ const NUDGE = 0.8; // px to offset after bounce to avoid re-collision
 export class Ray {
   constructor() {
     this.done = true;
-    this.segments      = [];   // sealed segments: {x1,y1,x2,y2,energy}
+    this.quiet = false;
+    this.segments      = [];
     this.heardEntities = new Set();
   }
 
-  init(ox, oy, dx, dy, energy, type, maxDist, burstX, burstY) {
+  init(ox, oy, dx, dy, energy, type, maxDist, burstX, burstY, quiet = false) {
     this.segments.length = 0;
     this.heardEntities.clear();
 
-    this.segX = ox; this.segY = oy;  // start of current (live) segment
-    this.tipX = ox; this.tipY = oy;  // current front of ray
+    this.segX = ox; this.segY = oy;
+    this.tipX = ox; this.tipY = oy;
     this.dx = dx;   this.dy = dy;
     this.energy   = energy;
     this.type     = type;
     this.maxDist  = maxDist;
     this.traveled = 0;
     this.bounces  = 0;
+    this.quiet    = quiet;
     this.burstX   = burstX;  // original sound source (for enemy targeting)
     this.burstY   = burstY;
     this.done     = false;
@@ -123,7 +125,7 @@ export class RaySystem {
 
   // Emit a burst of rays from (x,y).
   // countOverride and maxDistOverride let callers reduce output (e.g. when crouching).
-  burst(x, y, type, castFn, countOverride, maxDistOverride) {
+  burst(x, y, type, castFn, countOverride, maxDistOverride, quiet = false) {
     const count   = countOverride  ?? (type === 'pulse'  ? RAY_COUNT_PULSE
                                      : type === 'step'   ? RAY_COUNT_STEP
                                      : RAY_COUNT_HAZARD);
@@ -134,7 +136,6 @@ export class RaySystem {
                                       : type === 'step'   ? STEP_RAY_MAX
                                       : HAZARD_RAY_MAX);
 
-    // Random phase offset so successive bursts don't align
     const phase = Math.random() * Math.PI * 2;
 
     for (let i = 0; i < count; i++) {
@@ -142,7 +143,7 @@ export class RaySystem {
       const ray = this._pool.length ? this._pool.pop() : new Ray();
       ray.init(x, y,
                Math.cos(angle), Math.sin(angle),
-               energy, type, maxDist, x, y);
+               energy, type, maxDist, x, y, quiet);
       this.active.push(ray);
     }
   }

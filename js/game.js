@@ -147,8 +147,10 @@ function processRayEntities(now) {
         if (d < en.radius + 18) {
           ray.heardEntities.add(en);
           if (en instanceof ChaserEnemy) {
-            en.hearSound(ray.burstX, ray.burstY);
-            Audio.playAlert();
+            if (!ray.quiet) {
+              en.hearSound(ray.burstX, ray.burstY);
+              Audio.playAlert();
+            }
           } else if (en instanceof PatrolEnemy) {
             if (ray.type === 'pulse') {
               en.onPulseHit();
@@ -243,7 +245,8 @@ function update(dt, now) {
     const countMult = (crouching ? CROUCH_RAY_MULT : 1) * (G.playerInWater ? WATER_RAY_MULT : 1);
     const count   = Math.max(1, Math.min(64, Math.ceil(RAY_COUNT_STEP * countMult)));
     const maxDist = STEP_RAY_MAX * (crouching ? CROUCH_DIST_MULT : 1);
-    G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn, count, maxDist);
+    // quiet=true when crouching: rays still reveal geometry but won't re-alert chasers
+    G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn, count, maxDist, crouching);
     if (G.playerInWater) {
       Audio.playFootstepWater();
     } else {
