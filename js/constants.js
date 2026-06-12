@@ -43,7 +43,7 @@ export const HAZARD_PULSE_INTERVAL = 2400;
 export const CROUCH_SPEED_MULT    = 0.45;
 export const CROUCH_INTERVAL_MULT = 2.5;
 export const CROUCH_RAY_MULT      = 0.5;
-export const CROUCH_DIST_MULT     = 0.7;
+export const CROUCH_DIST_MULT     = 0.45;
 
 // ─── Water zone ──────────────────────────────────────────────────────────────
 export const WATER_SPEED_MULT    = 0.6;
