@@ -1,6 +1,7 @@
 import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
          RAY_TRAIL_MS, IMPACT_FADE_MS,
-         HEARING_NEAR, HEARING_FAR, CELL } from './constants.js';
+         HEARING_NEAR, HEARING_FAR, CELL,
+         CRUSHER_REVEAL_MS } from './constants.js';
 import { segPtDist } from './utils.js';
 
 // How loudly the player "hears" something at distance d:
@@ -324,11 +325,18 @@ function drawKeys(keys, now, px, py) {
 }
 
 // ─── Crushers — orange lethal moving blocks, revealed only by ray contact ─────
+function crusherRevealAlpha(revealTime, now) {
+  const age = now - revealTime;
+  if (age >= CRUSHER_REVEAL_MS) return 0;
+  const t = 1 - age / CRUSHER_REVEAL_MS;
+  return t * t * (3 - 2 * t);
+}
+
 function drawCrushers(crushers, now, px, py) {
   if (!crushers || crushers.length === 0) return;
   ctx.save();
   for (const c of crushers) {
-    const alpha = revealAlpha(c.revealedAt, now) * hearing(Math.hypot(c.x - px, c.y - py));
+    const alpha = crusherRevealAlpha(c.revealedAt, now) * hearing(Math.hypot(c.x - px, c.y - py));
     if (alpha < 0.004) continue;
     const b = c.bounds();
     ctx.fillStyle = `rgba(230,105,55,${(alpha * 0.55).toFixed(3)})`;

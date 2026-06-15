@@ -244,7 +244,7 @@ export const LEVELS = [
   //       → col 14 → walk left → col 6 → corridor 3 → col 14 → walk right → exit.
   {
     name: 'The Corridor',
-    hint: 'Enter from the left · Wait for the gap · Dash right to the exit',
+    hint: 'Watch for the crusher · Wait until it slides away · Then dash across',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1, open row
@@ -263,10 +263,10 @@ export const LEVELS = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
     ],
     enemies: [
-      // range 2 = ±80px sweep: crusher stays within cols 8–12, safe zones never blocked
-      { type: 'crusher', col: 10, row: 3,  axis: 'h', range: 2, period: 9.0 },
-      { type: 'crusher', col: 10, row: 7,  axis: 'h', range: 2, period: 7.0 },
-      { type: 'crusher', col: 10, row: 11, axis: 'h', range: 2, period: 5.5 },
+      // range 2 = ±80px sweep: danger zone cols 8–12, left safe ≤col 7, right safe ≥col 14
+      { type: 'crusher', col: 10, row: 3,  axis: 'h', range: 2, period: 13.0 },
+      { type: 'crusher', col: 10, row: 7,  axis: 'h', range: 2, period: 10.0 },
+      { type: 'crusher', col: 10, row: 11, axis: 'h', range: 2, period:  8.0 },
     ],
   },
 ];

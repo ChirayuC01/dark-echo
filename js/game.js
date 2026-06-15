@@ -7,7 +7,7 @@ import { TILE, COLS, ROWS,
          CROUCH_INTERVAL_MULT, CROUCH_RAY_MULT, CROUCH_DIST_MULT,
          WATER_INTERVAL_MULT, WATER_RAY_MULT,
          COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS,
-         KEY_PICKUP_RADIUS } from './constants.js';
+         KEY_PICKUP_RADIUS, CRUSHER_REVEAL_MS } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -186,10 +186,10 @@ function processRayEntities(now) {
       if (d < ent.radius + REVEAL_D) ent.revealedAt = now;
     }
 
-    // Crusher reveal by ray proximity
+    // Crusher reveal — larger radius than entities so player can track from safe zone
     for (const cr of G.crushers) {
       const d = segPtDist(cr.x, cr.y, sx, sy, tx, ty);
-      if (d < cr.radius + REVEAL_D) cr.revealedAt = now;
+      if (d < cr.radius + 52) cr.revealedAt = now;
     }
 
     // Key reveal

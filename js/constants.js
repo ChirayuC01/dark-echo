@@ -56,7 +56,8 @@ export const COLLAPSE_ENERGY_THRESHOLD = 0.3;
 export const COLLAPSE_BURST_RAYS       = 12;
 
 // ─── Doors / keys ────────────────────────────────────────────────────────────
-export const KEY_PICKUP_RADIUS = 12;
+export const KEY_PICKUP_RADIUS    = 12;
+export const CRUSHER_REVEAL_MS    = 5500;  // crushers stay visible longer than walls
 
 // ─── Cell types ──────────────────────────────────────────────────────────────
 export const CELL = {
