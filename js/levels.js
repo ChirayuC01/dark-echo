@@ -241,7 +241,7 @@ export const LEVELS = [
   // Player flow: enter col 6 → wait in left safe zone → sprint to col 14 when crusher swings out.
   {
     name: 'The Corridor',
-    hint: 'Watch for the crusher · Wait until it slides away · Then dash across',
+    hint: 'A switch unlocks the exit · Watch for the crusher · Wait, then dash',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1, open row
@@ -256,7 +256,7 @@ export const LEVELS = [
       [1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1], // 10: wall — gap at col 6
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11: CORRIDOR 3 (crusher at col 14)
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1], // 12: wall — gap at col 14
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13: exit col 18
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,1], // 13: exit col 18; wall at col 16 until switch fires
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
     ],
     enemies: [
@@ -265,5 +265,8 @@ export const LEVELS = [
       { type: 'crusher', col: 14, row: 7,  axis: 'h', range: 2, period: 10.0 },
       { type: 'crusher', col: 14, row: 11, axis: 'h', range: 2, period:  8.0 },
     ],
+    // Switch at col 3, row 9 (player crosses it while walking left toward corridor 3 entry)
+    // Opens the wall at row 13 col 16, unblocking the final run to the exit
+    triggers: [{ col: 3, row: 9, action: 'remove_wall', targetId: '13,16' }],
   },
 ];

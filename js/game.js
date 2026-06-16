@@ -41,6 +41,7 @@ const G = {
   doors: new Map(),               // id → {id, col, row, x, y, open, revealedAt}
   keys: new Map(),                // id → {id, col, row, x, y, collected, doorId, revealedAt}
   doorsByCell: new Map(),         // "row,col" → door obj; used for fast ray-hit lookups
+  triggers: [],                   // [{col, row, x, y, action, targetId, fired, revealedAt}]
 };
 
 const TOTAL = LEVELS.length;
@@ -72,6 +73,7 @@ function loadLevel(idx) {
   G.playerInWater = false;
   G.waterReveals = new Map();
   G.collapsibleReveals = new Map();
+  G.triggers = [];
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -129,6 +131,21 @@ function loadLevel(idx) {
         y: k.row * TILE + TILE / 2,
         collected: false,
         doorId: k.doorId,
+        revealedAt: -Infinity,
+      });
+    }
+  }
+
+  // Spawn triggers
+  if (def.triggers) {
+    for (const t of def.triggers) {
+      G.triggers.push({
+        col: t.col, row: t.row,
+        x: t.col * TILE + TILE / 2,
+        y: t.row * TILE + TILE / 2,
+        action: t.action,
+        targetId: t.targetId,
+        fired: false,
         revealedAt: -Infinity,
       });
     }
@@ -211,6 +228,13 @@ function processRayEntities(now) {
       if (d < REVEAL_D) G.exit.revealedAt = now;
     }
 
+    // Trigger reveal
+    for (const tr of G.triggers) {
+      if (tr.fired) continue;
+      const d = segPtDist(tr.x, tr.y, sx, sy, tx, ty);
+      if (d < REVEAL_D) tr.revealedAt = now;
+    }
+
     // Enemy hearing (one-shot per ray)
     if (ray.type === 'pulse' || (ray.type === 'step' && isStepLevel)) {
       for (const en of G.enemies) {
@@ -278,6 +302,22 @@ function die(reason) {
   UI.setDeathMessage(reason);
   UI.show('screen-dead');
   Renderer.setHUDVisible(false);
+}
+
+// ─── Trigger actions ─────────────────────────────────────────────────────────
+function fireTrigger(tr) {
+  if (tr.action === 'open_door') {
+    const door = G.doors.get(tr.targetId);
+    if (door && !door.open) {
+      door.open = true;
+      G.grid[door.row][door.col] = CELL.EMPTY;
+      G.doorsByCell.delete(`${door.row},${door.col}`);
+      Audio.playDoorOpen();
+    }
+  } else if (tr.action === 'remove_wall') {
+    const [r, c] = tr.targetId.split(',').map(Number);
+    G.grid[r][c] = CELL.EMPTY;
+  }
 }
 
 // ─── Win check ────────────────────────────────────────────────────────────────
@@ -375,6 +415,15 @@ function update(dt, now) {
         G.doorsByCell.delete(`${door.row},${door.col}`);
         Audio.playDoorOpen();
       }
+    }
+  }
+
+  // Trigger proximity — fires action once when player steps within 10px of center
+  for (const tr of G.triggers) {
+    if (tr.fired) continue;
+    if (dist(G.player.x, G.player.y, tr.x, tr.y) < 10) {
+      tr.fired = true;
+      fireTrigger(tr);
     }
   }
 

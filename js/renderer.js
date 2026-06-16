@@ -38,7 +38,7 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, crushers, doors, keys, exit, playerInWater, grid, waterReveals, collapsibleReveals } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
@@ -51,6 +51,7 @@ export function draw(state, now) {
   drawExit(exit, now);
   drawDoors(doors, now, px, py);
   drawKeys(keys, now, px, py);
+  drawTriggers(triggers, now, px, py);
   drawCrushers(crushers, now, px, py);
   drawHazards(hazards, now, px, py);
   drawEnemies(enemies, now, px, py);
@@ -320,6 +321,28 @@ function drawKeys(keys, now, px, py) {
     ctx.beginPath(); ctx.arc(key.x, key.y, 14, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = `rgba(255,240,130,${(pulse * 1.1 > 1 ? 1 : pulse * 1.1).toFixed(3)})`;
     ctx.beginPath(); ctx.arc(key.x, key.y, 3, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ─── Switches / Triggers — bright blue-white pulsing dot, hidden until sound finds it ─
+function drawTriggers(triggers, now, px, py) {
+  if (!triggers || triggers.length === 0) return;
+  ctx.save();
+  for (const tr of triggers) {
+    if (tr.fired) continue;
+    const alpha = revealAlpha(tr.revealedAt, now) * hearing(Math.hypot(tr.x - px, tr.y - py));
+    if (alpha < 0.004) continue;
+    const pulse = (0.5 + 0.25 * Math.sin(now / 350)) * alpha;
+    ctx.shadowBlur = 14 * alpha;
+    ctx.shadowColor = 'rgba(100,160,255,0.7)';
+    const grd = ctx.createRadialGradient(tr.x, tr.y, 1, tr.x, tr.y, 16);
+    grd.addColorStop(0, `rgba(120,175,255,${pulse.toFixed(3)})`);
+    grd.addColorStop(1, 'rgba(100,160,255,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(tr.x, tr.y, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `rgba(160,210,255,${(Math.min(1, pulse * 1.1)).toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(tr.x, tr.y, 3, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
 }
