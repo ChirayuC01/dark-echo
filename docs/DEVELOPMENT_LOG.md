@@ -4,6 +4,52 @@
 
 ---
 
+## [Phase 8 — Complete] BlindStalker Enemy + Level 10
+
+**Date:** 2026-06-16  
+**Commit:** `fe11f7d`  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/constants.js`**: Added 3 BlindStalker constants:
+- `BLIND_STALKER_SPEED_IDLE = 30` (px/s — slightly slower wander than ChaserEnemy's 35)
+- `BLIND_STALKER_SPEED_HUNT = 104` (px/s — CHASER_SPEED_HUNT × 1.3)
+- `BLIND_STALKER_HUNT_DURATION = 4` (seconds — shorter window than ChaserEnemy's 6s)
+
+**`js/entities.js`**: Added `BlindStalker` class between `Sentry` and `Hazard`:
+- Identical state machine to `ChaserEnemy` (`idle` wander → `hunting` → back to `idle`)
+- `hearSound(sourceX, sourceY)`: sets `state = 'hunting'`, `huntTimer = 4` — same signature as ChaserEnemy
+- `update(dt, grid)`: uses `BLIND_STALKER_SPEED_HUNT` and `BLIND_STALKER_SPEED_IDLE` instead of CHASER constants
+- No `onPulseHit()` — BlindStalker is not stunned by pulse (unlike PatrolEnemy/Sentry)
+- Import line extended with 3 new constants
+
+**`js/game.js`**:
+- Import extended: `BlindStalker` added from `'./entities.js'`
+- `loadLevel()`: `type:'stalker'` → `new BlindStalker(ex, ey)`; added to `G.enemies[]`
+- `processRayEntities()`: `instanceof BlindStalker` branch placed BEFORE `instanceof ChaserEnemy` check; calls `en.hearSound(ray.burstX, ray.burstY)` without `!ray.quiet` guard — responds to crouched steps too; runs inside the existing `if (ray.type === 'pulse' || (ray.type === 'step' && isStepLevel))` guard so hazard rays don't trigger it
+
+**`js/levels.js`**: Level 10 "The Gauntlet II" added:
+- Grid: water zone in row 3 (cols 2–8, 10–17) with dry corridors at col 9 and col 18
+- Row 4/2 gaps align with col 9 and col 18 to create a dry path through the water section
+- Collapsible wall at col 5 row 5 — must be pulsed to access left side of row 5/7
+- Key at col 2 row 7 (behind collapsible); door at col 10 row 10 (chokepoint to lower section)
+- BlindStalker starts col 15 row 5 — hears the required pulse at ~400px, ~3.8s travel time
+- Two hazards at col 5 and col 13 in water row (bracket the dry col 9 path)
+- Step-aware patrol sweeps row 9 (cols 3–16 waypoints)
+- Crusher at col 10 row 11, horizontal range 3 tiles, period 5.5s
+- Sentry at col 14 row 13, angle π (faces left), guards exit at col 18
+
+### Design decisions
+
+- **No pulse-stun for BlindStalker**: The mechanic is about sound awareness, not visual threat. Pulsing to stun would be counterproductive — the pulse itself is what alerts it. The only counter is stillness.
+- **Hearing all step rays (incl. quiet)**: This is the key differentiator from ChaserEnemy. `ray.quiet = true` (set when crouching) normally prevents re-alerting a ChaserEnemy. BlindStalker ignores this. The player cannot silently crouch-walk past a BlindStalker — only complete stillness works.
+- **Hazard rays excluded**: BlindStalker hearing runs inside the `ray.type === 'pulse' || 'step'` guard. Hazard rays do not trigger it. Otherwise the stalker would perpetually home toward hazard locations.
+- **Level 10 key mechanic creates forced noise**: The collapsible wall at col 5 row 5 is the only path to the key. Pulsing it is mandatory. The stalker starts ~400px away (3.8s at hunt speed). Player must: pulse → rush 3 tiles left to key → escape south through row 8 col 1 → before stalker closes. A tight but learnable sequence.
+- **`instanceof BlindStalker` before `instanceof ChaserEnemy`**: Both inherit nothing (plain classes), but placing BlindStalker first avoids any ambiguity. `instanceof` checks are O(1) and the order is purely defensive.
+
+---
+
 ## [Phase 7 — Complete] Sentry Enemy + Trigger Visibility Fix
 
 **Date:** 2026-06-16  

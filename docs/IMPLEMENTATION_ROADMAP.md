@@ -263,27 +263,28 @@
 ---
 
 ## Phase 8 — BlindStalker Enemy
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (commit `fe11f7d`)  
 **Goal:** Fast enemy that navigates purely by sound; re-acquires instantly on any sound.  
 **Depends on:** Phase 0 complete
 
 ### Tasks
-- [ ] `entities.js`: Add `BlindStalker` class (extend/copy ChaserEnemy with different speed/timer constants)
-- [ ] `game.js` `loadLevel()`: Spawn from `type: 'stalker'`
-- [ ] `game.js` `processRayEntities()`: Handle BlindStalker hearing (same path as ChaserEnemy)
-- [ ] Level 10 ("The Gauntlet II") data
-- [ ] Commit + push
+- [x] `entities.js`: Add `BlindStalker` class (copy of ChaserEnemy; different speed/timer constants; `hearSound()` ignores `ray.quiet`)
+- [x] `game.js` `loadLevel()`: Spawn from `type: 'stalker'`
+- [x] `game.js` `processRayEntities()`: `instanceof BlindStalker` branch — calls `hearSound()` without quiet guard; runs before ChaserEnemy check
+- [x] Level 10 ("The Gauntlet II") data — all mechanics + BlindStalker
+- [x] Commit + push
 
 ### Files Modified
+- `js/constants.js` (3 BLIND_STALKER_* constants)
 - `js/entities.js`
 - `js/game.js`
 - `js/levels.js`
 
 ### Acceptance Criteria
-- [ ] BlindStalker faster than ChaserEnemy in hunt mode (104 vs 80 px/s)
-- [ ] Hunt timer shorter (4s vs 6s)
-- [ ] Re-acquires target immediately on any sound that reaches it
-- [ ] Balanced: beatable by staying completely still
+- [x] BlindStalker faster than ChaserEnemy in hunt mode (104 vs 80 px/s)
+- [x] Hunt timer shorter (4s vs 6s)
+- [x] Re-acquires target immediately on any sound that reaches it (incl. crouched steps)
+- [x] Balanced: beatable by staying completely still
 
 ---
 

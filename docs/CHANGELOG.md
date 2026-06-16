@@ -5,7 +5,31 @@
 
 ---
 
-## [Unreleased] — Phase 8 pending
+## [Unreleased] — Phase 9 pending
+
+---
+
+## [v0.13.0] — 2026-06-16 — Phase 8
+
+### Added
+- **BlindStalker enemy**: fast sound-hunter that detects all noise including crouched footsteps
+  - `BlindStalker` class in `entities.js`: same state machine as `ChaserEnemy` but hears everything
+  - Hunt speed: 104 px/s (`CHASER_SPEED_HUNT × 1.3`); idle speed: 30 px/s
+  - Hunt timer: 4 seconds (shorter than ChaserEnemy's 6s)
+  - `hearSound()` called by `processRayEntities()` for all step and pulse rays, ignoring `ray.quiet` flag — crouching does NOT hide the player from it
+  - Re-acquires instantly on each new sound before timer expires
+  - 3 new constants: `BLIND_STALKER_SPEED_IDLE`, `BLIND_STALKER_SPEED_HUNT`, `BLIND_STALKER_HUNT_DURATION`
+  - Spawn from `type: 'stalker'` in level def enemies array
+- **Level 10 "The Gauntlet II"**: all mechanics combined, BlindStalker introduced
+  - BlindStalker at col 15 row 5 — hears the forced pulse at col 5 row 5
+  - Collapsible wall at col 5 row 5 blocks path to key; player must pulse it (alerting stalker)
+  - Key at col 2 row 7; door at col 10 row 10 — key/door chokepoint
+  - Water zone in row 3 (cols 2–8, 10–17) with two hazards bracketing the dry path at col 9
+  - Step-aware patrol sweeps row 9 (player must crouch to cross)
+  - Horizontal crusher in row 11 (range 3, period 5.5s)
+  - Sentry at col 14 row 13 guards the final sprint to exit
+
+---
 
 ---
 

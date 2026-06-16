@@ -7,7 +7,7 @@
 
 ## Active Phase
 
-**Phase 8 — BlindStalker Enemy**  
+**Phase 9 — Levels 6–10 polish**  
 Status: ⬜ Pending
 
 ---
@@ -41,6 +41,8 @@ Status: ⬜ Pending
 | **Doors & Keys** | `js/game.js`, `js/renderer.js`, `js/levels.js` | Keys reveal gold dot; closed doors block rays/movement; pickup opens door |
 | **Switches / Triggers** | `js/game.js`, `js/renderer.js`, `js/levels.js` | Blue-white pulsing dot; player proximity fires `open_door` or `remove_wall` once |
 | **Sentry Enemy** | `js/entities.js`, `js/game.js`, `js/renderer.js`, `js/levels.js` | Rotating ±45° scan cone, 180px LOS detection, 8s pursuit; stunned by pulse |
+| **BlindStalker Enemy** | `js/entities.js`, `js/game.js`, `js/levels.js` | Hears all sounds (step+pulse, incl. crouched); 104px/s hunt speed; 4s timer |
+| **10 levels** | `js/levels.js` | Level 10 "The Gauntlet II" — all mechanics + BlindStalker |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
@@ -55,6 +57,7 @@ Status: ⬜ Pending
 ## Phase 5 — Complete ✅ (commit `d1e4e23`)
 ## Phase 6 — Complete ✅ (commit `fe82322`)
 ## Phase 7 — Complete ✅ (commit `d1c00f5`)
+## Phase 8 — Complete ✅ (commit `fe11f7d`)
 
 **Phase 7 summary:**
 - `SENTRY_SCAN_RANGE=180`, `SENTRY_SCAN_ARC=π/2`, `SENTRY_SCAN_SPEED=π/3`, `SENTRY_HUNT_DURATION=8` added to `constants.js`
@@ -86,8 +89,8 @@ Status: ⬜ Pending
 | ~~Doors & keys~~ | ~~Phase 5~~ | ~~Medium~~ |
 | ~~Switches / triggers~~ | ~~Phase 6~~ | ~~Medium~~ |
 | ~~Sentry enemy~~ | ~~Phase 7~~ | ~~Medium~~ |
-| BlindStalker enemy | Phase 8 | Low |
-| Level 10 | Phase 9 | High |
+| ~~BlindStalker enemy~~ | ~~Phase 8~~ | ~~Low~~ |
+| Level 10 (full polish) | Phase 9 | High |
 | Ambient audio | Phase 10 | Medium |
 | Debug overlay | Phase 11 | Low |
 | Audio polish | Phase 12 | Low |
@@ -98,11 +101,10 @@ Status: ⬜ Pending
 
 ## Next Recommended Task
 
-Begin **Phase 8 — BlindStalker Enemy**:
-1. `entities.js`: Add `BlindStalker` class — copy of ChaserEnemy with speed 104 px/s (`CHASER_SPEED_HUNT × 1.3`) and 4s hunt timer; re-acquires instantly on any sound
-2. `game.js` `loadLevel()`: spawn from `type: 'stalker'`; add to `G.enemies[]`
-3. `game.js` `processRayEntities()`: handle BlindStalker same as ChaserEnemy (call `hearSound()` on any ray type, no `ray.quiet` check — it hears everything)
-4. Level 10 "The Gauntlet II" — all mechanics combined, BlindStalker introduced
+Begin **Phase 10 — Ambient Audio**:
+1. `audio.js`: `startAmbient()` — creates looping 55Hz oscillator at gain 0.04, stores as module-level node
+2. `audio.js`: `stopAmbient()` — ramps gain to 0 over 0.3s, then disconnects
+3. `game.js` `handleAction()`: call `startAmbient()` on `'start'` and `'resume'`; call `stopAmbient()` in `die()` and win check
 
 ---
 
