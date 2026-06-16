@@ -232,32 +232,33 @@
 ---
 
 ## Phase 7 — Sentry Enemy
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (commit `d1c00f5`)  
 **Goal:** A stationary enemy with a rotating scan cone. Detects player via line-of-sight, not sound.  
 **Depends on:** Phase 0 complete
 
 ### Tasks
-- [ ] `entities.js`: Add `Sentry` class — rotating scan angle, cone LOS check using `castFn`, state machine `idle`/`alert`
-- [ ] `game.js` `loadLevel()`: Spawn `Sentry` from level def type `'sentry'`
-- [ ] `game.js` update(): Pass `G.castFn` to `sentry.update(dt, castFn, player)` — sentry checks LOS to player each frame
-- [ ] `audio.js`: Add `playSentryAlert()` — distinct tone from ChaserEnemy alert
-- [ ] `renderer.js`: Reveal sentry same as other enemies (sound reveal radius, `revealedAt` fade)
-- [ ] Level 9 uses Sentry
-- [ ] Commit + push
+- [x] `entities.js`: Add `Sentry` class — rotating scan angle, cone LOS check using `castFn`, state machine `idle`/`alert`/`stunned`
+- [x] `game.js` `loadLevel()`: Spawn `Sentry` from level def type `'sentry'`
+- [x] `game.js` update(): `instanceof Sentry` branch passes `castFn`+`player`; calls `playSentryAlert()` on `true` return
+- [x] `audio.js`: `playSentryAlert()` already implemented in Phase 0 via SOUND_CONFIG
+- [x] `renderer.js`: Cone arc drawn before enemy dot; alert state → brighter red glow; `e.scanRange` property acts as Sentry discriminator
+- [x] Level 9 sentry at col 12 row 13 (exit row guard), initial angle π
+- [x] Trigger visibility fixed: larger glow, dramatic pulse beat, outer ring + 4-spoke cross
+- [x] Commit + push
 
 ### Files Modified
+- `js/constants.js` (4 SENTRY_* constants)
 - `js/entities.js`
 - `js/game.js`
-- `js/audio.js`
 - `js/renderer.js`
 - `js/levels.js`
 
 ### Acceptance Criteria
-- [ ] Sentry scan cone rotates visibly when revealed by sound
-- [ ] Player outside cone at any range → not detected
-- [ ] Player inside cone + no wall between → sentry alerts, pursues for 8s
-- [ ] Pulse hit → sentry stunned 0.6s
-- [ ] Sentry alert audio is distinct from ChaserEnemy alert
+- [x] Sentry scan cone rotates visibly when revealed by sound
+- [x] Player outside cone at any range → not detected
+- [x] Player inside cone + no wall between → sentry alerts, pursues for 8s
+- [x] Pulse hit → sentry stunned 0.6s
+- [x] Sentry alert audio is distinct from ChaserEnemy alert
 
 ---
 

@@ -1,13 +1,13 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 6 complete (2026-06-16)  
+> **Last updated:** Phase 7 complete (2026-06-16)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 7 — Sentry Enemy**  
+**Phase 8 — BlindStalker Enemy**  
 Status: ⬜ Pending
 
 ---
@@ -40,6 +40,7 @@ Status: ⬜ Pending
 | **Crushers** | `js/entities.js`, `js/collision.js`, `js/game.js`, `js/renderer.js` | AABB slab-method ray hit; sinusoidal motion; kill on AABB overlap |
 | **Doors & Keys** | `js/game.js`, `js/renderer.js`, `js/levels.js` | Keys reveal gold dot; closed doors block rays/movement; pickup opens door |
 | **Switches / Triggers** | `js/game.js`, `js/renderer.js`, `js/levels.js` | Blue-white pulsing dot; player proximity fires `open_door` or `remove_wall` once |
+| **Sentry Enemy** | `js/entities.js`, `js/game.js`, `js/renderer.js`, `js/levels.js` | Rotating ±45° scan cone, 180px LOS detection, 8s pursuit; stunned by pulse |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
@@ -53,6 +54,16 @@ Status: ⬜ Pending
 ## Phase 4 — Complete ✅ (commit `03303ff`)
 ## Phase 5 — Complete ✅ (commit `d1e4e23`)
 ## Phase 6 — Complete ✅ (commit `fe82322`)
+## Phase 7 — Complete ✅ (commit `d1c00f5`)
+
+**Phase 7 summary:**
+- `SENTRY_SCAN_RANGE=180`, `SENTRY_SCAN_ARC=π/2`, `SENTRY_SCAN_SPEED=π/3`, `SENTRY_HUNT_DURATION=8` added to `constants.js`
+- `Sentry` class in `entities.js`: stores `scanRange`/`scanArc` as instance fields for renderer; `update(dt, grid, castFn, player)` returns `true` once on spot frame; `onPulseHit()` stuns 0.6s; LOS check via `castFn(sx, sy, nx, ny, d-PLAYER_RADIUS)` — null hit = clear path
+- `game.js`: import `Sentry`; spawn from `type:'sentry'`; `instanceof Sentry` branch passes `castFn`+`player` to `update()`; calls `Audio.playSentryAlert()` on `true` return; adds `en.onPulseHit()` for pulse rays
+- `renderer.js drawEnemies()`: checks `e.scanRange !== undefined` to detect Sentry; draws cone arc before dot (faint orange idle, bright red alert); `hunting` flag extended to cover `state==='alert'` for glow color
+- Trigger visibility enhanced: larger glow (28px), dramatic pulse beat (0.35–0.80 swing), outer ring stroke + slow-rotating 4-spoke cross indicator
+- Level 9: `{ type:'sentry', col:12, row:13, angle:Math.PI }` — sentry faces left initially; player arrives at col 14 from corridor 3 gap; must wait for cone to face away before sprinting to exit at col 18 (1.5s danger / 4.5s safe per rotation cycle)
+- Hint updated: "Find the switch · Time the crushers · Dodge the sentry at the exit"
 
 **Phase 6 summary:**
 - `G.triggers = []` added to game state; reset in `loadLevel()`; populated from `def.triggers[]`
@@ -74,7 +85,7 @@ Status: ⬜ Pending
 | ~~Crushers~~ | ~~Phase 4~~ | ~~Medium~~ |
 | ~~Doors & keys~~ | ~~Phase 5~~ | ~~Medium~~ |
 | ~~Switches / triggers~~ | ~~Phase 6~~ | ~~Medium~~ |
-| Sentry enemy | Phase 7 | Medium |
+| ~~Sentry enemy~~ | ~~Phase 7~~ | ~~Medium~~ |
 | BlindStalker enemy | Phase 8 | Low |
 | Level 10 | Phase 9 | High |
 | Ambient audio | Phase 10 | Medium |
@@ -87,13 +98,11 @@ Status: ⬜ Pending
 
 ## Next Recommended Task
 
-Begin **Phase 7 — Sentry Enemy**:
-1. `entities.js`: Add `Sentry` class — rotating scan angle (60°/s), ±45° cone, 180px range, `idle`/`alert` state machine
-2. `game.js` `loadLevel()`: spawn from `type: 'sentry'`; pass `castFn` + `player` to `sentry.update(dt, castFn, player)` each frame
-3. LOS check: `castFn(sentry.x, sentry.y, dir.x, dir.y, dist)` — if no hit before player → alert
-4. `audio.js`: `playSentryAlert()` — distinct pitch pair from ChaserEnemy alert
-5. `renderer.js`: reveal sentry same as enemies (`revealedAt` fade); draw scan cone arc when revealed
-6. Introduce in Level 9 or a new level (roadmap says Level 9)
+Begin **Phase 8 — BlindStalker Enemy**:
+1. `entities.js`: Add `BlindStalker` class — copy of ChaserEnemy with speed 104 px/s (`CHASER_SPEED_HUNT × 1.3`) and 4s hunt timer; re-acquires instantly on any sound
+2. `game.js` `loadLevel()`: spawn from `type: 'stalker'`; add to `G.enemies[]`
+3. `game.js` `processRayEntities()`: handle BlindStalker same as ChaserEnemy (call `hearSound()` on any ray type, no `ray.quiet` check — it hears everything)
+4. Level 10 "The Gauntlet II" — all mechanics combined, BlindStalker introduced
 
 ---
 

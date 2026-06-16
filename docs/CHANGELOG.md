@@ -5,7 +5,31 @@
 
 ---
 
-## [Unreleased] — Phase 7 pending
+## [Unreleased] — Phase 8 pending
+
+---
+
+## [v0.12.0] — 2026-06-16 — Phase 7
+
+### Added
+- **Sentry enemy**: stationary guard with rotating visual scan cone
+  - `Sentry` class in `entities.js`: state machine `idle`/`alert`/`stunned`
+  - Scan cone: 90° arc (±45°), 180px range, rotates at 60°/s
+  - Detection: player must be inside cone AND have clear line-of-sight (castFn ray check)
+  - On spot: 8-second pursuit at `CHASER_SPEED_HUNT = 80 px/s`
+  - Pulse hit: stuns 0.6s (same as PatrolEnemy)
+  - 4 new constants: `SENTRY_SCAN_RANGE`, `SENTRY_SCAN_ARC`, `SENTRY_SCAN_SPEED`, `SENTRY_HUNT_DURATION`
+  - `playSentryAlert()` already present in `audio.js` from Phase 0
+- **Sentry cone rendered** in `drawEnemies()`: faint orange arc in idle, bright red in alert; drawn behind enemy dot; `e.scanRange` field acts as Sentry discriminator in renderer
+- Level 9 "The Corridor" now has sentry at row 13 col 12 guarding the exit sprint
+
+### Changed
+- **Trigger visual** — now much more noticeable:
+  - Larger outer glow (28px radius, was 16px)
+  - More dramatic pulse beat (0.35–0.80 amplitude swing, was 0.50–0.75)
+  - Pulsing outer ring stroke
+  - Slow-rotating 4-spoke cross indicator distinguishes it from key/exit/door dots
+  - Brighter center dot (4.5px, was 3px)
 
 ---
 

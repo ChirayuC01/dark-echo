@@ -4,6 +4,59 @@
 
 ---
 
+## [Phase 7 — Complete] Sentry Enemy + Trigger Visibility Fix
+
+**Date:** 2026-06-16  
+**Commit:** `d1c00f5`  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/constants.js`**: Added 4 sentry constants:
+- `SENTRY_SCAN_RANGE = 180` (px — cone depth)
+- `SENTRY_SCAN_ARC = Math.PI / 2` (90° total, ±45°)
+- `SENTRY_SCAN_SPEED = Math.PI / 3` (60°/s rotation)
+- `SENTRY_HUNT_DURATION = 8` (seconds in alert/pursuit state)
+
+**`js/entities.js`**: Added `Sentry` class:
+- Constructor stores `scanRange` and `scanArc` as instance fields — renderer reads these to detect Sentry type without needing instanceof or imports
+- State machine: `'idle'` (rotate + check LOS) → `'alert'` (pursue player, 8s timer) → `'stunned'` (0.6s, then idle)
+- `update(dt, grid, castFn, player)` returns `true` exactly once on the frame the player is first spotted, so game.js can play the alert sound
+- LOS check: normalize direction to player, cast ray via `castFn(sx, sy, nx, ny, d-PLAYER_RADIUS)`; null result = no wall = player visible
+- Cone check: `Math.abs(angleDiff) < scanArc/2` (i.e., within ±45° of current facing)
+- Pursuit movement: identical to ChaserEnemy — `resolveWalls` based movement toward player
+- `onPulseHit()`: immediately sets state to stunned (even if alert)
+
+**`js/game.js`**:
+- Import extended: `Sentry` added from `'./entities.js'`
+- `loadLevel()`: `type:'sentry'` → `new Sentry(ex, ey, e.angle ?? 0)`; added to `G.enemies[]` (same kill-check loop as other enemies)
+- Enemy update loop: `instanceof Sentry` branch passes `G.castFn` and `G.player` to `update()`; calls `Audio.playSentryAlert()` on `true` return
+- `processRayEntities()`: `instanceof Sentry` branch calls `en.onPulseHit()` on pulse ray hit (no sound hearing — Sentry is vision-only)
+
+**`js/audio.js`**: `playSentryAlert()` and `SOUND_CONFIG.sentryAlert` were already implemented in a prior session. No changes needed.
+
+**`js/renderer.js`** — two changes:
+1. **Sentry cone**: `drawEnemies()` checks `e.scanRange !== undefined` → draws cone arc (canvas path: moveTo center, arc spanning `e.angle ± e.scanArc/2`, closePath); faint orange `rgba(220,100,50,α×0.14)` in idle, brighter red `rgba(255,55,35,α×0.30)` in alert; thin stroke outline for clarity; drawn BEFORE the enemy dot so dot appears on top
+2. **Alert state color**: `const hunting = e.state === 'hunting' || e.state === 'alert'` — Sentry in alert now uses the same bright red glow as ChaserEnemy in hunting mode
+3. **Trigger visibility fix**: `drawTriggers()` redesigned — larger glow radius (28px), wider pulse beat (0.35–0.80 amplitude vs old 0.50–0.75), pulsing outer ring stroke, slow-rotating 4-spoke cross indicator (spokes 5–11px from center, rotate at now/4000 rad/ms), brighter center dot (4.5px)
+
+**`js/levels.js`**: Level 9 extended:
+- `{ type:'sentry', col:12, row:13, angle:Math.PI }` added to enemies array
+- Sentry faces LEFT initially (away from where player arrives at col 14)
+- Cone rotates clockwise; danger window (cone pointing east ±45°) = 1.5s; safe window = 4.5s per cycle
+- Player sprints 4 tiles (160px) in ~1.07s at PLAYER_SPEED=150 — comfortably fits in safe window once timed
+- Hint updated: "Find the switch · Time the crushers · Dodge the sentry at the exit"
+
+### Design decisions
+
+- **`instanceof Sentry` in game.js update loop**: Cleanest approach to pass extra parameters (castFn, player) without changing the base enemy interface. PatrolEnemy and ChaserEnemy's `update(dt, grid)` signature is unchanged.
+- **Return value for alert signal**: `update()` returns `true` on the spot frame rather than using a callback or event. Matches the existing `Hazard.update()` pattern (returns pulse event object or null). Single-responsibility: the Sentry manages its own state, game.js handles the audio side effect.
+- **`scanRange`/`scanArc` as instance fields**: The renderer detects Sentry type via `e.scanRange !== undefined` without needing to import `Sentry` or `instanceof`. Keeps renderer.js decoupled from entity types.
+- **Sentry at col 12 row 13**: Player enters row 13 at col 14 after final crusher. The sentry is 2 tiles LEFT (80px). Player goes RIGHT to exit at col 18. The sentry's cone sweeping rightward is the only danger — clear mechanical puzzle with learnable timing.
+- **Trigger cross indicator**: A rotating 4-spoke indicator distinguishes the trigger from other dots (key=gold, exit=green, door=amber). The slow rotation (one full turn ~25s) communicates "switch/interactive" better than a static dot.
+
+---
+
 ## [Phase 6 — Complete] Switches / Triggers
 
 **Date:** 2026-06-16  
