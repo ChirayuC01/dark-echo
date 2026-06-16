@@ -271,4 +271,44 @@ export const LEVELS = [
     // Opens the wall at row 13 col 16, unblocking the final run to the exit
     triggers: [{ col: 3, row: 9, action: 'remove_wall', targetId: '13,16' }],
   },
+
+  // ─── Level 10 ─── "The Gauntlet II"  (all mechanics + BlindStalker)
+  // BlindStalker starts in the mid-section (row 5, col 15). It hears everything —
+  // even crouched footsteps. The player must pulse the collapsible wall at col 5, row 5
+  // to reach the key at col 2, row 7. That pulse alerts the stalker.
+  // Strategy: pulse → sprint for key → escape south before stalker closes in.
+  // Route: start col 1 row 1 → col 9 dry path through water row (row 3) → row 5 →
+  //        pulse col5 → key at row7 col2 → col1 south → row9 → door at col10 row10 →
+  //        row11 (crusher) → row13 exit (sentry guards).
+  {
+    name: 'The Gauntlet II',
+    hint: 'It hears everything · Silence is survival · Combine all you\'ve learned',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1
+      [1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1], // 2: gaps col 9, col 18
+      [1,0,5,5,5,5,5,5,5,0,5,5,5,5,5,5,5,5,0,1], // 3: water cols 2-8 + 10-17; dry col 9 and 18
+      [1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1], // 4: gaps col 9, col 18
+      [1,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5: collapsible col 5 (BlindStalker at col 15)
+      [1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1], // 6: gaps col 4, col 15, col 18
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7: key at col 2
+      [1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1], // 8: gaps col 1 (open), col 10, col 18
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9: patrol (step-aware)
+      [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1], // 10: door at col 10; rest solid
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11: crusher row
+      [1,0,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1], // 12: scattered walls
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13: exit col 18 (sentry guards)
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'stalker', col: 15, row: 5 },
+      { type: 'hazard',  col:  5, row: 3 },
+      { type: 'hazard',  col: 13, row: 3 },
+      { type: 'patrol',  col:  3, row: 9, stepAware: true, waypoints: [[3,9],[16,9]] },
+      { type: 'crusher', col: 10, row: 11, axis: 'h', range: 3, period: 5.5 },
+      { type: 'sentry',  col: 14, row: 13, angle: Math.PI },
+    ],
+    keys:  [{ id: 'key-g2', col: 2, row: 7, doorId: 'door-g2' }],
+    doors: [{ id: 'door-g2', col: 10, row: 10 }],
+  },
 ];

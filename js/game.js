@@ -16,7 +16,7 @@ import * as UI from './ui.js';
 import { LEVELS } from './levels.js';
 import { RaySystem } from './waves.js';
 import { castRay, circlesOverlap, castRayCrushers, circleOverlapsAABB } from './collision.js';
-import { Player, PatrolEnemy, ChaserEnemy, Hazard, Crusher, Sentry } from './entities.js';
+import { Player, PatrolEnemy, ChaserEnemy, Hazard, Crusher, Sentry, BlindStalker } from './entities.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const G = {
@@ -105,6 +105,8 @@ function loadLevel(idx) {
       G.crushers.push(new Crusher(ex, ey, e.axis, e.range, e.period));
     } else if (e.type === 'sentry') {
       G.enemies.push(new Sentry(ex, ey, e.angle ?? 0));
+    } else if (e.type === 'stalker') {
+      G.enemies.push(new BlindStalker(ex, ey));
     }
   }
 
@@ -244,7 +246,10 @@ function processRayEntities(now) {
         const d = segPtDist(en.x, en.y, sx, sy, tx, ty);
         if (d < en.radius + 18) {
           ray.heardEntities.add(en);
-          if (en instanceof ChaserEnemy) {
+          if (en instanceof BlindStalker) {
+            en.hearSound(ray.burstX, ray.burstY);
+            Audio.playAlert();
+          } else if (en instanceof ChaserEnemy) {
             if (!ray.quiet) {
               en.hearSound(ray.burstX, ray.burstY);
               Audio.playAlert();

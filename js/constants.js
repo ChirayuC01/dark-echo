@@ -61,6 +61,11 @@ export const SENTRY_SCAN_ARC      = Math.PI / 2; // 90° total (±45° each side
 export const SENTRY_SCAN_SPEED    = Math.PI / 3; // 60°/s rotation
 export const SENTRY_HUNT_DURATION = 8;           // seconds in alert / pursuit
 
+// ─── BlindStalker ─────────────────────────────────────────────────────────────
+export const BLIND_STALKER_SPEED_IDLE     = 30;  // px/s when wandering
+export const BLIND_STALKER_SPEED_HUNT     = 104; // px/s when hunting (CHASER × 1.3)
+export const BLIND_STALKER_HUNT_DURATION  = 4;   // seconds — shorter window than ChaserEnemy
+
 // ─── Doors / keys ────────────────────────────────────────────────────────────
 export const KEY_PICKUP_RADIUS    = 12;
 export const CRUSHER_REVEAL_MS    = 5500;  // crushers stay visible longer than walls

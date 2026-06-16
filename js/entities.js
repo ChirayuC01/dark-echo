@@ -5,7 +5,9 @@ import { TILE, PLAYER_SPEED, PLAYER_RADIUS, ENEMY_RADIUS,
          CROUCH_SPEED_MULT,
          WATER_SPEED_MULT,
          SENTRY_SCAN_RANGE, SENTRY_SCAN_ARC,
-         SENTRY_SCAN_SPEED, SENTRY_HUNT_DURATION } from './constants.js';
+         SENTRY_SCAN_SPEED, SENTRY_HUNT_DURATION,
+         BLIND_STALKER_SPEED_IDLE, BLIND_STALKER_SPEED_HUNT,
+         BLIND_STALKER_HUNT_DURATION } from './constants.js';
 import { dist } from './utils.js';
 import { resolveWalls } from './collision.js';
 
@@ -233,6 +235,56 @@ export class Sentry {
       }
     }
     return false;
+  }
+}
+
+// ─── BlindStalker ────────────────────────────────────────────────────────────
+// Hears ALL sounds (step, pulse) including crouched steps — ignores quiet flag.
+// Faster than ChaserEnemy but hunt timer is shorter (4s vs 6s).
+// Re-acquires instantly on any new sound before the timer expires.
+export class BlindStalker {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.radius = ENEMY_RADIUS;
+    this.state = 'idle';
+    this.targetX = x; this.targetY = y;
+    this.wanderTimer = 0;
+    this.wanderDX = 0; this.wanderDY = 0;
+    this.huntTimer = 0;
+    this.revealedAt = -Infinity;
+  }
+
+  hearSound(sourceX, sourceY) {
+    this.state = 'hunting';
+    this.targetX = sourceX;
+    this.targetY = sourceY;
+    this.huntTimer = BLIND_STALKER_HUNT_DURATION;
+  }
+
+  update(dt, grid) {
+    if (this.state === 'hunting') {
+      this.huntTimer -= dt;
+      if (this.huntTimer <= 0) this.state = 'idle';
+      const dx = this.targetX - this.x, dy = this.targetY - this.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 8) { this.state = 'idle'; return; }
+      const nx = dx / d, ny = dy / d;
+      this.x += nx * BLIND_STALKER_SPEED_HUNT * dt;
+      this.y += ny * BLIND_STALKER_SPEED_HUNT * dt;
+    } else {
+      this.wanderTimer -= dt;
+      if (this.wanderTimer <= 0) {
+        this.wanderTimer = 1.5 + Math.random() * 2;
+        const angle = Math.random() * Math.PI * 2;
+        this.wanderDX = Math.cos(angle);
+        this.wanderDY = Math.sin(angle);
+      }
+      this.x += this.wanderDX * BLIND_STALKER_SPEED_IDLE * dt;
+      this.y += this.wanderDY * BLIND_STALKER_SPEED_IDLE * dt;
+    }
+    const r = resolveWalls(grid, this.x, this.y, this.radius);
+    if (r.x !== this.x || r.y !== this.y) this.wanderTimer = 0;
+    this.x = r.x; this.y = r.y;
   }
 }
 
