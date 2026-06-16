@@ -205,18 +205,18 @@
 ---
 
 ## Phase 6 — Switches / Triggers
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (commit `fe82322`)  
 **Goal:** Floor-level trigger zones that fire one-shot actions on player proximity.  
 **Depends on:** Phase 5 complete
 
 ### Tasks
-- [ ] `game.js` `loadLevel()`: Populate `G.triggers[]` from `def.triggers[]`
-- [ ] `game.js` update(): For each unfired trigger, check player dist < 10px → fire action → mark fired
-- [ ] Actions: `'open_door'`, `'remove_wall'`, `'spawn_enemy'`
-- [ ] `renderer.js`: `drawTriggers(triggers, now, px, py)` — small pulsing blue dot, revealed by sound
-- [ ] `processRayEntities()`: Reveal triggers by ray proximity
-- [ ] Level 9 extended with switch
-- [ ] Commit + push
+- [x] `game.js` `loadLevel()`: Populate `G.triggers[]` from `def.triggers[]`
+- [x] `game.js` update(): For each unfired trigger, check player dist < 10px → fire action → mark fired
+- [x] Actions: `'open_door'`, `'remove_wall'`
+- [x] `renderer.js`: `drawTriggers(triggers, now, px, py)` — small pulsing blue dot, revealed by sound
+- [x] `processRayEntities()`: Reveal triggers by ray proximity
+- [x] Level 9 extended with switch (wall at row 13 col 16; trigger at col 3 row 9 removes it)
+- [x] Commit + push
 
 ### Files Modified
 - `js/game.js`
@@ -224,10 +224,10 @@
 - `js/levels.js`
 
 ### Acceptance Criteria
-- [ ] Trigger not visible until sound reveals it
-- [ ] Walking over trigger fires its action exactly once
-- [ ] `open_door` trigger opens the target door
-- [ ] `remove_wall` trigger clears target cell to EMPTY
+- [x] Trigger not visible until sound reveals it
+- [x] Walking over trigger fires its action exactly once
+- [x] `open_door` trigger opens the target door
+- [x] `remove_wall` trigger clears target cell to EMPTY
 
 ---
 

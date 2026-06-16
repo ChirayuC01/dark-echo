@@ -5,7 +5,25 @@
 
 ---
 
-## [Unreleased] — Phase 6 pending
+## [Unreleased] — Phase 7 pending
+
+---
+
+## [v0.11.0] — 2026-06-16 — Phase 6
+
+### Added
+- **Switches / triggers mechanic**: one-shot floor trigger zones revealed by sound
+  - `G.triggers[]` array in game state; populated from `def.triggers[]` level def field
+  - Trigger format: `{ col, row, action, targetId }` — action is `'open_door'` or `'remove_wall'`
+  - Triggers revealed by ray proximity (same 28px `REVEAL_D` threshold as exit/key/door)
+  - Player walks within 10px of trigger center → fires exactly once; `fired = true` prevents re-trigger
+  - `'open_door'`: opens the door with matching `targetId` (same logic as key pickup)
+  - `'remove_wall'`: clears `G.grid[row][col]` at the `"row,col"` coordinate in `targetId`
+  - `drawTriggers()` in `renderer.js`: bright blue-white `rgba(100,160,255)` pulsing radial dot; disappears on fire; `sin(now/350)` pulse distinguishes from keys (400ms) and exit (500ms)
+- Level 9 "The Corridor" extended with trigger puzzle:
+  - Wall at row 13 col 16 blocks direct path to exit
+  - Trigger at row 9 col 3 removes it — fires naturally as player walks left toward corridor 3 entry
+  - Hint updated: "A switch unlocks the exit · Watch for the crusher · Wait, then dash"
 
 ---
 

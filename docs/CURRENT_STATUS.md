@@ -1,13 +1,13 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 5 complete (2026-06-12)  
+> **Last updated:** Phase 6 complete (2026-06-16)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 6 — Switches / Triggers**  
+**Phase 7 — Sentry Enemy**  
 Status: ⬜ Pending
 
 ---
@@ -39,6 +39,7 @@ Status: ⬜ Pending
 | **Collapsible walls** | `js/collision.js`, `js/game.js`, `js/renderer.js` | CELL.COLLAPSIBLE=4: blocks until pulse (energy>0.3) destroys it |
 | **Crushers** | `js/entities.js`, `js/collision.js`, `js/game.js`, `js/renderer.js` | AABB slab-method ray hit; sinusoidal motion; kill on AABB overlap |
 | **Doors & Keys** | `js/game.js`, `js/renderer.js`, `js/levels.js` | Keys reveal gold dot; closed doors block rays/movement; pickup opens door |
+| **Switches / Triggers** | `js/game.js`, `js/renderer.js`, `js/levels.js` | Blue-white pulsing dot; player proximity fires `open_door` or `remove_wall` once |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
@@ -51,18 +52,16 @@ Status: ⬜ Pending
 ## Phase 3 — Complete ✅ (commit `e9be4d4`)
 ## Phase 4 — Complete ✅ (commit `03303ff`)
 ## Phase 5 — Complete ✅ (commit `d1e4e23`)
+## Phase 6 — Complete ✅ (commit `fe82322`)
 
-**Phase 5 summary:**
-- `KEY_PICKUP_RADIUS = 12` added to `constants.js`
-- `G.doors` Map, `G.keys` Map, `G.doorsByCell` Map added to game state
-- `loadLevel()` populates maps from `def.doors[]`/`def.keys[]`; closed door cells are set to `CELL.WALL` in the mutable grid
-- `applyWallHits()`: checks `G.doorsByCell` to identify door hits; tags `cellType: 'door'`; updates `door.revealedAt`
-- `processRayEntities()`: key/door proximity reveal via `segPtDist` (same `REVEAL_D = 28px` as exit)
-- `update()`: key pickup loop — player within 12px → `key.collected = true`, matching door opens (`G.grid[row][col] = CELL.EMPTY`), `G.doorsByCell` entry removed, audio plays
-- `drawDoors()` in `renderer.js`: amber `rgba(210,160,50)` fill+stroke when locked, faint green `rgba(80,210,120)` when open
-- `drawKeys()` in `renderer.js`: gold `rgba(255,210,80)` pulsing dot with radial gradient, same fade pattern as exit
-- Door impact glints use amber color
-- Level 8 redesigned: row 9 is solid wall except col 9 (the door); key at col 16 row 3 (near chaser); lower section accessible only via the door; simplified lower zone with col 18 corridor to exit
+**Phase 6 summary:**
+- `G.triggers = []` added to game state; reset in `loadLevel()`; populated from `def.triggers[]`
+- Trigger objects: `{col, row, x, y, action, targetId, fired: false, revealedAt: -Infinity}`
+- `fireTrigger(tr)` dispatches `open_door` (reuses door-open logic) and `remove_wall` (mutates mutable grid)
+- `update()`: proximity loop checks `dist(player, trigger) < 10px` → fires once; `fired = true` prevents re-trigger
+- `processRayEntities()`: trigger reveal loop using `segPtDist` with `REVEAL_D = 28px` (same as exit/key/door)
+- `drawTriggers()` in `renderer.js`: bright blue-white `rgba(100,160,255)` pulsing radial dot, hearing-attenuated; disappears after fired
+- Level 9 extended: wall added at row 13 col 16 (blocks direct path to exit); trigger at col 3 row 9 (`remove_wall` → `'13,16'`) fires naturally as player crosses connecting zone between corridors 2 and 3; hint updated
 
 ---
 
@@ -74,7 +73,7 @@ Status: ⬜ Pending
 | ~~Collapsible walls~~ | ~~Phase 3~~ | ~~High~~ |
 | ~~Crushers~~ | ~~Phase 4~~ | ~~Medium~~ |
 | ~~Doors & keys~~ | ~~Phase 5~~ | ~~Medium~~ |
-| Switches / triggers | Phase 6 | Medium |
+| ~~Switches / triggers~~ | ~~Phase 6~~ | ~~Medium~~ |
 | Sentry enemy | Phase 7 | Medium |
 | BlindStalker enemy | Phase 8 | Low |
 | Level 10 | Phase 9 | High |
@@ -88,13 +87,13 @@ Status: ⬜ Pending
 
 ## Next Recommended Task
 
-Begin **Phase 6 — Switches / Triggers**:
-1. `game.js`: add `G.triggers[]` to state; populate from `def.triggers[]` in `loadLevel()`
-2. `game.js` `update()`: player proximity (< 10px) to unfired trigger → fire action
-3. Actions: `'open_door'`, `'remove_wall'`, `'spawn_enemy'`
-4. `renderer.js`: `drawTriggers()` — small pulsing blue dot, revealed by sound
-5. `processRayEntities()`: trigger proximity reveal
-6. Level using triggers (extend Level 9 or add to Level 10)
+Begin **Phase 7 — Sentry Enemy**:
+1. `entities.js`: Add `Sentry` class — rotating scan angle (60°/s), ±45° cone, 180px range, `idle`/`alert` state machine
+2. `game.js` `loadLevel()`: spawn from `type: 'sentry'`; pass `castFn` + `player` to `sentry.update(dt, castFn, player)` each frame
+3. LOS check: `castFn(sentry.x, sentry.y, dir.x, dir.y, dist)` — if no hit before player → alert
+4. `audio.js`: `playSentryAlert()` — distinct pitch pair from ChaserEnemy alert
+5. `renderer.js`: reveal sentry same as enemies (`revealedAt` fade); draw scan cone arc when revealed
+6. Introduce in Level 9 or a new level (roadmap says Level 9)
 
 ---
 

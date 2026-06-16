@@ -4,6 +4,41 @@
 
 ---
 
+## [Phase 6 — Complete] Switches / Triggers
+
+**Date:** 2026-06-16  
+**Commit:** `fe82322`  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/game.js`**:
+- `G.triggers: []` added to state object; reset in `loadLevel()`
+- `loadLevel()` iterates `def.triggers[]` to build trigger objects: `{col, row, x, y, action, targetId, fired: false, revealedAt: -Infinity}`
+- `processRayEntities()`: new trigger reveal loop — `segPtDist(tr.x, tr.y, sx, sy, tx, ty) < REVEAL_D` → `tr.revealedAt = now` (skips `fired` triggers)
+- `fireTrigger(tr)` function: `'open_door'` reuses the key-pickup door-open logic (get door from `G.doors`, set `CELL.EMPTY`, remove `doorsByCell` entry, play audio); `'remove_wall'` parses `targetId` as `"row,col"` and sets `G.grid[r][c] = CELL.EMPTY`
+- `update()`: trigger proximity loop after key pickup — `dist(player, trigger) < 10px` → `tr.fired = true` → `fireTrigger(tr)` (single-frame one-shot; fired flag prevents re-trigger)
+
+**`js/renderer.js`**:
+- `draw()` destructures `triggers` from state; calls `drawTriggers(triggers, now, px, py)` after `drawKeys`
+- `drawTriggers()`: bright blue-white `rgba(100,160,255)` pulsing radial gradient dot (16px radius), 3px solid center `rgba(160,210,255)`, `shadowBlur 14 * alpha`; uses `revealAlpha × hearing` attenuation; `sin(now/350)` pulse period differs from key (400ms) and exit (500ms) for distinct visual rhythm; renders nothing for fired triggers
+
+**`js/levels.js`**: Level 9 "The Corridor" extended:
+- Row 13 col 16 changed from `0` to `1` — creates a wall blocking the final exit sprint
+- `triggers: [{ col: 3, row: 9, action: 'remove_wall', targetId: '13,16' }]` added
+- Trigger fires naturally in player flow: after crossing corridor 2 (row 7 via col 14 gap in row 8), player enters row 9 connecting zone and walks LEFT toward col 6 (next corridor entry); passes col 3 during this traversal → trigger fires → exit wall removed
+- Hint updated: "A switch unlocks the exit · Watch for the crusher · Wait, then dash"
+
+### Design decisions
+
+- **10px proximity radius**: Tight enough that the player must deliberately walk through the trigger tile (not just pass nearby). At `TILE = 40px`, the trigger center is always ≥ 20px from tile edges — a 10px radius means the player must reach the center area. Natural for left-to-right traversal of a row.
+- **Trigger reveals itself via sound**: Same `segPtDist` reveal pattern as keys/exit/doors. No special handling needed — players learn to pulse-reveal before approaching, consistent with the game's sound-is-vision pillar.
+- **Level 9 switch placement at row 9, col 3**: The player MUST cross row 9 walking from the right (col 14 area) to the left (col 6 entry) as part of the normal level flow. Col 3 is reached during this walk — the trigger fires at a natural moment, never requiring a detour.
+- **Wall at row 13 col 16**: After crossing all three corridors, the player exits through col 14 gap in row 12 and arrives in row 13 around col 14. The wall at col 16 blocks the sprint to exit col 18. Since the trigger already fired in row 9, the wall is already gone — smooth experience if played in order. If the player somehow skips row 9 (impossible in normal flow), they would encounter the blocked exit and need to backtrack.
+- **`'spawn_enemy'` action not implemented**: No level in Phase 6 uses it; left as a no-op stub for a future phase if needed. Not worth implementing without a use case.
+
+---
+
 ## [Phase 5 — Complete] Doors & Keys
 
 **Date:** 2026-06-12  
