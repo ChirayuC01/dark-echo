@@ -55,6 +55,12 @@ export const WATER_ENERGY_DRAIN  = 0.2; // extra energy loss per water cell trav
 export const COLLAPSE_ENERGY_THRESHOLD = 0.3;
 export const COLLAPSE_BURST_RAYS       = 12;
 
+// ─── Sentry ───────────────────────────────────────────────────────────────────
+export const SENTRY_SCAN_RANGE    = 180;          // px — detection cone depth
+export const SENTRY_SCAN_ARC      = Math.PI / 2; // 90° total (±45° each side)
+export const SENTRY_SCAN_SPEED    = Math.PI / 3; // 60°/s rotation
+export const SENTRY_HUNT_DURATION = 8;           // seconds in alert / pursuit
+
 // ─── Doors / keys ────────────────────────────────────────────────────────────
 export const KEY_PICKUP_RADIUS    = 12;
 export const CRUSHER_REVEAL_MS    = 5500;  // crushers stay visible longer than walls

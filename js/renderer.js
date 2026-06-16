@@ -157,7 +157,29 @@ function drawEnemies(enemies, now, px, py) {
     if (heard <= 0) continue;
     const alpha = revealAlpha(e.revealedAt, now) * heard;
     if (alpha < 0.004) continue;
-    const hunting = e.state === 'hunting';
+
+    // Sentry scan cone — drawn before the dot so dot appears on top
+    if (e.scanRange !== undefined) {
+      const alerting = e.state === 'alert';
+      const coneColor = alerting ? '255,55,35' : '220,100,50';
+      const coneAlpha = alerting ? alpha * 0.30 : alpha * 0.14;
+      if (e.state !== 'stunned') {
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(e.x, e.y);
+        ctx.arc(e.x, e.y, e.scanRange, e.angle - e.scanArc / 2, e.angle + e.scanArc / 2);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(${coneColor},${coneAlpha.toFixed(3)})`;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(${coneColor},${(coneAlpha * 1.8).toFixed(3)})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    const hunting = e.state === 'hunting' || e.state === 'alert';
     const base = hunting ? '230,45,45' : '185,55,55';
     ctx.shadowBlur = hunting ? 14 * alpha : 8 * alpha;
     ctx.shadowColor = `rgba(${base},${alpha * 0.7})`;
@@ -168,6 +190,8 @@ function drawEnemies(enemies, now, px, py) {
     ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 9, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = `rgba(${base},${alpha * 0.92})`;
     ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
+
+    // Patrol waypoint direction arrow
     if (e.waypoints) {
       const wp = e.waypoints[e.wpIdx || 0];
       if (wp) {
@@ -329,20 +353,46 @@ function drawKeys(keys, now, px, py) {
 function drawTriggers(triggers, now, px, py) {
   if (!triggers || triggers.length === 0) return;
   ctx.save();
+  ctx.lineCap = 'round';
   for (const tr of triggers) {
     if (tr.fired) continue;
     const alpha = revealAlpha(tr.revealedAt, now) * hearing(Math.hypot(tr.x - px, tr.y - py));
     if (alpha < 0.004) continue;
-    const pulse = (0.5 + 0.25 * Math.sin(now / 350)) * alpha;
-    ctx.shadowBlur = 14 * alpha;
-    ctx.shadowColor = 'rgba(100,160,255,0.7)';
-    const grd = ctx.createRadialGradient(tr.x, tr.y, 1, tr.x, tr.y, 16);
-    grd.addColorStop(0, `rgba(120,175,255,${pulse.toFixed(3)})`);
+    const beat = (0.35 + 0.45 * Math.sin(now / 350)) * alpha;  // wider swing than keys
+
+    // Outer glow
+    ctx.shadowBlur = 22 * alpha;
+    ctx.shadowColor = 'rgba(100,160,255,0.75)';
+    const grd = ctx.createRadialGradient(tr.x, tr.y, 2, tr.x, tr.y, 28);
+    grd.addColorStop(0, `rgba(140,200,255,${beat.toFixed(3)})`);
     grd.addColorStop(1, 'rgba(100,160,255,0)');
     ctx.fillStyle = grd;
-    ctx.beginPath(); ctx.arc(tr.x, tr.y, 16, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = `rgba(160,210,255,${(Math.min(1, pulse * 1.1)).toFixed(3)})`;
-    ctx.beginPath(); ctx.arc(tr.x, tr.y, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(tr.x, tr.y, 28, 0, Math.PI * 2); ctx.fill();
+
+    // Pulsing outer ring
+    ctx.strokeStyle = `rgba(120,180,255,${(alpha * 0.6).toFixed(3)})`;
+    ctx.lineWidth = 1.2;
+    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(tr.x, tr.y, 14 + beat * 6, 0, Math.PI * 2); ctx.stroke();
+
+    // 4-point cross indicator
+    ctx.strokeStyle = `rgba(170,220,255,${(alpha * 0.8).toFixed(3)})`;
+    ctx.lineWidth = 1.5;
+    ctx.shadowBlur = 8 * alpha;
+    ctx.shadowColor = 'rgba(140,200,255,0.9)';
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI / 2) + (now / 4000);
+      const r0 = 5, r1 = 11;
+      ctx.beginPath();
+      ctx.moveTo(tr.x + Math.cos(a) * r0, tr.y + Math.sin(a) * r0);
+      ctx.lineTo(tr.x + Math.cos(a) * r1, tr.y + Math.sin(a) * r1);
+      ctx.stroke();
+    }
+
+    // Bright center dot
+    ctx.shadowBlur = 12 * alpha;
+    ctx.fillStyle = `rgba(200,230,255,${Math.min(1, beat * 1.2).toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(tr.x, tr.y, 4.5, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
 }

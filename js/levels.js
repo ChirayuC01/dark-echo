@@ -241,7 +241,7 @@ export const LEVELS = [
   // Player flow: enter col 6 → wait in left safe zone → sprint to col 14 when crusher swings out.
   {
     name: 'The Corridor',
-    hint: 'A switch unlocks the exit · Watch for the crusher · Wait, then dash',
+    hint: 'Find the switch · Time the crushers · Dodge the sentry at the exit',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1, open row
@@ -264,6 +264,8 @@ export const LEVELS = [
       { type: 'crusher', col: 14, row: 3,  axis: 'h', range: 2, period: 13.0 },
       { type: 'crusher', col: 14, row: 7,  axis: 'h', range: 2, period: 10.0 },
       { type: 'crusher', col: 14, row: 11, axis: 'h', range: 2, period:  8.0 },
+      // Sentry guards the exit row — cone sweeps clockwise; player must wait for it to face away
+      { type: 'sentry',  col: 12, row: 13, angle: Math.PI },
     ],
     // Switch at col 3, row 9 (player crosses it while walking left toward corridor 3 entry)
     // Opens the wall at row 13 col 16, unblocking the final run to the exit

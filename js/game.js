@@ -16,7 +16,7 @@ import * as UI from './ui.js';
 import { LEVELS } from './levels.js';
 import { RaySystem } from './waves.js';
 import { castRay, circlesOverlap, castRayCrushers, circleOverlapsAABB } from './collision.js';
-import { Player, PatrolEnemy, ChaserEnemy, Hazard, Crusher } from './entities.js';
+import { Player, PatrolEnemy, ChaserEnemy, Hazard, Crusher, Sentry } from './entities.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const G = {
@@ -103,6 +103,8 @@ function loadLevel(idx) {
       G.hazards.push(new Hazard(ex, ey));
     } else if (e.type === 'crusher') {
       G.crushers.push(new Crusher(ex, ey, e.axis, e.range, e.period));
+    } else if (e.type === 'sentry') {
+      G.enemies.push(new Sentry(ex, ey, e.angle ?? 0));
     }
   }
 
@@ -253,6 +255,8 @@ function processRayEntities(now) {
             } else if (ray.type === 'step' && en.stepAware) {
               en.hearStep(ray.burstX, ray.burstY);
             }
+          } else if (en instanceof Sentry) {
+            if (ray.type === 'pulse') en.onPulseHit();
           }
         }
       }
@@ -398,8 +402,14 @@ function update(dt, now) {
   processRayEntities(now);
   processWaterReveals(now);
 
-  // Enemy movement
-  for (const en of G.enemies) en.update(dt, G.grid);
+  // Enemy movement — Sentry needs castFn + player for visual LOS detection
+  for (const en of G.enemies) {
+    if (en instanceof Sentry) {
+      if (en.update(dt, G.grid, G.castFn, G.player)) Audio.playSentryAlert();
+    } else {
+      en.update(dt, G.grid);
+    }
+  }
   for (const cr of G.crushers) cr.update(dt);
 
   // Key pickup — proximity triggers collection and opens the matching door

@@ -3,7 +3,9 @@ import { TILE, PLAYER_SPEED, PLAYER_RADIUS, ENEMY_RADIUS,
          PATROL_SPEED, HAZARD_RADIUS,
          HAZARD_PULSE_INTERVAL,
          CROUCH_SPEED_MULT,
-         WATER_SPEED_MULT } from './constants.js';
+         WATER_SPEED_MULT,
+         SENTRY_SCAN_RANGE, SENTRY_SCAN_ARC,
+         SENTRY_SCAN_SPEED, SENTRY_HUNT_DURATION } from './constants.js';
 import { dist } from './utils.js';
 import { resolveWalls } from './collision.js';
 
@@ -162,6 +164,75 @@ export class Crusher {
       x1: this.x - TILE / 2, y1: this.y - TILE / 2,
       x2: this.x + TILE / 2, y2: this.y + TILE / 2,
     };
+  }
+}
+
+// ─── Sentry ──────────────────────────────────────────────────────────────────
+// Visual enemy: rotates a scan cone; transitions to pursuit on player LOS.
+// Detects visually only — sound rays cannot trigger detection.
+// Stunned by pulse; pursues at ChaserEnemy hunt speed for SENTRY_HUNT_DURATION s.
+export class Sentry {
+  constructor(x, y, angle = 0) {
+    this.x = x; this.y = y;
+    this.radius    = ENEMY_RADIUS;
+    this.angle     = angle;            // current cone facing direction (radians)
+    this.scanRange = SENTRY_SCAN_RANGE;
+    this.scanArc   = SENTRY_SCAN_ARC;
+    this.state     = 'idle';           // 'idle' | 'alert' | 'stunned'
+    this.huntTimer = 0;
+    this.stunTimer = 0;
+    this.revealedAt = -Infinity;
+  }
+
+  onPulseHit() {
+    this.state     = 'stunned';
+    this.stunTimer = 0.6;
+  }
+
+  // Returns true once on the frame the sentry spots the player (for audio trigger).
+  update(dt, grid, castFn, player) {
+    if (this.state === 'stunned') {
+      this.stunTimer -= dt;
+      if (this.stunTimer <= 0) this.state = 'idle';
+      return false;
+    }
+
+    if (this.state === 'alert') {
+      this.huntTimer -= dt;
+      if (this.huntTimer <= 0) { this.state = 'idle'; return false; }
+      const dx = player.x - this.x, dy = player.y - this.y;
+      const d  = Math.sqrt(dx * dx + dy * dy);
+      if (d > 8) {
+        this.x += (dx / d) * CHASER_SPEED_HUNT * dt;
+        this.y += (dy / d) * CHASER_SPEED_HUNT * dt;
+      }
+      const r = resolveWalls(grid, this.x, this.y, this.radius);
+      this.x = r.x; this.y = r.y;
+      return false;
+    }
+
+    // Idle: rotate scan cone
+    this.angle = (this.angle + SENTRY_SCAN_SPEED * dt) % (Math.PI * 2);
+
+    // Check if player is inside cone + has clear LOS
+    const dx = player.x - this.x, dy = player.y - this.y;
+    const d  = Math.sqrt(dx * dx + dy * dy);
+    if (d < this.scanRange && d > 1) {
+      const angleTo = Math.atan2(dy, dx);
+      let diff = angleTo - this.angle;
+      while (diff >  Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      if (Math.abs(diff) < this.scanArc / 2) {
+        const nx = dx / d, ny = dy / d;
+        const hit = castFn(this.x, this.y, nx, ny, d - PLAYER_RADIUS);
+        if (!hit) {
+          this.state     = 'alert';
+          this.huntTimer = SENTRY_HUNT_DURATION;
+          return true;  // signal game.js to play alert sound
+        }
+      }
+    }
+    return false;
   }
 }
 
