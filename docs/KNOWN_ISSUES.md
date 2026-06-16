@@ -14,11 +14,10 @@ _None currently confirmed._
 ## Tech Debt
 
 ### TD-001 — echoTrails no hard cap
-**Status:** 🔄 Addressing in Phase 0  
+**Status:** ✅ Resolved (Phase 0, `ECHO_TRAIL_CAP = 500` in `constants.js`; enforced in `waves.js` `RaySystem.update()`)  
 **Severity:** Medium  
 **File:** `js/waves.js` `RaySystem.update()`  
-**Description:** echoTrails array is pruned by time (`RAY_TRAIL_MS = 4200ms`) but has no absolute cap. During heavy pulse spam or complex levels, the array can grow to thousands of entries before the time window clears, causing GC pressure and potential frame drops.  
-**Fix:** Enforce `ECHO_TRAIL_CAP = 500`; trim oldest entries when cap is exceeded after time-based prune.
+**Resolution:** `ECHO_TRAIL_CAP = 500` constant added and pruning enforced in `RaySystem.update()` — after time-based prune, oldest entries are trimmed to keep total under cap.
 
 ---
 
