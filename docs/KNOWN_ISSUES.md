@@ -98,7 +98,7 @@ _None currently confirmed._
 ---
 
 ### DC-003 — Level 9 crusher difficulty still too high  
-**Status:** ⬜ Deferred — address in Phase 14 (Final Balance)  
+**Status:** ✅ Resolved (commit `842ab09` + follow-up)  
 **Severity:** High  
 **File:** `js/levels.js` Level 9 "The Corridor"  
 **Description:** Despite two rounds of redesign (wide-range long corridors → narrow-range short corridors), Level 9 is still reported as too difficult. The crusher's sinusoidal motion is hard to read as sound alone, and the 6-tile danger zone leaves little margin for error. Players cannot reliably time the crossing using only the echo visualization.  

@@ -235,38 +235,35 @@ export const LEVELS = [
   },
 
   // ─── Level 9 ─── "The Corridor"  (crushers)
-  // Crusher at col 10, range 2 (±80px): sweeps x=340–500, i.e. cols 8–12.
-  // Left safe zone: cols 1–7 (x<320, always clear).
-  // Right safe zone: cols 14–18 (x>520, always clear).
-  // Entry gaps are at col 6 (left safe zone); exit gaps at col 14 (right safe zone).
-  // The player only needs to dart 6 tiles through the danger zone per crossing.
-  // Path: start → col 6 → corridor 1 → col 14 → walk left → col 6 → corridor 2
-  //       → col 14 → walk left → col 6 → corridor 3 → col 14 → walk right → exit.
+  // Crusher at col 14, range 2 (±80px): sweeps center x=500–660, i.e. cols 12–17.
+  // Left safe zone: cols 1–11 (x<473, always clear — 11 tiles of waiting room).
+  // Exit gap is at col 14 (crusher's center): safe when crusher is at either extreme.
+  // Player flow: enter col 6 → wait in left safe zone → sprint to col 14 when crusher swings out.
   {
     name: 'The Corridor',
     hint: 'Watch for the crusher · Wait until it slides away · Then dash across',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1, open row
-      [1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1], // 2: wall — gap at col 6 (left safe zone)
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 3: CORRIDOR 1 (crusher at col 10)
-      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1], // 4: wall — gap at col 14 (right safe zone)
+      [1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1], // 2: wall — gap at col 6 (entry, left safe zone)
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 3: CORRIDOR 1 (crusher at col 14)
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1], // 4: wall — gap at col 14 (exit, crusher center)
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5: open connecting row
       [1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1], // 6: wall — gap at col 6
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7: CORRIDOR 2 (crusher at col 10)
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7: CORRIDOR 2 (crusher at col 14)
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1], // 8: wall — gap at col 14
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9: open connecting row
       [1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1], // 10: wall — gap at col 6
-      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11: CORRIDOR 3 (crusher at col 10)
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11: CORRIDOR 3 (crusher at col 14)
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1], // 12: wall — gap at col 14
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13: exit col 18
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
     ],
     enemies: [
-      // range 2 = ±80px sweep: danger zone cols 8–12, left safe ≤col 7, right safe ≥col 14
-      { type: 'crusher', col: 10, row: 3,  axis: 'h', range: 2, period: 13.0 },
-      { type: 'crusher', col: 10, row: 7,  axis: 'h', range: 2, period: 10.0 },
-      { type: 'crusher', col: 10, row: 11, axis: 'h', range: 2, period:  8.0 },
+      // col 14, range 2 = ±80px: crusher sweeps cols 12–17; exit gap at col 14 is clear at extremes
+      { type: 'crusher', col: 14, row: 3,  axis: 'h', range: 2, period: 13.0 },
+      { type: 'crusher', col: 14, row: 7,  axis: 'h', range: 2, period: 10.0 },
+      { type: 'crusher', col: 14, row: 11, axis: 'h', range: 2, period:  8.0 },
     ],
   },
 ];
