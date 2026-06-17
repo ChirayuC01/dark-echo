@@ -3,6 +3,7 @@ import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
          HEARING_NEAR, HEARING_FAR, CELL,
          CRUSHER_REVEAL_MS } from './constants.js';
 import { segPtDist } from './utils.js';
+import * as Debug from './debug.js';
 
 // How loudly the player "hears" something at distance d:
 // 1 inside HEARING_NEAR, smoothstep down to 0 at HEARING_FAR
@@ -59,6 +60,7 @@ export function draw(state, now) {
   if (playerInWater) drawWaterZone(player);
   drawPlayer(player);
   drawVignette();
+  if (Debug.isEnabled()) Debug.draw(ctx, state, state.fps || 60);
 }
 
 // ─── Wall impact glints ───────────────────────────────────────────────────────

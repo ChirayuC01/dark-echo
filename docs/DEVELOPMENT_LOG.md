@@ -4,6 +4,45 @@
 
 ---
 
+## [Phase 11 — Complete] Debug Overlay
+
+**Date:** 2026-06-17  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/debug.js`** (new file):
+- `_enabled` bool; `isEnabled()`, `toggle()`, `draw(ctx, state, fps)` exports
+- `draw()` builds a string array of diagnostic lines, then renders a semi-transparent panel (306×variable px, top-left at 8,8) using `ctx.font = '12px monospace'`
+- Lines: FPS, Screen, separator, Rays active, Echo trails (count / ECHO_TRAIL_CAP), Glints, separator, Player px+tile+crouch+water, separator, Entities list
+- Entity type via `en.constructor.name.replace('Enemy', '')` — gives Patrol, Chaser, Sentry, Hazard, Crusher, BlindStalker
+- Color rules: FPS line green/yellow/red by threshold; echo trails line orange when ≥85% cap; hunting/alert entity lines coral red; idle entity lines muted rose; all other lines pale blue-white
+
+**`js/input.js`**:
+- Added `let _debugToggle = false;` module-level var
+- `keydown` handler: `if (e.code === 'Backquote') _debugToggle = true;`
+- Exported `consumeDebugToggle()` — same consume pattern as consumePulse/consumePause
+
+**`js/game.js`**:
+- `G.fps = 60` added to initial state object
+- Import: `import * as Debug from './debug.js';`
+- In `loop()`: EMA update `if (dt > 0.001) G.fps = G.fps * 0.85 + (1 / dt) * 0.15;` (guard prevents division by near-zero dt)
+- In `loop()`: `if (Input.consumeDebugToggle()) Debug.toggle();` — called every frame before pause check
+- State spread to Renderer.draw() now includes `fps: G.fps`
+
+**`js/renderer.js`**:
+- Import: `import * as Debug from './debug.js';`
+- End of `draw()`: `if (Debug.isEnabled()) Debug.draw(ctx, state, state.fps || 60);` — after `drawVignette()` so overlay renders above all game elements
+
+### Design decisions
+
+- **EMA for FPS**: Exponential moving average with α=0.15 gives smooth readout that tracks real performance without jitter. The `dt > 0.001` guard prevents the first frame (which can have a very small dt) from setting an unrealistically high FPS value.
+- **Entity type via `constructor.name`**: Clean approach that requires no imports of entity classes into debug.js and automatically handles new entity types added in the future.
+- **Drawn after vignette**: The debug panel is drawn last so the dark vignette doesn't dim it — it reads clearly even at canvas edges where the vignette is darkest.
+- **No `shadowBlur` in debug**: Debug panel resets `ctx.shadowBlur = 0` at start of draw to prevent bleed from any game-element shadow settings still on the context.
+
+---
+
 ## [Phase 10 — Complete] Ambient Audio Wiring
 
 **Date:** 2026-06-17  

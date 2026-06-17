@@ -5,7 +5,23 @@
 
 ---
 
-## [Unreleased] — Phase 11 pending
+## [Unreleased] — Phase 12 pending
+
+---
+
+## [v0.16.0] — 2026-06-17 — Phase 11
+
+### Added
+- **Debug overlay** (`js/debug.js`): Backtick key toggles a diagnostic panel in the top-left corner during gameplay
+  - FPS counter (EMA, color-coded: green ≥55fps / yellow ≥30fps / red <30fps)
+  - Active ray count, echo trail count (warns orange when ≥85% of 500-cap), impact glint count
+  - Player pixel coordinates + tile coordinates, crouch flag, water flag
+  - All entities listed by type (constructor name), current state, and position
+  - Entity lines color-coded: hunting/alert states in coral; idle in muted rose
+  - Semi-transparent dark panel with faint blue border, monospace font, drawn above vignette
+- `js/input.js`: `Backquote` key sets `_debugToggle`; new `consumeDebugToggle()` export
+- `js/game.js`: FPS tracked as exponential moving average in `G.fps`; debug toggle consumed each frame; `fps` forwarded in state spread to renderer
+- `js/renderer.js`: imports `Debug`; calls `Debug.draw()` as final draw step
 
 ---
 

@@ -2,6 +2,7 @@ const keys = new Set();
 let _pulsePressed  = false;
 let _pausePressed  = false;
 let _crouching     = false;
+let _debugToggle   = false;
 
 // Touch joystick state
 const touch = {
@@ -14,9 +15,10 @@ const touch = {
 export function init() {
   window.addEventListener('keydown', e => {
     keys.add(e.code);
-    if (e.code === 'Space') { e.preventDefault(); _pulsePressed = true; }
+    if (e.code === 'Space')    { e.preventDefault(); _pulsePressed = true; }
     if (e.code === 'Escape' || e.code === 'KeyP') _pausePressed = true;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyC') _crouching = true;
+    if (e.code === 'Backquote') _debugToggle = true;
   });
   window.addEventListener('keyup', e => {
     keys.delete(e.code);
@@ -104,6 +106,10 @@ export function consumePulse() {
 
 export function consumePause() {
   const v = _pausePressed; _pausePressed = false; return v;
+}
+
+export function consumeDebugToggle() {
+  const v = _debugToggle; _debugToggle = false; return v;
 }
 
 export function isMoving() {

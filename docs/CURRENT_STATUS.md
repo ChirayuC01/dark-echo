@@ -7,7 +7,7 @@
 
 ## Active Phase
 
-**Phase 11 — Debug Overlay**  
+**Phase 12 — Audio Polish**  
 Status: ⬜ Pending
 
 ---
@@ -45,6 +45,7 @@ Status: ⬜ Pending
 | **10 levels** | `js/levels.js` | Level 10 "The Gauntlet II" — all mechanics + BlindStalker |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | **Ambient drone** | `js/audio.js`, `js/game.js` | 55Hz sine, gain 0.035, 1.5s fade-in/0.5s fade-out; starts on play, stops on death/win/title |
+| **Debug overlay** | `js/debug.js`, `js/input.js`, `js/game.js`, `js/renderer.js` | Backtick toggle; FPS, rays, trails, glints, player state, all enemy states |
 | Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
 
@@ -61,6 +62,17 @@ Status: ⬜ Pending
 ## Phase 8 — Complete ✅ (commit `fe11f7d`)
 ## Phase 9 — Complete ✅
 ## Phase 10 — Complete ✅
+## Phase 11 — Complete ✅
+
+**Phase 11 summary:**
+- `js/debug.js` (new module): `isEnabled()`, `toggle()`, `draw(ctx, state, fps)`
+- Overlay panel: semi-transparent dark box, top-left corner, 306px wide; monospace 12px font
+- Displays: FPS (green ≥55 / yellow ≥30 / red <30), screen state, active rays, echo trail count with cap warning at 85% threshold, glint count, player pixel + tile coords, crouch + water flags, per-entity type+state+position
+- Entity type shown as `constructor.name.replace('Enemy', '')` — produces Patrol/Chaser/BlindStalker/Sentry/Hazard/Crusher
+- Enemy lines are color-coded: hunting/alert states render in coral red; idle in muted rose
+- `input.js`: `_debugToggle` bool + `Backquote` keydown; `consumeDebugToggle()` export
+- `game.js`: EMA FPS (`G.fps * 0.85 + (1/dt) * 0.15`, guarded on `dt > 0.001`); `consumeDebugToggle()` → `Debug.toggle()` each frame; `fps: G.fps` added to state spread
+- `renderer.js`: imports Debug; calls `Debug.draw(ctx, state, state.fps)` after vignette (drawn last so it renders above all game visuals)
 
 **Phase 10 summary:**
 - `audio.js` `startAmbient()` and `stopAmbient()` were already fully implemented from Phase 0 (55Hz sine, `SOUND_CONFIG.ambient`, null guard, fade-in/fade-out)
@@ -106,7 +118,7 @@ Status: ⬜ Pending
 | ~~BlindStalker enemy~~ | ~~Phase 8~~ | ~~Low~~ |
 | ~~Level 10 (full polish)~~ | ~~Phase 9~~ | ~~High~~ |
 | ~~Ambient audio~~ | ~~Phase 10~~ | ~~Medium~~ |
-| Debug overlay | Phase 11 | Low |
+| ~~Debug overlay~~ | ~~Phase 11~~ | ~~Low~~ |
 | Audio polish | Phase 12 | Low |
 | Mobile polish | Phase 13 | Medium |
 | Final balance/polish | Phase 14 | Low |
@@ -115,11 +127,10 @@ Status: ⬜ Pending
 
 ## Next Recommended Task
 
-Begin **Phase 11 — Debug Overlay**:
-1. `js/debug.js` (NEW): `isEnabled()`, `toggle()`, `draw(ctx, state, fps)` — shows FPS, ray counts, echo trail count, entity states, player tile/water/crouch
-2. `input.js`: Add backtick key → `consumeDebugToggle()`
-3. `game.js` loop: Track FPS (rolling average over last 30 frames). Call `Input.consumeDebugToggle()` → `Debug.toggle()`.
-4. `renderer.js` `draw()`: If `Debug.isEnabled()`, call `Debug.draw(ctx, state, fps)` last in draw order
+Begin **Phase 12 — Audio Polish**:
+1. Verify all `play*()` in `audio.js` read from `SOUND_CONFIG` (no hardcoded values) — most already do
+2. Add `playFootstepSurface(surface)` dispatcher that calls `playFootstep()` or `playFootstepWater()` based on surface type
+3. Add subtle pitch variation to footstep: randomize `filterFreq` ± 5% on each call
 
 ---
 

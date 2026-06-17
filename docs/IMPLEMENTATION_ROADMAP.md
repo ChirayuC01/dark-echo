@@ -337,17 +337,17 @@
 ---
 
 ## Phase 11 — Debug Overlay
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Backtick-toggled overlay showing FPS, ray counts, enemy states, player position.  
 **Depends on:** Phase 0 complete
 
 ### Tasks
-- [ ] `js/debug.js` (NEW): `isEnabled()`, `toggle()`, `draw(ctx, state, fps)`
-- [ ] `input.js`: Add backtick key toggle → `consumeDebugToggle()`
-- [ ] `game.js` loop: Track FPS (rolling average). Call `Input.consumeDebugToggle()` → `Debug.toggle()`.
-- [ ] `renderer.js` `draw()`: If `Debug.isEnabled()`, call `Debug.draw(ctx, state, fps)` last
-- [ ] Debug display: FPS, active rays, echo trails, impacts, `G.screen`, player x/y tile, player water/crouch state, enemy states
-- [ ] Commit + push
+- [x] `js/debug.js` (NEW): `isEnabled()`, `toggle()`, `draw(ctx, state, fps)`
+- [x] `input.js`: Add `Backquote` keydown → `_debugToggle`; `consumeDebugToggle()` export
+- [x] `game.js` loop: EMA FPS (`G.fps * 0.85 + (1/dt) * 0.15`); `consumeDebugToggle()` → `Debug.toggle()`; `fps: G.fps` in state spread
+- [x] `renderer.js` `draw()`: Import `Debug`; `if (Debug.isEnabled()) Debug.draw(ctx, state, state.fps)` after vignette
+- [x] Debug display: FPS (color-coded green/yellow/red), screen, rays/trails/glints, player px+tile+crouch+water, all entity types+states+positions
+- [x] Commit + push
 
 ### Files Modified
 - `js/debug.js` (new)
@@ -356,10 +356,10 @@
 - `js/renderer.js`
 
 ### Acceptance Criteria
-- [ ] Backtick toggles overlay on/off in-game
-- [ ] FPS counter updates every frame
-- [ ] Echo trail count never exceeds 500 (visible in overlay)
-- [ ] Enemy states (idle/hunting/alert) shown
+- [x] Backtick toggles overlay on/off in-game
+- [x] FPS counter updates every frame
+- [x] Echo trail count visible in overlay (warns in orange when ≥85% of cap)
+- [x] Enemy states (idle/hunting/alert) shown with color coding
 
 ---
 

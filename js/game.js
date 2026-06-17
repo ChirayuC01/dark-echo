@@ -17,6 +17,7 @@ import { LEVELS } from './levels.js';
 import { RaySystem } from './waves.js';
 import { castRay, circlesOverlap, castRayCrushers, circleOverlapsAABB } from './collision.js';
 import { Player, PatrolEnemy, ChaserEnemy, Hazard, Crusher, Sentry, BlindStalker } from './entities.js';
+import * as Debug from './debug.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const G = {
@@ -34,6 +35,7 @@ const G = {
   lastStepTime: 0,
   lastTime: 0,
   deathReason: '',
+  fps: 60,
   playerInWater: false,
   waterReveals: new Map(),        // "row,col" → timestamp of last ray hit
   collapsibleReveals: new Map(),  // "row,col" → timestamp of last ray hit
@@ -457,6 +459,9 @@ function loop(timestamp) {
   const dt = Math.min((timestamp - G.lastTime) / 1000, 0.05);
   G.lastTime = timestamp;
 
+  if (dt > 0.001) G.fps = G.fps * 0.85 + (1 / dt) * 0.15;
+  if (Input.consumeDebugToggle()) Debug.toggle();
+
   if (Input.consumePause() && G.screen === 'playing') {
     G.screen = 'paused';
     UI.show('screen-pause');
@@ -470,6 +475,7 @@ function loop(timestamp) {
     ...G,
     rays:       G.raySystem ? G.raySystem.active     : [],
     echoTrails: G.raySystem ? G.raySystem.echoTrails : [],
+    fps:        G.fps,
   }, timestamp);
   requestAnimationFrame(loop);
 }
