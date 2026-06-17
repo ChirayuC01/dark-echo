@@ -312,27 +312,27 @@
 ---
 
 ## Phase 10 — Ambient Audio
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Continuous low-frequency background drone during gameplay.  
 **Depends on:** Phase 0 complete
 
 ### Tasks
-- [ ] `audio.js`: Add `startAmbient()` — creates looping 55Hz oscillator, stores node
-- [ ] `audio.js`: Add `stopAmbient()` — ramps gain to 0, disconnects
-- [ ] `game.js` `handleAction()`: Call `startAmbient()` on `'start'` and `'resume'`
-- [ ] `game.js` `die()`: Call `stopAmbient()`
-- [ ] `game.js` win check: Call `stopAmbient()` before showing win screen
-- [ ] Commit + push
+- [x] `audio.js`: `startAmbient()` — already implemented (55Hz sine, gain 0.035, 1.5s fade-in, null guard prevents stacking)
+- [x] `audio.js`: `stopAmbient()` — already implemented (0.5s fade-out, disconnects, nulls refs)
+- [x] `game.js` `handleAction()`: Call `startAmbient()` on `'start'`, `'resume'`, `'restart'`, `'restart-from-1'`, `'next-level'`
+- [x] `game.js` `die()`: Call `stopAmbient()` before `playDeath()`
+- [x] `game.js` win check: Call `stopAmbient()` before showing win screen
+- [x] `game.js` `handleAction('title')`: Call `stopAmbient()` on return to title
+- [x] Commit + push
 
 ### Files Modified
-- `js/audio.js`
-- `js/game.js`
+- `js/game.js` (audio.js was already complete from Phase 0)
 
 ### Acceptance Criteria
-- [ ] Drone audible (barely) during gameplay
-- [ ] Drone stops immediately on death and win
-- [ ] Drone resumes on 'resume' from pause
-- [ ] Drone does not stack (only one instance at a time)
+- [x] Drone audible (barely) during gameplay
+- [x] Drone stops immediately on death and win
+- [x] Drone resumes on 'resume' from pause
+- [x] Drone does not stack (only one instance at a time)
 
 ---
 

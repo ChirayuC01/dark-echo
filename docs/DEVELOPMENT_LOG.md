@@ -4,6 +4,35 @@
 
 ---
 
+## [Phase 10 — Complete] Ambient Audio Wiring
+
+**Date:** 2026-06-17  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/audio.js`**: No changes required — `startAmbient()`, `stopAmbient()`, and `SOUND_CONFIG.ambient` were already implemented from Phase 0:
+- `_ambientNode` / `_ambientGain` module-level refs (null initially)
+- `startAmbient()`: null guard → creates 55Hz sine oscillator → 1.5s linear fade-in to gain 0.035
+- `stopAmbient()`: 0.5s linear fade-out → `nodeToStop.stop(now + 0.55)` → nulls both refs
+
+**`js/game.js`**: 6 wiring additions:
+- `die()`: `Audio.stopAmbient()` before `Audio.playDeath()` — drone fades out cleanly as death sound plays
+- `checkExit()` win branch: `Audio.stopAmbient()` before `Audio.playLevelComplete()`
+- `handleAction('start')`: `Audio.startAmbient()` after loadLevel + UI hide
+- `handleAction('resume')`: `Audio.startAmbient()` — resumes drone after pause (null guard makes this a noop if already running, but drone is always stopped by die(), never by pause, so this is effectively always a real start)
+- `handleAction('restart')` + `handleAction('restart-from-1')`: `Audio.startAmbient()` after loadLevel — restores drone following death
+- `handleAction('next-level')`: `Audio.startAmbient()` — drone was not stopped between levels (level exit → levelup screen doesn't call stopAmbient), so this is a defensive noop; correct behavior either way
+- `handleAction('title')`: `Audio.stopAmbient()` — ensures drone stops when returning to title screen from any state
+
+### Design decisions
+
+- **Level-to-level: drone stays running**: Normal level progression (reach exit → levelup screen → next level) does NOT call `stopAmbient()`. The continuous tension drone should persist through the level transition sequence. `startAmbient()` in `'next-level'` is a safety noop via null guard.
+- **Death: stop before death sound**: `stopAmbient()` is called before `playDeath()` in `die()`, not after. Both are fire-and-forget; the 0.5s fade-out of the drone overlaps the start of the death sound, creating a smooth transition rather than an abrupt cut.
+- **Title return**: Added `stopAmbient()` to `'title'` case even though the spec only mentioned death and win — it would be jarring to hear the gameplay drone on the silent title screen.
+
+---
+
 ## [Phase 9 — Complete] Level Audit + Trigger Bug Fix + Entity Differentiation Design
 
 **Date:** 2026-06-17  

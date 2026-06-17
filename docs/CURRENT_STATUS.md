@@ -7,7 +7,7 @@
 
 ## Active Phase
 
-**Phase 10 — Ambient Audio**  
+**Phase 11 — Debug Overlay**  
 Status: ⬜ Pending
 
 ---
@@ -44,6 +44,7 @@ Status: ⬜ Pending
 | **BlindStalker Enemy** | `js/entities.js`, `js/game.js`, `js/levels.js` | Hears all sounds (step+pulse, incl. crouched); 104px/s hunt speed; 4s timer |
 | **10 levels** | `js/levels.js` | Level 10 "The Gauntlet II" — all mechanics + BlindStalker |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
+| **Ambient drone** | `js/audio.js`, `js/game.js` | 55Hz sine, gain 0.035, 1.5s fade-in/0.5s fade-out; starts on play, stops on death/win/title |
 | Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
 
@@ -59,6 +60,13 @@ Status: ⬜ Pending
 ## Phase 7 — Complete ✅ (commit `d1c00f5`)
 ## Phase 8 — Complete ✅ (commit `fe11f7d`)
 ## Phase 9 — Complete ✅
+## Phase 10 — Complete ✅
+
+**Phase 10 summary:**
+- `audio.js` `startAmbient()` and `stopAmbient()` were already fully implemented from Phase 0 (55Hz sine, `SOUND_CONFIG.ambient`, null guard, fade-in/fade-out)
+- `game.js` wired: `startAmbient()` called in `'start'`, `'resume'`, `'restart'`, `'restart-from-1'`, `'next-level'` action branches; `stopAmbient()` called in `die()` (before `playDeath()`) and `checkExit()` win branch; also `stopAmbient()` in `'title'` to mute when returning to title screen
+- Drone never stacks: `startAmbient()` null-guards before creating new oscillator node
+- Drone persists across normal level transitions (level exit → levelup screen → next level); only stops on death, win, or title
 
 **Phase 9 summary:**
 - All 10 levels audited for completability; all confirmed solvable
@@ -97,7 +105,7 @@ Status: ⬜ Pending
 | ~~Sentry enemy~~ | ~~Phase 7~~ | ~~Medium~~ |
 | ~~BlindStalker enemy~~ | ~~Phase 8~~ | ~~Low~~ |
 | ~~Level 10 (full polish)~~ | ~~Phase 9~~ | ~~High~~ |
-| Ambient audio | Phase 10 | Medium |
+| ~~Ambient audio~~ | ~~Phase 10~~ | ~~Medium~~ |
 | Debug overlay | Phase 11 | Low |
 | Audio polish | Phase 12 | Low |
 | Mobile polish | Phase 13 | Medium |
@@ -107,10 +115,11 @@ Status: ⬜ Pending
 
 ## Next Recommended Task
 
-Begin **Phase 10 — Ambient Audio**:
-1. `audio.js`: `startAmbient()` — creates looping 55Hz oscillator at gain 0.04, stores as module-level node (prevent stacking with null guard)
-2. `audio.js`: `stopAmbient()` — ramps gain to 0 over 0.3s, then disconnects node and sets ref to null
-3. `game.js` `handleAction()`: call `startAmbient()` on `'start'` and `'resume'`; call `stopAmbient()` in `die()` and win check
+Begin **Phase 11 — Debug Overlay**:
+1. `js/debug.js` (NEW): `isEnabled()`, `toggle()`, `draw(ctx, state, fps)` — shows FPS, ray counts, echo trail count, entity states, player tile/water/crouch
+2. `input.js`: Add backtick key → `consumeDebugToggle()`
+3. `game.js` loop: Track FPS (rolling average over last 30 frames). Call `Input.consumeDebugToggle()` → `Debug.toggle()`.
+4. `renderer.js` `draw()`: If `Debug.isEnabled()`, call `Debug.draw(ctx, state, fps)` last in draw order
 
 ---
 

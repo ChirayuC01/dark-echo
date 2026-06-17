@@ -307,6 +307,7 @@ function checkDeath() {
 function die(reason) {
   G.deathReason = reason;
   G.screen = 'dead';
+  Audio.stopAmbient();
   Audio.playDeath();
   UI.setDeathMessage(reason);
   UI.show('screen-dead');
@@ -335,6 +336,7 @@ function checkExit() {
   if (dist(G.player.x, G.player.y, G.exit.x, G.exit.y) < TILE * 0.6) {
     if (G.levelIndex + 1 >= TOTAL) {
       G.screen = 'win';
+      Audio.stopAmbient();
       Audio.playLevelComplete();
       UI.show('screen-win');
       Renderer.setHUDVisible(false);
@@ -482,16 +484,19 @@ function handleAction(action) {
       G.screen = 'playing';
       UI.hide();
       Renderer.setHUDVisible(true);
+      Audio.startAmbient();
       break;
     case 'resume':
       G.screen = 'playing';
       UI.hide();
+      Audio.startAmbient();
       break;
     case 'restart':
       loadLevel(G.levelIndex);
       G.screen = 'playing';
       UI.hide();
       Renderer.setHUDVisible(true);
+      Audio.startAmbient();
       break;
     case 'restart-from-1':
       G.levelIndex = 0;
@@ -499,14 +504,17 @@ function handleAction(action) {
       G.screen = 'playing';
       UI.hide();
       Renderer.setHUDVisible(true);
+      Audio.startAmbient();
       break;
     case 'next-level':
       G.screen = 'playing';
       UI.hide();
       Renderer.setHUDVisible(true);
+      Audio.startAmbient();
       break;
     case 'title':
       G.screen = 'title';
+      Audio.stopAmbient();
       UI.show('screen-title');
       Renderer.setHUDVisible(false);
       break;

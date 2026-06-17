@@ -5,7 +5,21 @@
 
 ---
 
-## [Unreleased] — Phase 10 pending
+## [Unreleased] — Phase 11 pending
+
+---
+
+## [v0.15.0] — 2026-06-17 — Phase 10
+
+### Added
+- **Ambient audio drone**: Continuous 55Hz sine wave plays quietly during all gameplay
+  - `startAmbient()` / `stopAmbient()` in `audio.js` were already implemented from Phase 0; this phase wires them to game events
+  - Drone fades in over 1.5s on game start; fades out over 0.5s on death or win
+  - `game.js` `handleAction()`: `startAmbient()` called on `'start'`, `'resume'`, `'restart'`, `'restart-from-1'`, `'next-level'`
+  - `game.js` `die()`: `stopAmbient()` called before `playDeath()` — drone stops before death sound plays
+  - `game.js` `checkExit()`: `stopAmbient()` called in win branch before showing win screen
+  - `game.js` `handleAction('title')`: `stopAmbient()` on returning to title screen
+  - Null guard in `startAmbient()` prevents stacking across rapid calls; safe to call on every gameplay entry
 
 ---
 
