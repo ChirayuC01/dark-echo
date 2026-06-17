@@ -7,7 +7,7 @@
 
 ## Active Phase
 
-**Phase 12 — Audio Polish**  
+**Phase 13 — Mobile Polish**  
 Status: ⬜ Pending
 
 ---
@@ -63,6 +63,14 @@ Status: ⬜ Pending
 ## Phase 9 — Complete ✅
 ## Phase 10 — Complete ✅
 ## Phase 11 — Complete ✅
+## Phase 12 — Complete ✅
+
+**Phase 12 summary:**
+- All `play*()` functions already read from `SOUND_CONFIG` — audit passed with no changes needed
+- `audio.js` `SOUND_CONFIG`: `pitchVariation: 0.05` added to `footstep` and `footstepWater` entries
+- `audio.js` `noiseNode()`: applies variation as `filterFreq × (1 + rand(−1,1) × pitchVariation)` — affects only sounds that declare `pitchVariation` in their config; all other sounds unaffected
+- `audio.js`: `playFootstepSurface(surface)` dispatcher added — `'water'` → `playFootstepWater()`, else → `playFootstep()`
+- `game.js`: footstep call consolidated from 3-line if/else to `Audio.playFootstepSurface(G.playerInWater ? 'water' : 'normal')`
 
 **Phase 11 summary:**
 - `js/debug.js` (new module): `isEnabled()`, `toggle()`, `draw(ctx, state, fps)`
@@ -119,7 +127,7 @@ Status: ⬜ Pending
 | ~~Level 10 (full polish)~~ | ~~Phase 9~~ | ~~High~~ |
 | ~~Ambient audio~~ | ~~Phase 10~~ | ~~Medium~~ |
 | ~~Debug overlay~~ | ~~Phase 11~~ | ~~Low~~ |
-| Audio polish | Phase 12 | Low |
+| ~~Audio polish~~ | ~~Phase 12~~ | ~~Low~~ |
 | Mobile polish | Phase 13 | Medium |
 | Final balance/polish | Phase 14 | Low |
 
@@ -127,10 +135,10 @@ Status: ⬜ Pending
 
 ## Next Recommended Task
 
-Begin **Phase 12 — Audio Polish**:
-1. Verify all `play*()` in `audio.js` read from `SOUND_CONFIG` (no hardcoded values) — most already do
-2. Add `playFootstepSurface(surface)` dispatcher that calls `playFootstep()` or `playFootstepWater()` based on surface type
-3. Add subtle pitch variation to footstep: randomize `filterFreq` ± 5% on each call
+Begin **Phase 13 — Mobile Polish**:
+1. Test at 375px width (iPhone SE viewport): verify joystick, pulse button, crouch button all visible and functional
+2. Verify canvas scales correctly at mobile viewport width
+3. Fix any layout overflow or clipped elements found during testing
 
 ---
 

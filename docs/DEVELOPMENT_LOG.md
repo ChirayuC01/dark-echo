@@ -4,6 +4,37 @@
 
 ---
 
+## [Phase 12 — Complete] Audio Polish
+
+**Date:** 2026-06-17  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/audio.js`** — 3 changes:
+1. `SOUND_CONFIG.footstep`: added `pitchVariation: 0.05`
+2. `SOUND_CONFIG.footstepWater`: added `pitchVariation: 0.05`
+3. `noiseNode()`: 2-line pitch variation logic before `filter.frequency.value` assignment:
+   ```javascript
+   const variation = cfg.pitchVariation ? (Math.random() * 2 - 1) * cfg.pitchVariation : 0;
+   filter.frequency.value = cfg.filterFreq * (1 + variation);
+   ```
+4. `playFootstepSurface(surface)` dispatcher added between `playFootstepWater` and `playPulse`
+
+**`js/game.js`** — footstep call simplified:
+- Before: 3-line `if (G.playerInWater) { ... } else { ... }`
+- After: `Audio.playFootstepSurface(G.playerInWater ? 'water' : 'normal');`
+
+**Audit result**: all 12 `play*()` functions read exclusively from `SOUND_CONFIG`. The `osc()` helper receives all its parameters from the config objects. No hardcoded audio values remain.
+
+### Design decisions
+
+- **`pitchVariation` in SOUND_CONFIG, not hardcoded in `playFootstep()`**: This keeps variation configurable. Setting `pitchVariation: 0` or removing the field disables it for that sound. Other sounds (collapse, door, keyPickup) don't vary because they're one-shot events where consistency is expected.
+- **`Math.random() * 2 - 1`** gives a uniform distribution over [−1, 1], so the cutoff varies uniformly between `filterFreq * 0.95` and `filterFreq * 1.05`. This is subtle enough not to be distracting but distinct enough to eliminate the robotic regularity of identical repeated sounds.
+- **Dispatcher replaces callers**: `playFootstepSurface()` is the right long-term API. If a third surface type (e.g., metal grating) is added in the future, only the dispatcher needs updating — no changes needed in game.js.
+
+---
+
 ## [Phase 11 — Complete] Debug Overlay
 
 **Date:** 2026-06-17  

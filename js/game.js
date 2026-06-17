@@ -379,11 +379,7 @@ function update(dt, now) {
     const maxDist = STEP_RAY_MAX * (crouching ? CROUCH_DIST_MULT : 1);
     // quiet=true when crouching: rays still reveal geometry but won't re-alert chasers
     G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn, count, maxDist, crouching);
-    if (G.playerInWater) {
-      Audio.playFootstepWater();
-    } else {
-      Audio.playFootstep();
-    }
+    Audio.playFootstepSurface(G.playerInWater ? 'water' : 'normal');
   }
 
   // Pulse rays

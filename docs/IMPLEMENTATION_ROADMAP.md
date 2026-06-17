@@ -364,19 +364,19 @@
 ---
 
 ## Phase 12 — Audio Polish
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** All sounds use `SOUND_CONFIG`. Surface-type dispatcher. Pitch variation. Optional reverb.  
 **Depends on:** Phase 10 complete
 
 ### Tasks
-- [ ] Verify all `play*()` functions read from `SOUND_CONFIG` (no hardcoded values)
-- [ ] Add `playFootstepSurface(surface)` dispatcher in `audio.js`
-- [ ] Add subtle pitch variation to footstep (±5% lowpass freq)
-- [ ] Commit + push
+- [x] Verify all `play*()` functions read from `SOUND_CONFIG` — confirmed; no hardcoded values anywhere
+- [x] Add `playFootstepSurface(surface)` dispatcher in `audio.js`; update `game.js` caller to use it
+- [x] Add subtle pitch variation to footstep: `pitchVariation: 0.05` in SOUND_CONFIG; applied in `noiseNode()` as `filterFreq × (1 + rand(−1,1) × pitchVariation)`
+- [x] Commit + push
 
 ### Acceptance Criteria
-- [ ] Modifying any `SOUND_CONFIG` value changes the audio behavior
-- [ ] Footstep sound varies slightly on each step
+- [x] Modifying any `SOUND_CONFIG` value changes the audio behavior
+- [x] Footstep sound varies slightly on each step (±5% lowpass cutoff frequency)
 
 ---
 

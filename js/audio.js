@@ -11,10 +11,10 @@ function ctx() {
 // ─── Centralized sound config — tune all sounds here ─────────────────────────
 export const SOUND_CONFIG = {
   footstep: {
-    gain: 0.18, filterFreq: 180, duration: 0.06,
+    gain: 0.18, filterFreq: 180, duration: 0.06, pitchVariation: 0.05,
   },
   footstepWater: {
-    gain: 0.28, filterFreq: 320, duration: 0.09,
+    gain: 0.28, filterFreq: 320, duration: 0.09, pitchVariation: 0.05,
   },
   pulse: {
     freq1: 90, freq2: 55, gain1: 0.5, gain2: 0.3,
@@ -83,7 +83,9 @@ function noiseNode(ac, cfg) {
   const src = ac.createBufferSource();
   const g = ac.createGain();
   const filter = ac.createBiquadFilter();
-  filter.type = 'lowpass'; filter.frequency.value = cfg.filterFreq;
+  filter.type = 'lowpass';
+  const variation = cfg.pitchVariation ? (Math.random() * 2 - 1) * cfg.pitchVariation : 0;
+  filter.frequency.value = cfg.filterFreq * (1 + variation);
   src.buffer = noiseBuffer(ac, cfg.duration);
   src.connect(filter); filter.connect(g); g.connect(ac.destination);
   g.gain.setValueAtTime(cfg.gain, ac.currentTime);
@@ -97,6 +99,11 @@ export function playFootstep() {
 
 export function playFootstepWater() {
   try { noiseNode(ctx(), SOUND_CONFIG.footstepWater); } catch (_) {}
+}
+
+export function playFootstepSurface(surface) {
+  if (surface === 'water') playFootstepWater();
+  else playFootstep();
 }
 
 export function playPulse() {

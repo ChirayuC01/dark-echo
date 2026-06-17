@@ -5,7 +5,18 @@
 
 ---
 
-## [Unreleased] — Phase 12 pending
+## [Unreleased] — Phase 13 pending
+
+---
+
+## [v0.17.0] — 2026-06-17 — Phase 12
+
+### Changed
+- **Footstep pitch variation**: each footstep (normal and water) now plays at a slightly different lowpass cutoff frequency — ±5% random variation per step
+  - `SOUND_CONFIG.footstep` and `SOUND_CONFIG.footstepWater` both gain `pitchVariation: 0.05`
+  - `noiseNode()` applies: `filterFreq × (1 + rand(−1,1) × pitchVariation)` — zero variation for sounds without the field
+- **Surface dispatcher**: `playFootstepSurface(surface)` added to `audio.js`; `game.js` uses it instead of the inline if/else
+- **Audit**: all `play*()` functions confirmed to read exclusively from `SOUND_CONFIG` — no hardcoded audio parameters remain
 
 ---
 
