@@ -4,6 +4,43 @@
 
 ---
 
+## [Phase 9 — Complete] Level Audit + Trigger Bug Fix + Entity Differentiation Design
+
+**Date:** 2026-06-17  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`js/levels.js`**: Fixed critical Level 9 trigger bug:
+- Trigger was at `{ col: 3, row: 9 }` — player never reaches col 3 in normal gameplay
+- Player enters row 9 at col 14 (gap in row 8 wall) and exits at col 6 (gap in row 10 wall); col 3 is left of the exit
+- Fixed to `{ col: 10, row: 9 }` — col 10 is mid-path between col 14 entry and col 6 exit
+- Without this fix, the wall at row 13 col 16 is never removed and the exit is permanently blocked
+
+**`docs/KNOWN_ISSUES.md`**: Added DC-004 — entity visual differentiation:
+- Documents that PatrolEnemy, ChaserEnemy, and BlindStalker all render as identical muted-red dots
+- Proposes shape vocabulary: triangle (patrol), circle+ring (chaser), dot+arcs (stalker)
+- Deferred to Phase 14
+
+**`docs/PROJECT_MASTER_SPEC.md`**: Section 3 updated with enemy shape vocabulary table for future implementation
+
+### Level audit results
+
+All 10 levels traced for solvability:
+- **Levels 1–5**: Original prototype levels — no issues
+- **Level 6 (The Whisper)**: Patrol at row 7 fully traversable via crouch; exits at col 1/18 both reachable
+- **Level 7 (Flooded)**: Water rows 6–8 crossable; hazards at col 5/14 patrol inner water, dry path at col 9 forces inside; both hazard locations avoid blocking the path
+- **Level 8 (The Collapse)**: Key at col 16 row 3 reachable from start; collapsible at col 9 rows 6 and 8 block downward path until pulsed; door at col 9 row 9 opens on key pickup — confirmed flow works
+- **Level 9 (The Corridor)**: ⚠️ **Trigger bug fixed** (see above). After fix: trigger at col 10 row 9 fires mid-traversal; wall at 13,16 removed; sentry at col 12 row 13 has timed gaps; exit at col 18 row 13 reachable
+- **Level 10 (The Gauntlet II)**: Forced pulse to destroy col 5 row 5 alerts BlindStalker; key at col 2 row 7 reachable via col 4 gap in row 6; door at col 10 row 10 opens after key; crusher at col 10 row 11 (period 5.5s); sentry at col 14 row 13 has timed gaps; exit at col 18 row 13
+
+### Design decisions
+
+- **Trigger relocation rationale**: Level 9 hint says "Find the switch" — the switch must be findable via natural traversal. The S-path through corridors goes Entry(col 14) → row 9 crossing → Exit(col 6). Col 10 sits naturally in the middle of that crossing and fires without requiring any detour.
+- **DC-004 deferred correctly**: Visual differentiation is a UX improvement that requires no gameplay logic change — only renderer shapes. Phase 14 is the right time for polish after all systems are in.
+
+---
+
 ## [Phase 8 — Complete] BlindStalker Enemy + Level 10
 
 **Date:** 2026-06-16  

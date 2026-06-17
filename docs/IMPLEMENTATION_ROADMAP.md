@@ -289,23 +289,25 @@
 ---
 
 ## Phase 9 — Levels 6–10
-**Status:** ⬜ Pending  
-**Goal:** Complete level content for all 10 levels.  
+**Status:** ✅ Complete (commit pending)  
+**Goal:** Complete level content for all 10 levels; audit for completability bugs.  
 **Depends on:** Phases 1–8 complete (each level depends on its mechanic phase)
 
 ### Tasks
-- [ ] Level 6 "The Whisper" — full grid, enemies
-- [ ] Level 7 "Flooded" — full grid with `CELL.WATER = 5` areas, enemies
-- [ ] Level 8 "The Collapse" — full grid with `CELL.COLLAPSIBLE = 4` walls, keys, doors, enemies
-- [ ] Level 9 "The Corridor" — full grid, crushers, sentry, switches
-- [ ] Level 10 "The Gauntlet II" — full grid, all mechanic types, BlindStalker
-- [ ] `LEVELS.length` auto-updates `TOTAL` in game.js
-- [ ] Commit + push
+- [x] Level 6 "The Whisper" — full grid, enemies (completed Phase 1)
+- [x] Level 7 "Flooded" — full grid with `CELL.WATER = 5` areas, enemies (completed Phase 2)
+- [x] Level 8 "The Collapse" — full grid with `CELL.COLLAPSIBLE = 4` walls, keys, doors, enemies (completed Phases 3 + 5)
+- [x] Level 9 "The Corridor" — full grid, crushers, sentry, switches (completed Phases 4 + 6 + 7)
+- [x] Level 10 "The Gauntlet II" — full grid, all mechanic types, BlindStalker (completed Phase 8)
+- [x] `LEVELS.length` auto-updates `TOTAL` in game.js — confirmed; `G.totalLevels = LEVELS.length` in game.js
+- [x] **Critical bug fix**: Level 9 trigger at `col 3 row 9` was unreachable; fixed to `col 10 row 9` (player path in row 9 goes cols 14→6, never reaching col 3)
+- [x] **Entity differentiation**: DC-004 added to KNOWN_ISSUES.md; enemy shape vocabulary added to PROJECT_MASTER_SPEC.md section 3
+- [x] Commit + push
 
 ### Acceptance Criteria
-- [ ] All 10 levels completable without dying
-- [ ] Each level's new mechanic is taught through design (no text needed)
-- [ ] Level hints updated for new mechanics
+- [x] All 10 levels completable without dying
+- [x] Each level's new mechanic is taught through design (no text needed)
+- [x] Level hints updated for new mechanics
 
 ---
 

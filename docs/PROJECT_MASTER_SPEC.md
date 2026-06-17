@@ -49,6 +49,20 @@
 | Water zone background | `rgba(50,150,160,0.04)` | Barely visible teal wash, only when player inside |
 | Crusher (revealed) | `rgba(230,105,55,α)` | Same as hazard — crushing is lethal |
 
+**Enemy shape vocabulary (planned — Phase 14):**
+
+All enemies use `rgba(200,70,70)` red, but shapes communicate behavior at a glance:
+
+| Enemy Type | Shape | Why |
+|---|---|---|
+| PatrolEnemy | Triangle pointing in movement direction | Communicates: "moves predictably" |
+| ChaserEnemy | Circle + outer concentric ring (ring expands when hunting) | Communicates: "this chases" |
+| BlindStalker | Dot with 3 short radiating arcs at 120° intervals | Communicates: "hears everything" |
+| Hazard | Orange cross/X (already distinct by color) | No change needed |
+| Sentry | Distinct via rotating scan cone; optionally diamond dot | Already recognizable |
+
+See KNOWN_ISSUES.md DC-004 for implementation notes.
+
 **Rendering rules:**
 - Alpha `α` is always modulated by two factors multiplied together:
   1. **Time fade**: smoothstep from 1.0 at creation to 0 at `RAY_TRAIL_MS` (4200ms)

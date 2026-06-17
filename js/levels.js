@@ -267,9 +267,10 @@ export const LEVELS = [
       // Sentry guards the exit row — cone sweeps clockwise; player must wait for it to face away
       { type: 'sentry',  col: 12, row: 13, angle: Math.PI },
     ],
-    // Switch at col 3, row 9 (player crosses it while walking left toward corridor 3 entry)
+    // Switch at col 10, row 9 (player crosses it on the way from corridor 3 exit to corridor 3 entry)
+    // Player path in row 9: enters at col 14 (gap in row 8), exits at col 6 (gap in row 10) — col 10 is mid-path
     // Opens the wall at row 13 col 16, unblocking the final run to the exit
-    triggers: [{ col: 3, row: 9, action: 'remove_wall', targetId: '13,16' }],
+    triggers: [{ col: 10, row: 9, action: 'remove_wall', targetId: '13,16' }],
   },
 
   // ─── Level 10 ─── "The Gauntlet II"  (all mechanics + BlindStalker)

@@ -5,7 +5,22 @@
 
 ---
 
-## [Unreleased] — Phase 9 pending
+## [Unreleased] — Phase 10 pending
+
+---
+
+## [v0.14.0] — 2026-06-17 — Phase 9
+
+### Fixed
+- **Level 9 trigger placement bug (critical)**: The `remove_wall` trigger was placed at `col 3, row 9` — unreachable in normal play. Player path in row 9 enters at col 14 (gap in row 8 wall) and exits at col 6 (gap in row 10 wall), never crossing col 3. Trigger moved to `col 10, row 9` (mid-path), ensuring the wall at row 13 col 16 is always removed before the player reaches the exit sprint.
+
+### Documentation
+- **DC-004 added to KNOWN_ISSUES.md**: All three "dot" enemy types (PatrolEnemy, ChaserEnemy, BlindStalker) are visually identical under pressure. Proposed shape vocabulary documented:
+  - PatrolEnemy → directional triangle (movement direction)
+  - ChaserEnemy → circle + outer ring (ring brightens when hunting)
+  - BlindStalker → dot + 3 radiating arcs at 120° (communicates sound-awareness)
+  - Deferred to Phase 14 polish pass
+- **PROJECT_MASTER_SPEC.md section 3** updated with enemy shape vocabulary table
 
 ---
 

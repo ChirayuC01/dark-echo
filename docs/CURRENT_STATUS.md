@@ -1,13 +1,13 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 7 complete (2026-06-16)  
+> **Last updated:** Phase 9 complete (2026-06-17)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 9 — Levels 6–10 polish**  
+**Phase 10 — Ambient Audio**  
 Status: ⬜ Pending
 
 ---
@@ -58,6 +58,12 @@ Status: ⬜ Pending
 ## Phase 6 — Complete ✅ (commit `fe82322`)
 ## Phase 7 — Complete ✅ (commit `d1c00f5`)
 ## Phase 8 — Complete ✅ (commit `fe11f7d`)
+## Phase 9 — Complete ✅
+
+**Phase 9 summary:**
+- All 10 levels audited for completability; all confirmed solvable
+- **Critical bug fixed**: Level 9 trigger `{ col: 3, row: 9 }` was unreachable — player path in row 9 traverses cols 14→6 (never reaches col 3). Fixed to `col: 10` which sits mid-path
+- **DC-004 documented**: Entity visual differentiation concern logged in KNOWN_ISSUES.md with proposed shape vocabulary (PatrolEnemy→triangle, ChaserEnemy→circle+ring, BlindStalker→dot+arcs); spec section 3 updated; deferred to Phase 14
 
 **Phase 7 summary:**
 - `SENTRY_SCAN_RANGE=180`, `SENTRY_SCAN_ARC=π/2`, `SENTRY_SCAN_SPEED=π/3`, `SENTRY_HUNT_DURATION=8` added to `constants.js`
@@ -90,7 +96,7 @@ Status: ⬜ Pending
 | ~~Switches / triggers~~ | ~~Phase 6~~ | ~~Medium~~ |
 | ~~Sentry enemy~~ | ~~Phase 7~~ | ~~Medium~~ |
 | ~~BlindStalker enemy~~ | ~~Phase 8~~ | ~~Low~~ |
-| Level 10 (full polish) | Phase 9 | High |
+| ~~Level 10 (full polish)~~ | ~~Phase 9~~ | ~~High~~ |
 | Ambient audio | Phase 10 | Medium |
 | Debug overlay | Phase 11 | Low |
 | Audio polish | Phase 12 | Low |
@@ -102,8 +108,8 @@ Status: ⬜ Pending
 ## Next Recommended Task
 
 Begin **Phase 10 — Ambient Audio**:
-1. `audio.js`: `startAmbient()` — creates looping 55Hz oscillator at gain 0.04, stores as module-level node
-2. `audio.js`: `stopAmbient()` — ramps gain to 0 over 0.3s, then disconnects
+1. `audio.js`: `startAmbient()` — creates looping 55Hz oscillator at gain 0.04, stores as module-level node (prevent stacking with null guard)
+2. `audio.js`: `stopAmbient()` — ramps gain to 0 over 0.3s, then disconnects node and sets ref to null
 3. `game.js` `handleAction()`: call `startAmbient()` on `'start'` and `'resume'`; call `stopAmbient()` in `die()` and win check
 
 ---
