@@ -167,3 +167,31 @@ canvas {
   canvas { width: 100%; height: 100%; }
   #touch-controls { display: block; }
 }
+
+/* ── 375px (iPhone SE) fixes ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Screen panels: reduce padding and cap width so they never overflow */
+  .screen {
+    padding: 28px 20px;
+    max-width: calc(100vw - 16px);
+  }
+
+  /* h1 "RESONANCE" at 2.6rem + 0.22em letter-spacing ≈ 402px — clips at 375px */
+  .screen h1 { font-size: 1.7rem; letter-spacing: 0.14em; }
+  .screen h2 { font-size: 1.2rem; }
+  .screen p  { font-size: 0.72rem; max-width: 100%; }
+
+  /* Keyboard hint is irrelevant on touch and overflows the narrow panel */
+  #screen-title .hint { display: none; }
+
+  .btn { padding: 9px 18px; }
+
+  /* HUD: move to top so joystick (bottom: 20px) can't overlap it */
+  #hud { bottom: auto; top: 8px; }
+
+  /* Touch controls: scale down from 110→90px joystick, reduce bottom offset */
+  #joystick-zone { bottom: 20px; left: 16px; width: 90px; height: 90px; }
+  #joystick-knob { width: 34px; height: 34px; }
+  #pulse-btn     { bottom: 25px; right: 16px; width: 56px; height: 56px; font-size: 0.55rem; }
+  #crouch-btn    { bottom: 27px; width: 48px;  height: 48px; font-size: 0.5rem; }
+}

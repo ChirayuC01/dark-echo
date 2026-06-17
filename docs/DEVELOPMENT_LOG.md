@@ -4,6 +4,44 @@
 
 ---
 
+## [Phase 13 — Complete] Mobile Polish
+
+**Date:** 2026-06-17  
+**Branch:** `claude/sound-vision-game-7pvbo1`
+
+### What was done
+
+**`css/style.css`**: Added `@media (max-width: 480px)` block after the existing `@media (max-width: 820px)` block.
+
+**Geometry analysis at 375px viewport:**
+- Canvas: `100vw × 75vw = 375 × 281px` (from existing `@media max-width:820px` rule)
+- `#wrap`: same 375×281px
+- All absolute-positioned elements use pixel values that don't scale — their proportional footprint grows significantly on small screens
+
+**Bugs found and fixed:**
+
+| Bug | Root cause | Fix |
+|---|---|---|
+| h1 "RESONANCE" clipped | 2.6rem + 0.22em letter-spacing → ~402px panel > 375px viewport | `font-size: 1.7rem; letter-spacing: 0.14em` → ~218px |
+| Screen panels overflow | `padding: 44px 52px` (104px horizontal) + content | `padding: 28px 20px` + `max-width: calc(100vw - 16px)` |
+| HUD behind joystick | HUD at bottom:14px; `#touch-controls` is later in DOM (renders above); joystick bottom at 20px overlaps HUD | `#hud { bottom: auto; top: 8px }` on mobile |
+| Keyboard hint overflow + irrelevant | `<span class="hint">WASD / arrows...` ~300px wide | `#screen-title .hint { display: none }` on mobile |
+| Controls too tall (60% canvas) | 110px joystick + 60px bottom = 170px from bottom = 60.5% of 281px | Joystick 90px + bottom 20px = 39%; pulse 56px; crouch 48px |
+
+**Touch target audit after fixes:**
+- Joystick: 90×90px ✓ (min: 44px)
+- Pulse btn: 56×56px ✓
+- Crouch btn: 48×48px ✓
+
+### Design decisions
+
+- **480px breakpoint** (not 375px): iPhone SE is 375px, but 480px catches all narrow portrait phones. The 820px breakpoint already handles medium phones; 480px handles the narrow edge case.
+- **HUD to top**: On large screens (800×600), bottom-HUD is clean. On mobile where the game canvas is 281px tall and bottom is dominated by touch controls, top placement is the only position that's guaranteed unobscured.
+- **Keyboard hint hidden, not shrunk**: Shrinking the font below 0.72rem produces illegible text. The keyboard hint is simply not relevant on touch — hiding it is cleaner than trying to make it fit.
+- **Crouch button at 48px**: Technically just above the 44px minimum. Could go to 44px if needed, but 48px is more comfortable. The joystick's large zone (90px) already provides ample touch area for the most-used control.
+
+---
+
 ## [Phase 12 — Complete] Audio Polish
 
 **Date:** 2026-06-17  

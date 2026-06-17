@@ -5,7 +5,18 @@
 
 ---
 
-## [Unreleased] — Phase 13 pending
+## [Unreleased] — Phase 14 pending
+
+---
+
+## [v0.18.0] — 2026-06-17 — Phase 13
+
+### Fixed
+- **Mobile: title h1 overflow** — "RESONANCE" at `2.6rem + 0.22em letter-spacing` produces a ~402px panel on a 375px viewport. New rule at `max-width: 480px` reduces to `1.7rem + 0.14em` (~218px panel). No clipping.
+- **Mobile: screen panel overflow** — reduced padding from `44px 52px` to `28px 20px` and added `max-width: calc(100vw - 16px)` on all `.screen` elements at narrow viewports. Panels can never exceed the viewport width.
+- **Mobile: HUD obscured by touch controls** — `#hud` was at `bottom: 14px` while `#touch-controls` (later in DOM, renders above) had its joystick at `bottom: 20–110px`. HUD text was visually behind the joystick zone. Fixed by moving HUD to `top: 8px` on mobile.
+- **Mobile: keyboard hint overflow** — title screen `<span class="hint">WASD / arrows · SPACE = pulse · P / ESC = pause</span>` is ~300px wide at 0.72rem in a 218px-wide panel. Hidden via `#screen-title .hint { display: none }` on mobile (keyboard hints are irrelevant on touch devices).
+- **Mobile: touch controls oversized for 281px canvas** — at 375px viewport the canvas is 281px tall; the 110px joystick with 60px bottom offset consumed 60.5% of canvas height. Scaled down: joystick `90px`, pulse btn `56px`, crouch btn `48px`; bottom offsets reduced to `20–27px`. All targets remain ≥44px minimum.
 
 ---
 

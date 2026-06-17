@@ -7,7 +7,7 @@
 
 ## Active Phase
 
-**Phase 13 — Mobile Polish**  
+**Phase 14 — Final Polish & Balance**  
 Status: ⬜ Pending
 
 ---
@@ -64,6 +64,15 @@ Status: ⬜ Pending
 ## Phase 10 — Complete ✅
 ## Phase 11 — Complete ✅
 ## Phase 12 — Complete ✅
+## Phase 13 — Complete ✅
+
+**Phase 13 summary:**
+- `@media (max-width: 480px)` block added to `css/style.css` — 4 bugs fixed:
+  1. **h1 overflow**: "RESONANCE" at 2.6rem+0.22em ≈ 402px panel > 375px viewport → reduced to 1.7rem+0.14em ≈ 218px
+  2. **Screen panel overflow**: reduced padding `44px 52px → 28px 20px`; added `max-width: calc(100vw - 16px)` so no panel can exceed viewport
+  3. **HUD overlap with touch controls**: HUD at `bottom:14px` was visually behind `#touch-controls` (later in DOM, renders on top); moved to `top:8px` on mobile
+  4. **Keyboard hint overflow**: title screen `<span class="hint">WASD / arrows...` ~300px wide in narrow panel; hidden on mobile (touch users don't need keyboard hints)
+- Touch controls scaled for 281px canvas height: joystick `110→90px` + bottom offset `60→20px`; pulse btn `64→56px`; crouch btn `56→48px`; all remain ≥44px min touch target
 
 **Phase 12 summary:**
 - All `play*()` functions already read from `SOUND_CONFIG` — audit passed with no changes needed
@@ -128,17 +137,18 @@ Status: ⬜ Pending
 | ~~Ambient audio~~ | ~~Phase 10~~ | ~~Medium~~ |
 | ~~Debug overlay~~ | ~~Phase 11~~ | ~~Low~~ |
 | ~~Audio polish~~ | ~~Phase 12~~ | ~~Low~~ |
-| Mobile polish | Phase 13 | Medium |
+| ~~Mobile polish~~ | ~~Phase 13~~ | ~~Medium~~ |
 | Final balance/polish | Phase 14 | Low |
 
 ---
 
 ## Next Recommended Task
 
-Begin **Phase 13 — Mobile Polish**:
-1. Test at 375px width (iPhone SE viewport): verify joystick, pulse button, crouch button all visible and functional
-2. Verify canvas scales correctly at mobile viewport width
-3. Fix any layout overflow or clipped elements found during testing
+Begin **Phase 14 — Final Polish & Balance**:
+1. Playtest all 10 levels; tune enemy speeds and hazard intervals where needed
+2. Title screen: fire a demo pulse from center on load (shows mechanic before play)
+3. Screen transitions: brief CSS opacity fade on level-up screen
+4. Verify echo trail cap holds under stress (rapid pulse spam)
 
 ---
 
