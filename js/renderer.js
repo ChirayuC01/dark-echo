@@ -37,6 +37,15 @@ export function draw(state, now) {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
+  // Title screen: show demo pulse to communicate the core mechanic before play
+  if (state.screen === 'title') {
+    drawEchoTrails(state.echoTrails || [], now, W / 2, H / 2);
+    drawActiveRays(state.rays || [], W / 2, H / 2);
+    drawVignette();
+    if (Debug.isEnabled()) Debug.draw(ctx, state, state.fps || 60);
+    return;
+  }
+
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
   const { impacts, rays, echoTrails, player, enemies, hazards, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals } = state;
@@ -152,6 +161,11 @@ function drawHazards(hazards, now, px, py) {
 }
 
 // ─── Enemies ──────────────────────────────────────────────────────────────────
+// Each enemy type has a distinct shape to aid identification under pressure:
+//   patrol  → directional arrowhead triangle (movement cue)
+//   chaser  → dot + concentric ring (brightens when hunting)
+//   stalker → dot + 3 rotating arcs at 120° (sound-detection cue)
+//   sentry  → scan cone + plain dot (cone is its own distinctive mark)
 function drawEnemies(enemies, now, px, py) {
   ctx.save();
   for (const e of enemies) {
@@ -160,7 +174,7 @@ function drawEnemies(enemies, now, px, py) {
     const alpha = revealAlpha(e.revealedAt, now) * heard;
     if (alpha < 0.004) continue;
 
-    // Sentry scan cone — drawn before the dot so dot appears on top
+    // Sentry scan cone — drawn before dot so dot appears on top
     if (e.scanRange !== undefined) {
       const alerting = e.state === 'alert';
       const coneColor = alerting ? '255,55,35' : '220,100,50';
@@ -183,6 +197,8 @@ function drawEnemies(enemies, now, px, py) {
 
     const hunting = e.state === 'hunting' || e.state === 'alert';
     const base = hunting ? '230,45,45' : '185,55,55';
+
+    // Outer glow (shared by all types)
     ctx.shadowBlur = hunting ? 14 * alpha : 8 * alpha;
     ctx.shadowColor = `rgba(${base},${alpha * 0.7})`;
     const grd = ctx.createRadialGradient(e.x, e.y, 2, e.x, e.y, e.radius + 9);
@@ -190,24 +206,64 @@ function drawEnemies(enemies, now, px, py) {
     grd.addColorStop(1, `rgba(${base},0)`);
     ctx.fillStyle = grd;
     ctx.beginPath(); ctx.arc(e.x, e.y, e.radius + 9, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = `rgba(${base},${alpha * 0.92})`;
-    ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
 
-    // Patrol waypoint direction arrow
-    if (e.waypoints) {
-      const wp = e.waypoints[e.wpIdx || 0];
+    if (e.shape === 'patrol') {
+      // Arrowhead triangle pointing toward current waypoint target
+      const wp = e.waypoints && e.waypoints[e.wpIdx || 0];
       if (wp) {
         const dx = wp.x - e.x, dy = wp.y - e.y;
-        const len = Math.sqrt(dx*dx + dy*dy);
-        if (len > 0.01) {
-          ctx.strokeStyle = `rgba(${base},${alpha * 0.35})`;
-          ctx.lineWidth = 1.2;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d > 1) {
+          const nx = dx / d, ny = dy / d;
+          const tx = -ny, ty = nx; // perpendicular tangent
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = `rgba(${base},${alpha * 0.92})`;
           ctx.beginPath();
-          ctx.moveTo(e.x, e.y);
-          ctx.lineTo(e.x + dx/len * 13, e.y + dy/len * 13);
-          ctx.stroke();
+          ctx.moveTo(e.x + nx * 10,                    e.y + ny * 10);
+          ctx.lineTo(e.x + tx * 5  - nx * 3,           e.y + ty * 5  - ny * 3);
+          ctx.lineTo(e.x - tx * 5  - nx * 3,           e.y - ty * 5  - ny * 3);
+          ctx.closePath();
+          ctx.fill();
         }
       }
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = `rgba(${base},${(alpha * 0.7).toFixed(3)})`;
+      ctx.beginPath(); ctx.arc(e.x, e.y, 3, 0, Math.PI * 2); ctx.fill();
+
+    } else if (e.shape === 'chaser') {
+      // Dot + pulsing outer ring that brightens rapidly when hunting
+      ctx.fillStyle = `rgba(${base},${alpha * 0.92})`;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      const ringPulse = hunting ? (1 + 0.18 * Math.sin(now / 180)) : 1;
+      const ringAlpha = hunting ? alpha * 0.80 : alpha * 0.22;
+      ctx.strokeStyle = `rgba(${base},${ringAlpha.toFixed(3)})`;
+      ctx.lineWidth = hunting ? 1.8 : 1.0;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, (e.radius + 6) * ringPulse, 0, Math.PI * 2);
+      ctx.stroke();
+
+    } else if (e.shape === 'stalker') {
+      // Dot + 3 rotating arcs at 120° — communicates sound detection
+      ctx.fillStyle = `rgba(${base},${alpha * 0.92})`;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      const arcRot   = now / (hunting ? 1200 : 1800);
+      const arcR     = hunting ? e.radius + 11 : e.radius + 7;
+      const arcAlpha = hunting ? alpha * 0.72 : alpha * 0.36;
+      ctx.strokeStyle = `rgba(${base},${arcAlpha.toFixed(3)})`;
+      ctx.lineWidth = 1.6;
+      for (let i = 0; i < 3; i++) {
+        const a = arcRot + (i * Math.PI * 2 / 3);
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, arcR, a - 0.38, a + 0.38);
+        ctx.stroke();
+      }
+
+    } else {
+      // Sentry / fallback: plain dot (sentry is already distinguished by its cone)
+      ctx.fillStyle = `rgba(${base},${alpha * 0.92})`;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
     }
   }
   ctx.restore();

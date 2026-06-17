@@ -1,6 +1,6 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 9 complete (2026-06-17)  
+> **Last updated:** Phase 14 complete (2026-06-17)  
 > Update this file after every completed task or phase.
 
 ---
@@ -8,7 +8,7 @@
 ## Active Phase
 
 **Phase 14 — Final Polish & Balance**  
-Status: ⬜ Pending
+Status: ✅ Complete
 
 ---
 
@@ -64,7 +64,18 @@ Status: ⬜ Pending
 ## Phase 10 — Complete ✅
 ## Phase 11 — Complete ✅
 ## Phase 12 — Complete ✅
+## Phase 14 — Complete ✅ (v1.0.0)
 ## Phase 13 — Complete ✅
+
+**Phase 14 summary:**
+- **Title screen demo pulse**: `initTitleScreen()` in `game.js` creates a perimeter-wall grid + dedicated `G.titleRaySystem`; fires 64-ray pulse from canvas center (400, 300) every 4 seconds; renderer draws echo trails + active rays for `screen === 'title'`
+- **Entity differentiation (DC-004)**: `shape` field added to PatrolEnemy/ChaserEnemy/BlindStalker/Sentry constructors; `drawEnemies()` switches on `e.shape`:
+  - PatrolEnemy → arrowhead triangle pointing toward waypoint
+  - ChaserEnemy → dot + outer ring (pulses fast, brightens when hunting)
+  - BlindStalker → dot + 3 rotating arcs at 120° (faster when hunting)
+- **Level-up fade-in**: `@keyframes screenFadeIn` + `#screen-levelup.visible { animation: screenFadeIn 0.25s ease-out }` in `css/style.css`
+- **Echo trail cap verified**: enforced since Phase 0 via `ECHO_TRAIL_CAP = 500` in `RaySystem.update()`; no changes needed
+- **Level 9 balance**: crusher periods already adjusted to 13.0s / 10.0s / 8.0s — sufficient crossing windows
 
 **Phase 13 summary:**
 - `@media (max-width: 480px)` block added to `css/style.css` — 4 bugs fixed:
@@ -138,7 +149,7 @@ Status: ⬜ Pending
 | ~~Debug overlay~~ | ~~Phase 11~~ | ~~Low~~ |
 | ~~Audio polish~~ | ~~Phase 12~~ | ~~Low~~ |
 | ~~Mobile polish~~ | ~~Phase 13~~ | ~~Medium~~ |
-| Final balance/polish | Phase 14 | Low |
+| ~~Final balance/polish~~ | ~~Phase 14~~ | ~~Low~~ |
 
 ---
 

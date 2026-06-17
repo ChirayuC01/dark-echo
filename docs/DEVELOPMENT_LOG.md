@@ -4,6 +4,58 @@
 
 ---
 
+## [Phase 14 — Complete] Final Polish & Balance
+
+**Date:** 2026-06-17  
+**Branch:** `claude/sound-vision-game-7pvbo1`  
+**Tag:** `v1.0.0`
+
+### What was done
+
+**`js/entities.js`**: Added `shape` field to all four enemy constructors:
+- `PatrolEnemy`: `this.shape = 'patrol'`
+- `ChaserEnemy`: `this.shape = 'chaser'`
+- `BlindStalker`: `this.shape = 'stalker'`
+- `Sentry`: `this.shape = 'sentry'`
+
+**`js/renderer.js`** — two changes:
+
+1. **Title screen rendering path**: Before the main `screen !== 'playing'` guard, added a branch for `screen === 'title'` that calls `drawEchoTrails` + `drawActiveRays` centered at `(W/2, H/2)` + `drawVignette()`. The rest of the draw function (player, enemies, grid, etc.) is skipped since none of that state exists on the title screen.
+
+2. **`drawEnemies()` — shape-based differentiation (DC-004 resolved)**: Replaced the monolithic dot+arrow rendering with per-shape branches switched on `e.shape`:
+   - `'patrol'`: filled arrowhead triangle pointing toward `e.waypoints[e.wpIdx]` + small center dot. Communicates directional predictability.
+   - `'chaser'`: dot + concentric outer ring; ring uses `1 + 0.18 × sin(now/180)` pulse and `alpha × 0.80` when hunting vs `alpha × 0.22` idle. Communicates aggressive pursuit.
+   - `'stalker'`: dot + 3 arcs at 120° spacing, radius growing and rotation speed doubling when hunting. Communicates omnidirectional sound detection.
+   - `'sentry'` / default: plain dot (sentry is already distinguished by its rotating scan cone).
+   - Outer glow radius and shadow remain shared across all types.
+
+**`js/game.js`** — title screen demo pulse:
+- Imported `W`, `H` from `constants.js`
+- Added `titleRaySystem`, `titleCastFn`, `titlePulseTimer` to `G`
+- `initTitleScreen()`: builds a 20×15 perimeter-wall grid (`CELL.WALL` on all edges, `CELL.EMPTY` inside); creates a `RaySystem` + `castFn` that uses this grid; sets `titlePulseTimer = 500` (half-second delay before first pulse)
+- In `loop()`: when `screen === 'title'`, decrements `titlePulseTimer`; fires `G.titleRaySystem.burst(W/2, H/2, 'pulse', G.titleCastFn)` every 4 seconds; calls `G.titleRaySystem.update(dt, G.titleCastFn, timestamp)`
+- `Renderer.draw()` call: uses `titleRaySystem.active/echoTrails` when `screen === 'title'`, regular `raySystem` otherwise
+- `initTitleScreen()` called in `init()` (initial load) and `handleAction('title')` (return from game)
+
+**`css/style.css`**: Added at end of file:
+```css
+@keyframes screenFadeIn { from { opacity: 0; } to { opacity: 1; } }
+#screen-levelup.visible { animation: screenFadeIn 0.25s ease-out; }
+```
+The `@keyframes` animation fires each time `.visible` is added, creating a brief fade-in on level completion.
+
+### Balance audit findings
+- Level 9 crusher periods: 13.0s / 10.0s / 8.0s — already adjusted (DC-003 was from 5.0s era). Static analysis confirms safe crossing windows.
+- Echo trail cap: enforced via `ECHO_TRAIL_CAP = 500` in `RaySystem.update()` since Phase 0. Debug overlay confirms count under cap.
+- All 10 levels statically confirmed completable. No gameplay blockers found.
+
+### Decisions
+- Title pulse fires visually only — no `Audio.playPulse()` on title screen (would be jarring before player interaction).
+- Title pulse uses perimeter-wall grid, not an empty grid, so rays bounce off canvas edges and create a full-screen echo pattern rather than just radiating outward.
+- DC-004 shape vocabulary matches the spec from KNOWN_ISSUES.md exactly (proposed → implemented).
+
+---
+
 ## [Phase 13 — Complete] Mobile Polish
 
 **Date:** 2026-06-17  

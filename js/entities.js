@@ -41,6 +41,7 @@ export class PatrolEnemy {
     this.waypoints = waypoints;
     this.wpIdx = 0;
     this.speed = PATROL_SPEED;
+    this.shape = 'patrol';
     this.revealedAt = -Infinity;
     // Pulse stun
     this.pauseTimer = 0;
@@ -99,6 +100,7 @@ export class ChaserEnemy {
   constructor(x, y) {
     this.x = x; this.y = y;
     this.radius = ENEMY_RADIUS;
+    this.shape = 'chaser';
     this.state = 'idle';
     this.targetX = x; this.targetY = y;
     this.wanderTimer = 0;
@@ -177,6 +179,7 @@ export class Sentry {
   constructor(x, y, angle = 0) {
     this.x = x; this.y = y;
     this.radius    = ENEMY_RADIUS;
+    this.shape     = 'sentry';
     this.angle     = angle;            // current cone facing direction (radians)
     this.scanRange = SENTRY_SCAN_RANGE;
     this.scanArc   = SENTRY_SCAN_ARC;
@@ -246,6 +249,7 @@ export class BlindStalker {
   constructor(x, y) {
     this.x = x; this.y = y;
     this.radius = ENEMY_RADIUS;
+    this.shape = 'stalker';
     this.state = 'idle';
     this.targetX = x; this.targetY = y;
     this.wanderTimer = 0;

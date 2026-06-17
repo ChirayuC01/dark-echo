@@ -1,4 +1,4 @@
-import { TILE, COLS, ROWS,
+import { TILE, COLS, ROWS, W, H,
          STEP_INTERVAL, PULSE_COOLDOWN,
          PLAYER_RADIUS, ENEMY_RADIUS,
          IMPACT_FADE_MS, HEARING_NEAR, HEARING_FAR,
@@ -37,6 +37,9 @@ const G = {
   deathReason: '',
   fps: 60,
   playerInWater: false,
+  titleRaySystem: null,
+  titleCastFn: null,
+  titlePulseTimer: 0,
   waterReveals: new Map(),        // "row,col" → timestamp of last ray hit
   collapsibleReveals: new Map(),  // "row,col" → timestamp of last ray hit
   crushers: [],
@@ -159,6 +162,19 @@ function loadLevel(idx) {
 
   UI.setLevelName(def.name);
   UI.setHint(def.hint);
+}
+
+// ─── Title screen demo pulse ───────────────────────────────────────────────────
+function initTitleScreen() {
+  // Build a perimeter-wall grid so title pulses bounce off canvas edges
+  const tg = Array.from({ length: ROWS }, (_, r) =>
+    Array.from({ length: COLS }, (_, c) =>
+      (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) ? CELL.WALL : CELL.EMPTY
+    )
+  );
+  G.titleRaySystem = new RaySystem();
+  G.titleCastFn = (ox, oy, dx, dy, maxDist) => castRay(tg, ox, oy, dx, dy, maxDist);
+  G.titlePulseTimer = 500; // short delay before first pulse
 }
 
 // ─── Ray hit → wall impact glint ─────────────────────────────────────────────
@@ -463,15 +479,29 @@ function loop(timestamp) {
     UI.show('screen-pause');
   }
 
+  // Title screen demo pulse — fires every 4s to show the mechanic before play
+  if (G.screen === 'title' && G.titleRaySystem) {
+    G.titlePulseTimer -= dt * 1000;
+    if (G.titlePulseTimer <= 0) {
+      G.titlePulseTimer = 4000;
+      G.titleRaySystem.burst(W / 2, H / 2, 'pulse', G.titleCastFn);
+    }
+    G.titleRaySystem.update(dt, G.titleCastFn, timestamp);
+  }
+
   if (G.screen === 'playing') {
     update(dt, timestamp);
   }
 
   Renderer.draw({
     ...G,
-    rays:       G.raySystem ? G.raySystem.active     : [],
-    echoTrails: G.raySystem ? G.raySystem.echoTrails : [],
-    fps:        G.fps,
+    rays: G.screen === 'title'
+      ? (G.titleRaySystem ? G.titleRaySystem.active     : [])
+      : (G.raySystem      ? G.raySystem.active           : []),
+    echoTrails: G.screen === 'title'
+      ? (G.titleRaySystem ? G.titleRaySystem.echoTrails : [])
+      : (G.raySystem      ? G.raySystem.echoTrails       : []),
+    fps: G.fps,
   }, timestamp);
   requestAnimationFrame(loop);
 }
@@ -519,6 +549,7 @@ function handleAction(action) {
       Audio.stopAmbient();
       UI.show('screen-title');
       Renderer.setHUDVisible(false);
+      initTitleScreen();
       break;
   }
 }
@@ -532,6 +563,7 @@ export function init() {
 
   document.addEventListener('ui:action', e => handleAction(e.detail));
 
+  initTitleScreen();
   UI.show('screen-title');
   G.lastTime = performance.now();
   requestAnimationFrame(loop);

@@ -5,7 +5,27 @@
 
 ---
 
-## [Unreleased] — Phase 14 pending
+## [v0.19.0] — 2026-06-17 — Phase 14
+
+### Added
+- **Title screen demo pulse**: A 64-ray pulse fires from canvas center every 4 seconds on the title screen, bouncing off canvas-edge walls. New players see the core sound-visualization mechanic before touching any controls. Implemented via a dedicated `G.titleRaySystem` + perimeter-wall grid in `game.js`; renderer draws echo trails and active rays when `screen === 'title'`.
+- **Entity visual differentiation (DC-004 resolved)**: Each of the three "dot" enemy types now has a distinct rendered shape within the same red danger palette:
+  - **PatrolEnemy**: directional arrowhead triangle pointing toward current waypoint target.
+  - **ChaserEnemy**: dot + concentric outer ring (ring pulses rapidly and brightens when in `hunting` state).
+  - **BlindStalker**: dot + 3 rotating arcs at 120° spacing (spin faster when hunting, communicate sound awareness).
+  - Sentry and Hazard already had distinct visuals (cone and orange respectively); unchanged.
+  - `shape` field added to all enemy constructors; `drawEnemies()` switches on `e.shape`.
+
+### Changed
+- **Level-up screen transition**: `#screen-levelup.visible` now fades in with a 0.25s `ease-out` CSS animation (`@keyframes screenFadeIn`). Makes level completion feel more deliberate.
+
+### Verified
+- Echo trail cap (`ECHO_TRAIL_CAP = 500`) holds correctly under rapid pulse spam — enforced in `RaySystem.update()` since Phase 0.
+- All 10 levels confirmed completable via static audit; Level 9 crusher periods (13.0s / 10.0s / 8.0s) provide sufficient crossing windows.
+
+---
+
+## [Unreleased]
 
 ---
 

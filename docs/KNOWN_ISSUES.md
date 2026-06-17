@@ -116,21 +116,17 @@ _None currently confirmed._
 ---
 
 ### DC-004 — All enemy types render as near-identical red dots
-**Status:** ⬜ Deferred to Phase 14  
+**Status:** ✅ Resolved (Phase 14)  
 **Severity:** Medium  
 **File:** `js/renderer.js` `drawEnemies()`  
-**Description:** Under gameplay pressure, players cannot distinguish PatrolEnemy, ChaserEnemy, and BlindStalker from each other — all appear as identical muted-red dots of the same size. The Hazard and Sentry are already visually distinct (Hazard: orange; Sentry: has scan cone), but the three "dot" enemies give no information about behavior or threat level.
+**Resolution:** Each enemy type now has a distinct shape drawn within the same red danger palette:
+- **PatrolEnemy**: directional arrowhead triangle pointing toward current waypoint + small center dot.
+- **ChaserEnemy**: dot + concentric outer ring that pulses rapidly and brightens when in `hunting` state.
+- **BlindStalker**: dot + 3 rotating arcs at 120° spacing that spin faster when hunting (communicates sound awareness).
+- **Sentry**: unchanged — rotating scan cone is already visually distinct.
+- **Hazard**: unchanged — orange color already provides clear differentiation.
 
-**Proposed fix — shape-based differentiation within existing danger palette:**
-- **PatrolEnemy**: directional triangle pointing in current movement direction. Communicates "this moves predictably."
-- **ChaserEnemy**: circle with a concentric outer ring (ring brightens / expands when in `hunting` state). Communicates "this chases."
-- **BlindStalker**: dot with 3 short radiating arcs at 120° intervals (like sound-wave emanating rings). Communicates "this hears everything."
-- **Hazard**: already distinct (orange, cross/X shape optional if desired). No change required.
-- **Sentry**: already distinct via rotating scan cone arc. Optionally use a diamond dot shape.
-
-**Implementation:** In `renderer.js` `drawEnemies()`, add `instanceof` checks (or a shape property) to switch draw path per entity type. All shapes remain in the existing `rgba(200,70,70)` red danger palette — only shape differs, not color. Shape is drawn at the entity's current position, attenuated by `hearing(d)` like the existing dot.
-
-**Priority:** Phase 14 polish pass — does not block gameplay; purely UX improvement.
+Implementation: `shape` property added to each enemy constructor (`'patrol'`, `'chaser'`, `'stalker'`, `'sentry'`); `drawEnemies()` switches on `e.shape` instead of duck-typing.
 
 ---
 

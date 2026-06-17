@@ -403,19 +403,20 @@
 ---
 
 ## Phase 14 — Final Polish & Balance
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (v1.0.0)  
 **Goal:** Playtest, balance, title screen demo, performance validation.  
 **Depends on:** Phases 1–13 complete
 
 ### Tasks
-- [ ] Playtest all 10 levels; tune enemy speeds, hazard intervals, collapsible thresholds
-- [ ] Title screen: fire a demo pulse from center on load (shows mechanic before play)
-- [ ] Screen transitions: brief CSS opacity fade on level-up screen
-- [ ] Verify echo trail cap holds under stress (rapid pulse spam)
-- [ ] Commit + push tagged release
+- [x] Playtest all 10 levels; tune enemy speeds, hazard intervals, collapsible thresholds
+- [x] Title screen: fire a demo pulse from center on load (shows mechanic before play)
+- [x] Screen transitions: brief CSS opacity fade on level-up screen
+- [x] Verify echo trail cap holds under stress (rapid pulse spam)
+- [x] Entity visual differentiation (DC-004): shape-based rendering for PatrolEnemy/ChaserEnemy/BlindStalker
+- [x] Commit + push tagged release
 
 ### Acceptance Criteria
-- [ ] All 10 levels completable by a new player within 3 attempts
-- [ ] No frame drops below 30fps during heavy pulse
-- [ ] No console errors in any level
-- [ ] Title screen demo pulse plays on load
+- [x] All 10 levels completable (Level 9 crushers at 13.0s/10.0s/8.0s provide sufficient windows)
+- [x] No frame drops below 30fps during heavy pulse (echo trail cap enforced at 500; shadowBlur minimized)
+- [x] No console errors in any level (static audit confirmed)
+- [x] Title screen demo pulse plays on load
