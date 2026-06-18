@@ -130,14 +130,93 @@ Implementation: `shape` property added to each enemy constructor (`'patrol'`, `'
 
 ---
 
+---
+
+### TD-007 — Vignette gradient recreated every frame
+**Status:** ⬜ Fix in Phase 23  
+**Severity:** Low-Medium (mobile performance impact)  
+**File:** `js/renderer.js` `drawVignette()`  
+**Description:** `createRadialGradient()` is called every frame to draw the vignette. On mobile, this adds GPU upload state per frame. Cache the vignette on an offscreen canvas created once at resize and use `drawImage()` each frame instead.  
+**Fix:** `let _vignetteCanvas = null` — create on first call or canvas resize, reuse every frame.
+
+---
+
+### TD-008 — No error boundary in game loop
+**Status:** ⬜ Fix in Phase 22 (with Sentry)  
+**Severity:** Medium  
+**File:** `js/game.js` `loop()`  
+**Description:** An uncaught exception in `update()` or `Renderer.draw()` silently kills the `requestAnimationFrame` loop. The canvas freezes with no user feedback.  
+**Fix:** Wrap the loop body in try/catch. On catch: show an error overlay ("Something went wrong — reload the page"). Wire Sentry.captureException() in production build.
+
+---
+
+### TD-009 — No build pipeline (ES module HTTP requests on load)
+**Status:** ⬜ Fix in Phase 15  
+**Severity:** Medium (performance on mobile 4G)  
+**File:** `index.html`  
+**Description:** The browser makes 12+ separate HTTP requests for ES module files on page load. On localhost this is imperceptible. On a mobile 4G connection with 100ms RTT, this adds ~1.2s to initial load time.  
+**Fix:** Vite build bundles all modules into a single minified JS file. Phase 15 task.
+
+---
+
+### TD-010 — No level progress persistence
+**Status:** ⬜ Fix in Phase 15  
+**Severity:** Medium (UX regression — players restart at Level 1 on every refresh)  
+**File:** `js/game.js`  
+**Description:** `G.levelIndex` is in-memory only. Refreshing the browser resets to Level 1. Acceptable for prototype; unacceptable for a shipped game.  
+**Fix:** `localStorage.setItem('resonance_progress', G.levelIndex + 1)` on level complete. Read on init. Phase 15 task.
+
+---
+
+### TD-011 — Enemies are completely silent
+**Status:** ⬜ Fix in Phase 17  
+**Severity:** **High** (largest gameplay gap vs Dark Echo)  
+**File:** `js/entities.js`, `js/audio.js`, `js/game.js`  
+**Description:** Enemies do not generate any sound. In Dark Echo, enemy footsteps propagate through the visualization system exactly like the player's, creating tension from ambiguous echoes. In RESONANCE, enemies are invisible and silent until the player's own rays find them. This eliminates ~40% of the psychological tension the concept is capable of generating.  
+**Fix:** Add `shouldEmitStep()` to moving enemies; emit `'step-enemy'` ray bursts + positional audio each step. Phase 17 task. Full spec in PRODUCTION_ROADMAP.md.
+
+---
+
+### TD-012 — No positional / binaural audio
+**Status:** ⬜ Fix in Phase 17  
+**Severity:** High (audio immersion gap)  
+**File:** `js/audio.js`  
+**Description:** All sounds route directly to `AudioContext.destination`. Enemy alerts play at constant volume and center pan regardless of enemy position. There is no spatial awareness from audio alone.  
+**Fix:** Route sounds through `PannerNode` at world coordinates. Update `AudioListener` position with player coordinates each frame. Phase 17 task.
+
+---
+
+### TD-013 — No reverb / room acoustics
+**Status:** ⬜ Fix in Phase 18  
+**Severity:** Medium-High (atmosphere gap)  
+**File:** `js/audio.js`  
+**Description:** All sounds are "dry" — no room response. In a cave/tunnel environment, absence of reverb makes sounds feel disconnected from the space. Dark Echo's sounds feel physically present in the environment.  
+**Fix:** Add a procedurally-synthesized impulse response buffer → ConvolverNode at 15% wet mix. Phase 18 task.
+
+---
+
+### TD-014 — Ray visual looks like starburst, not wavefront
+**Status:** ⬜ Fix in Phase 16  
+**Severity:** High (visual identity gap vs Dark Echo)  
+**File:** `js/renderer.js`  
+**Description:** Active rays render as discrete line segments radiating from origin — a "spoke" or starburst pattern. Dark Echo's sound propagation looks like a coherent expanding ring (sonar wavefront). The underlying DDA mechanics are equivalent; only the rendering differs.  
+**Fix:** Group rays by burstId, sort by angle, draw arcs between adjacent tips. Add shockwave origin ring on burst. Phase 16 task. Full spec in PRODUCTION_ROADMAP.md.
+
+---
+
 ## Future Improvements (Post v1.0)
 
-| # | Idea | Notes |
-|---|---|---|
-| FI-001 | Procedural level generator | For replay value; hard to guarantee solvability |
-| FI-002 | Actual audio samples | Architecture is ready via SOUND_CONFIG |
-| FI-003 | Leaderboard (level time) | Needs backend; out of current scope |
-| FI-004 | Level editor | Would require DOM overlay; medium effort |
-| FI-005 | Reverb / echo chamber zones | ConvolverNode; can be SOUND_CONFIG option |
-| FI-006 | Enemy patrol path visualization in debug | Draw waypoints when debug overlay is active |
-| FI-007 | Screen-shake on collapse / death | CSS transform animation, low effort |
+| # | Idea | Notes | Target Phase |
+|---|---|---|---|
+| FI-001 | Procedural level generator | For replay value; hard to guarantee solvability | Post-25 |
+| FI-002 | Actual audio samples | Architecture is ready via SOUND_CONFIG | Post-25 |
+| FI-003 | Leaderboard (level time) | Needs backend (Supabase); out of current scope | Post-25 |
+| FI-004 | Level editor | Would require DOM overlay; medium effort | Post-25 |
+| FI-005 | Reverb / echo chamber zones | ConvolverNode — being implemented in Phase 18 | Phase 18 |
+| FI-006 | Enemy patrol path visualization in debug | Draw waypoints when debug overlay is active | Post-20 |
+| FI-007 | Screen-shake on collapse / death | CSS transform animation — being implemented in Phase 19 | Phase 19 |
+| FI-008 | Sound bleeding through thin walls | Attenuated ray energy passing through 1-cell-wide walls | Post-25 |
+| FI-009 | Chapter select screen | Navigate between Act I and Act II independently | Phase 24 |
+| FI-010 | iOS / App Store release | Capacitor supports iOS; requires Mac + Apple developer account ($99/yr) | Post-25 |
+| FI-011 | Colorblind accessibility mode | Alternative color palette for echo/enemy colors | Post-25 |
+| FI-012 | Narrative / environmental storytelling | Text fragments revealed by sound; environmental geometry that implies a location | Phase 20 |

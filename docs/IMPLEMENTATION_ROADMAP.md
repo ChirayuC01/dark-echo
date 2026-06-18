@@ -420,3 +420,144 @@
 - [x] No frame drops below 30fps during heavy pulse (echo trail cap enforced at 500; shadowBlur minimized)
 - [x] No console errors in any level (static audit confirmed)
 - [x] Title screen demo pulse plays on load
+
+---
+
+## ── PRODUCTION PHASES (v1.1 and beyond) ──────────────────────────────────────
+
+> Full specifications for all phases below live in `docs/PRODUCTION_ROADMAP.md`.  
+> This section is a summary index. Check PRODUCTION_ROADMAP.md for task lists, file lists, and acceptance criteria.
+
+---
+
+## Phase 15 — Build Pipeline + Deployment Foundation
+**Status:** ⬜ Pending  
+**Goal:** Vite build tool, Cloudflare Pages deployment, localStorage progress persistence, TD-002 cleanup.  
+**Depends on:** Nothing — start here  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 15 for complete task list
+
+### Quick-reference tasks
+- [ ] `npm install --save-dev vite`; create `vite.config.js`
+- [ ] Verify `npm run dev` and `npm run build`
+- [ ] Delete Wave/WaveManager shim classes from `js/waves.js` (TD-002)
+- [ ] Add localStorage level persistence (`resonance_progress` key)
+- [ ] Add `#continue-btn` to title screen
+- [ ] Set up Cloudflare Pages + GitHub Actions CI
+- [ ] Commit + push
+
+### Acceptance Criteria (summary)
+- [ ] `npm run build` produces working `dist/`
+- [ ] Game is live at a public Cloudflare Pages URL
+- [ ] Level progress survives page refresh
+- [ ] Wave/WaveManager shims deleted with no remaining imports
+
+---
+
+## Phase 16 — Wavefront Visual Upgrade
+**Status:** ⬜ Pending  
+**Goal:** Render active rays as an expanding sonar ring rather than starburst spokes.  
+**Depends on:** Phase 15  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 16
+
+### Quick-reference tasks
+- [ ] Add `burstId` and `startTime` to Ray in `waves.js`
+- [ ] Add `drawWavefront()` in `renderer.js` — arc-fill between adjacent ray tips
+- [ ] Add shockwave origin ring on first 200ms of burst
+- [ ] Add `blur(1.5px)` filter on wavefront pass; disable if fps < 45
+- [ ] Commit + push
+
+---
+
+## Phase 17 — Positional Audio + Enemy Footstep Visualization
+**Status:** ⬜ Pending  
+**Goal:** 3D panned audio via PannerNode; enemies emit their own visible step ray bursts.  
+**Depends on:** Phase 15  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 17
+
+### Quick-reference tasks
+- [ ] Add `createPositionalSource(x, y)` and `updateListener(px, py)` to `audio.js`
+- [ ] Route alert/hazard sounds through PannerNode
+- [ ] Add `stepTimer` + `shouldEmitStep()` to PatrolEnemy, ChaserEnemy, BlindStalker
+- [ ] Emit `'step-enemy'` ray bursts from moving enemies (muted red color)
+- [ ] Add `playEnemyFootstep()`, `playEnemyFootstepHunting()`, `playBlindStalkerBreathing()`
+- [ ] Guard: enemy step rays must NOT trigger hearSound() on the emitting enemy
+- [ ] Commit + push
+
+---
+
+## Phase 18 — Reverb + Environmental Ambient Sounds
+**Status:** ⬜ Pending  
+**Goal:** ConvolverNode room acoustics; procedural drips, rumbles, creaks.  
+**Depends on:** Phase 17  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 18
+
+### Quick-reference tasks
+- [ ] Procedural impulse response buffer → ConvolverNode at 15% wet mix
+- [ ] `startEnvironmental()` / `stopEnvironmental()` — scheduled drip/rumble/creak
+- [ ] `reverb: 'small'|'medium'|'large'` field in level definitions
+- [ ] Wire start/stop alongside startAmbient/stopAmbient in game.js
+- [ ] Commit + push
+
+---
+
+## Phase 19 — Movement Feel + Micro-Polish
+**Status:** ⬜ Pending  
+**Goal:** Player inertia, screen-shake, pulse-ready cue, danger proximity audio.  
+**Depends on:** Phase 15 (can run parallel with 16–18)  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 19
+
+### Quick-reference tasks
+- [ ] Player velocity lerp in `entities.js` (`vx/vy` + `PLAYER_ACCEL`)
+- [ ] Screen-shake system (`G.shake`, `triggerShake()`, ctx translate wrapper)
+- [ ] `playPulseReady()` — fires when cooldown hits zero
+- [ ] `setDangerLevel(t)` — modulates ambient gain by enemy proximity
+- [ ] Level entry pulse — auto-fires 300ms after level load
+- [ ] Commit + push
+
+---
+
+## Phase 20 — Level Expansion (Act II — Levels 11–20)
+**Status:** ⬜ Pending  
+**Goal:** 10 new levels, ScreamerEnemy, spawn_enemy trigger.  
+**Depends on:** Phases 16–18  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 20
+
+---
+
+## Phase 21 — Android App (Capacitor)
+**Status:** ⬜ Pending  
+**Goal:** Native Android APK via Capacitor, tested on physical devices.  
+**Depends on:** Phase 15  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 21
+
+---
+
+## Phase 22 — Website + Landing Page
+**Status:** ⬜ Pending  
+**Goal:** Professional landing page at Cloudflare Pages root; game playable at `/play/`.  
+**Depends on:** Phase 15  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 22
+
+---
+
+## Phase 23 — Performance Hardening
+**Status:** ⬜ Pending  
+**Goal:** Stable 60fps on mid-range 2021 Android. Adaptive quality tier system.  
+**Depends on:** Phase 21  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 23
+
+---
+
+## Phase 24 — Save System + Achievements
+**Status:** ⬜ Pending  
+**Goal:** Level select screen, best times, 10 achievements — all via localStorage.  
+**Depends on:** Phase 20  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 24
+
+---
+
+## Phase 25 — Google Play Store Submission
+**Status:** ⬜ Pending  
+**Goal:** Public Google Play listing; game available to download worldwide.  
+**Depends on:** Phases 21 + 24  
+**See:** `docs/PRODUCTION_ROADMAP.md` Phase 25

@@ -29,6 +29,24 @@
 
 ---
 
+## [v1.0.1] — 2026-06-18 — Production Audit
+
+### Added
+- `docs/PRODUCTION_ROADMAP.md` — complete specifications for Phases 15–25 covering: Vite build pipeline, Cloudflare Pages deployment, wavefront visual upgrade, positional audio + enemy footstep rays, reverb + environmental sounds, movement inertia + micro-polish, Act II (10 more levels + ScreamerEnemy), Android Capacitor packaging, website + landing page, performance hardening, achievements + level select, and Google Play Store submission.
+
+### Changed
+- `docs/CURRENT_STATUS.md` — active phase updated to Phase 15; production pending systems table added; branch table updated; run instructions updated to reflect post-Vite workflow.
+- `docs/IMPLEMENTATION_ROADMAP.md` — Phases 15–25 appended as pending with quick-reference task lists, referencing PRODUCTION_ROADMAP.md for full specs.
+- `docs/PROJECT_MASTER_SPEC.md` — project identity updated with deployment targets; Out of Scope revised; Section 14 (Production Scope) and Section 15 (New Systems v1.1+) added.
+- `docs/KNOWN_ISSUES.md` — 8 new tech debt entries (TD-007–TD-014); Future Improvements table updated with target phases.
+- `docs/DEVELOPMENT_LOG.md` — Production Audit session entry added.
+
+### Notes
+- No game code changed in this session. Documentation only.
+- v1.0.0 game is feature-complete and playable locally. This documents the production planning audit.
+
+---
+
 ## [v0.18.0] — 2026-06-17 — Phase 13
 
 ### Fixed

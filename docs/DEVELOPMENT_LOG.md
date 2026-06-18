@@ -4,6 +4,84 @@
 
 ---
 
+## [Production Audit — Complete] Full Project Audit + Production Roadmap
+
+**Date:** 2026-06-18  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v1.0.1 (documentation only — no game code changed)
+
+### What was done
+
+Performed a comprehensive audit of the v1.0.0 prototype across all dimensions (architecture, gameplay, audio, visuals, level design, mobile, performance) and produced a full commercial production roadmap for taking RESONANCE from a local prototype to a deployed browser game + Android app.
+
+**New document created:**
+- `docs/PRODUCTION_ROADMAP.md` — 11 phases (15–25) with complete task lists, file lists, acceptance criteria, effort estimates, risk ratings, and dependency chains.
+
+**Existing documents updated:**
+- `docs/CURRENT_STATUS.md` — Active phase set to Phase 15; production pending systems table; updated branch and run instructions.
+- `docs/IMPLEMENTATION_ROADMAP.md` — Phases 15–25 appended as pending with quick-reference summaries.
+- `docs/PROJECT_MASTER_SPEC.md` — Deployment targets added to identity table; Out of Scope revised; Sections 14–15 added (Production Scope + New Systems).
+- `docs/KNOWN_ISSUES.md` — 8 new tech debt items (TD-007 through TD-014); Future Improvements table extended with 5 new items and target phases.
+- `docs/CHANGELOG.md` — v1.0.1 entry added.
+- `docs/DEVELOPMENT_LOG.md` — this entry.
+
+### Key audit findings
+
+**What is working well:**
+- DDA ray propagation, echo trails, entity reveal — geometrically correct and performant
+- 5 distinct enemy types with clear behavioral differences
+- 10 levels with correct mechanic introduction curve
+- Web Audio synthesis architecture (SOUND_CONFIG) is excellent and extensible
+- Codebase is clean, modular, well-documented — zero circular dependencies
+
+**Critical gaps vs Dark Echo (prioritized):**
+1. **Silent enemies** (TD-011) — Dark Echo's enemies generate footstep sounds that propagate visually. Completely absent in RESONANCE. Phase 17 fixes this.
+2. **No positional/binaural audio** (TD-012) — Sounds do not pan left/right based on source position. Phase 17 fixes this.
+3. **Ray visual looks like starburst, not wavefront** (TD-014) — Pulse renders as spokes, not expanding ring. Phase 16 fixes this via arc-fill rendering grouped by burstId.
+4. **No reverb** (TD-013) — Sounds feel disconnected from any physical space. Phase 18 fixes this via procedural ConvolverNode.
+5. **No public deployment** — Game exists only locally. Phase 15 (Vite + Cloudflare Pages) fixes this.
+6. **No Android app** — Phase 21 (Capacitor) fixes this.
+7. **Content volume** — 10 levels vs Dark Echo's ~50. Phase 20 adds Act II (levels 11–20).
+
+**What does NOT need to change:**
+- DDA ray mechanics — these are correct and performant
+- SOUND_CONFIG architecture — correctly extensible for all new sounds
+- Module structure — no refactoring needed, only additive changes
+- Level format — fully extensible for new mechanics
+
+### Production roadmap summary
+
+```
+Phase 15 — Vite build + Cloudflare deploy + localStorage       3–5 days
+Phase 16 — Wavefront visual upgrade (arc-fill renderer)        5–8 days
+Phase 17 — Positional audio + enemy footstep rays              8–12 days
+Phase 18 — Reverb + environmental sounds                       5–7 days
+Phase 19 — Movement inertia + screen-shake + micro-polish      3–4 days
+Phase 20 — Act II: 10 new levels + ScreamerEnemy               10–15 days
+Phase 21 — Android app (Capacitor)                             5–8 days
+Phase 22 — Website + landing page                              5–8 days
+Phase 23 — Performance hardening (60fps mobile)                4–6 days
+Phase 24 — Level select + achievements                         3–5 days
+Phase 25 — Google Play Store submission                        3–5 + review
+─────────────────────────────────────────────────────────────
+Total:                                                         55–83 days
+```
+
+### Recommended entry point for next session
+
+> Read `docs/CURRENT_STATUS.md` first, then `docs/PRODUCTION_ROADMAP.md` Phase 15.  
+> Phase 15 is entirely standalone — no gameplay changes, only build tooling and deployment. Begin with `npm init -y && npm install --save-dev vite`.
+
+### Decisions
+
+- **Keep vanilla JS** — No migration to React, TypeScript, Phaser, or PixiJS warranted. The codebase is clean and capable. Vite adds a build step without changing the code.
+- **Capacitor over PWA** — PWA on Android has audio latency issues in Web Audio. Capacitor wraps the existing web code in a WebView with native audio configuration.
+- **Cloudflare Pages over Netlify/Vercel** — Best global CDN, most generous free tier, fastest for a static game.
+- **No backend for v1.0** — localStorage handles all persistence. Supabase recommended only if leaderboards are added post-launch.
+- **Phase 17 (enemy sounds) is the highest-impact gameplay change** — It is also the most complex. It should be implemented after Phase 15 (build pipeline) and Phase 16 (visual) to avoid shipping complexity before the foundation is solid.
+
+---
+
 ## [Phase 14 — Complete] Final Polish & Balance
 
 **Date:** 2026-06-17  

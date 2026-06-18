@@ -1,14 +1,17 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 14 complete (2026-06-17)  
+> **Last updated:** Production Audit complete (2026-06-18)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 14 — Final Polish & Balance**  
-Status: ✅ Complete
+**Phase 15 — Build Pipeline + Deployment Foundation**  
+Status: ⬜ Pending — start here in every new session
+
+> See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
+> Phases 0–14 are complete (v1.0.0). The prototype is working. The production gap is delivery, not gameplay.
 
 ---
 
@@ -133,33 +136,43 @@ Status: ✅ Complete
 
 ---
 
-## Pending Systems
+## Production Phase Pending Systems
 
-| System | Phase | Priority |
-|---|---|---|
-| ~~Water zones~~ | ~~Phase 2~~ | ~~High~~ |
-| ~~Collapsible walls~~ | ~~Phase 3~~ | ~~High~~ |
-| ~~Crushers~~ | ~~Phase 4~~ | ~~Medium~~ |
-| ~~Doors & keys~~ | ~~Phase 5~~ | ~~Medium~~ |
-| ~~Switches / triggers~~ | ~~Phase 6~~ | ~~Medium~~ |
-| ~~Sentry enemy~~ | ~~Phase 7~~ | ~~Medium~~ |
-| ~~BlindStalker enemy~~ | ~~Phase 8~~ | ~~Low~~ |
-| ~~Level 10 (full polish)~~ | ~~Phase 9~~ | ~~High~~ |
-| ~~Ambient audio~~ | ~~Phase 10~~ | ~~Medium~~ |
-| ~~Debug overlay~~ | ~~Phase 11~~ | ~~Low~~ |
-| ~~Audio polish~~ | ~~Phase 12~~ | ~~Low~~ |
-| ~~Mobile polish~~ | ~~Phase 13~~ | ~~Medium~~ |
-| ~~Final balance/polish~~ | ~~Phase 14~~ | ~~Low~~ |
+| System | Phase | Priority | Notes |
+|---|---|---|---|
+| Build pipeline (Vite) + Cloudflare deploy | Phase 15 | **Critical** | Start here — everything else depends on this |
+| localStorage level persistence | Phase 15 | High | Players lose progress on refresh currently |
+| Delete Wave/WaveManager shims | Phase 15 | Low | TD-002, quick win |
+| Wavefront visual upgrade (arc-fill) | Phase 16 | High | Biggest visual gap vs Dark Echo |
+| Positional audio (PannerNode) | Phase 17 | High | Enemies should pan left/right |
+| Enemy footstep ray bursts | Phase 17 | **Critical** | Most important missing mechanic — enemies are silent |
+| Reverb (ConvolverNode) | Phase 18 | High | Acoustic room feel |
+| Environmental ambient sounds | Phase 18 | High | Drips, rumbles, creaks — non-gameplay dread |
+| Player velocity inertia | Phase 19 | Medium | Movement feel |
+| Screen-shake on death/collapse | Phase 19 | Low | FI-007 |
+| Pulse-ready audio cue | Phase 19 | Low | QoL |
+| Act II levels (11–20) | Phase 20 | High | Content volume gap vs Dark Echo |
+| ScreamerEnemy | Phase 20 | Medium | New enemy type for Act II |
+| Android app (Capacitor) | Phase 21 | High | Play Store prerequisite |
+| Website + landing page | Phase 22 | High | No public presence currently |
+| Performance hardening (60fps mobile) | Phase 23 | High | Must pass on mid-range Android |
+| Level select screen | Phase 24 | Medium | Quality-of-life for 20-level game |
+| Achievements (10 total) | Phase 24 | Medium | Retention and replay incentive |
+| Google Play Store submission | Phase 25 | High | Final commercial goal |
 
 ---
 
 ## Next Recommended Task
 
-Begin **Phase 14 — Final Polish & Balance**:
-1. Playtest all 10 levels; tune enemy speeds and hazard intervals where needed
-2. Title screen: fire a demo pulse from center on load (shows mechanic before play)
-3. Screen transitions: brief CSS opacity fade on level-up screen
-4. Verify echo trail cap holds under stress (rapid pulse spam)
+Begin **Phase 15 — Build Pipeline + Deployment Foundation**:
+1. `npm init -y && npm install --save-dev vite`
+2. Create `vite.config.js` (see PRODUCTION_ROADMAP.md Phase 15 for exact config)
+3. Verify `npm run dev` and `npm run build` both work
+4. Delete Wave/WaveManager shim classes from `js/waves.js`
+5. Add localStorage level persistence
+6. Connect Cloudflare Pages to GitHub repo
+
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 15.
 
 ---
 
@@ -169,11 +182,14 @@ None currently.
 
 ---
 
-## Branch
+## Branches
 
-`claude/sound-vision-game-7pvbo1`
+| Branch | Purpose |
+|---|---|
+| `claude/beautiful-fermat-5102bb` | Current active branch |
+| `claude/sound-vision-game-7pvbo1` | Prior development branch (v1.0.0 shipped here) |
 
-## How to Run
+## How to Run (Development — until Phase 15)
 
 ```
 cd /home/user/dark-echo
@@ -181,4 +197,11 @@ python3 -m http.server 8080
 # Open: http://localhost:8080
 ```
 
-> Must use HTTP server (not `file://`) due to ES module CORS restrictions.
+## How to Run (After Phase 15)
+
+```
+npm run dev     # development server with HMR
+npm run build   # production build to dist/
+```
+
+> After Phase 15, `python3 -m http.server` is replaced by `npm run dev`.

@@ -10,11 +10,14 @@
 |---|---|
 | Title | RESONANCE |
 | Genre | Top-down minimalist stealth / horror exploration |
-| Platform | Browser (HTML + CSS + JavaScript, ES Modules) |
-| Stack | Canvas 2D, Web Audio API, no build step, no frameworks |
+| Platform | Browser (primary) + Android (secondary, via Capacitor) |
+| Stack | Canvas 2D, Web Audio API, Vite build (Phase 15+), no frameworks |
 | Target resolution | 800 × 600 px (responsive on mobile) |
 | Entry point | `index.html` → `js/game.js` (ES module) |
-| Repo branch | `claude/sound-vision-game-7pvbo1` |
+| Active branch | `claude/beautiful-fermat-5102bb` |
+| Prior branch | `claude/sound-vision-game-7pvbo1` (v1.0.0 shipped here) |
+| Current version | v1.0.0 (prototype complete, production phases pending) |
+| Deployment target | Cloudflare Pages (web), Google Play Store (Android) |
 
 ---
 
@@ -379,11 +382,49 @@ js/
 
 ---
 
-## 13. Out of Scope
+## 13. Out of Scope (Permanent)
 
 - Monetization, ads, IAP — **never**.
-- Save/checkpoint system beyond current level (levels are short; no need).
 - Multiplayer.
-- Sound sample files (Web Audio synthesis only).
-- External libraries or build systems.
-- Any analytics or tracking.
+- Sound sample files (Web Audio synthesis only — procedural always).
+- Any user tracking, cookies, or personal data collection.
+
+---
+
+## 14. Production Scope (Added v1.0.0 → commercial)
+
+These were out of scope for the prototype but are active production targets:
+
+- **Build system**: Vite (Phase 15) — bundling, minification, cache-busting. Replaces `python3 -m http.server`.
+- **Deployment**: Cloudflare Pages — auto-deploy on push to main via GitHub Actions.
+- **Android**: Capacitor wrapper for Google Play Store submission (Phase 21).
+- **Level persistence**: `localStorage` for level progress and best times (Phase 15 / Phase 24).
+- **Website**: Professional landing page at `/` with game playable at `/play/` (Phase 22).
+- **Analytics**: Cookieless (Umami or Plausible). No personal data. GDPR-safe.
+- **Error tracking**: Sentry JS (production build only, free tier).
+- **Content**: Expand to 20 levels across 2 acts (Phase 20).
+- **Save/checkpoint**: `localStorage` best times per level and Act completion flags (Phase 24).
+
+---
+
+## 15. New Systems (v1.1+)
+
+The following systems are specified in `docs/PRODUCTION_ROADMAP.md` and not yet implemented:
+
+### 15.1 Enemy Step Ray System
+Enemies emit their own `'step-enemy'` ray bursts as they move. Rays render in muted red `rgba(180,60,60,α)`. Enemy step rays reveal wall geometry. Enemy step rays do NOT trigger hearing on the emitting enemy. Audio: `playEnemyFootstep(x, y)` routed through `PannerNode` at enemy world coordinates.
+
+### 15.2 Positional Audio
+`AudioContext.listener` updated with player position each frame. All entity sounds routed through `PannerNode` at entity world coordinates. Model: `panningModel: 'HRTF'`, `distanceModel: 'inverse'`.
+
+### 15.3 Reverb System
+Procedural impulse response (exponential noise decay, 2.5s) loaded into `ConvolverNode`. Per-level wet mix via `reverb: 'small'|'medium'|'large'` field in level definition.
+
+### 15.4 Wavefront Renderer (replaces spoke-ray visual)
+Active rays from the same burst grouped by `burstId`, sorted by angle, connected with arc strokes at tip radius. Produces a ring/wavefront visual rather than discrete spokes. Shockwave origin ring added on pulse burst.
+
+### 15.5 ScreamerEnemy (Act II)
+Stationary enemy. When any ray hits it, it emits a 48-ray burst and plays a loud audio cue, alerting all enemies within 300px. Cannot be silenced; must be avoided. `type: 'screamer'` in level def.
+
+### 15.6 Environmental Ambient Sounds
+Non-gameplay procedural sounds: drips (all levels), distant rumble (levels 5+), structural creaks (levels 3+). Scheduled via AudioContext time, NOT visualized as rays. Started/stopped alongside ambient drone.
