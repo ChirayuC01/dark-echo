@@ -77,26 +77,43 @@ function circleOverlapsTile(cx, cy, cr, tileCol, tileRow) {
 // Resolve player circle against all wall tiles; returns adjusted {x,y}
 export function resolveWalls(grid, x, y, radius) {
   const rows = grid.length, cols = grid[0].length;
-  const minCol = Math.max(0, Math.floor((x - radius) / TILE));
-  const maxCol = Math.min(cols - 1, Math.floor((x + radius) / TILE));
-  const minRow = Math.max(0, Math.floor((y - radius) / TILE));
-  const maxRow = Math.min(rows - 1, Math.floor((y + radius) / TILE));
 
-  for (let r = minRow; r <= maxRow; r++) {
-    for (let c = minCol; c <= maxCol; c++) {
-      if (grid[r][c] !== CELL.WALL && grid[r][c] !== CELL.COLLAPSIBLE) continue;
-      if (!circleOverlapsTile(x, y, radius, c, r)) continue;
+  // Up to 3 passes so pushback from one tile can be re-checked against adjacent tiles
+  for (let pass = 0; pass < 3; pass++) {
+    const minCol = Math.max(0, Math.floor((x - radius) / TILE));
+    const maxCol = Math.min(cols - 1, Math.floor((x + radius) / TILE));
+    const minRow = Math.max(0, Math.floor((y - radius) / TILE));
+    const maxRow = Math.min(rows - 1, Math.floor((y + radius) / TILE));
 
-      const tx = c * TILE, ty = r * TILE;
-      const nearX = Math.max(tx, Math.min(x, tx + TILE));
-      const nearY = Math.max(ty, Math.min(y, ty + TILE));
-      const dx = x - nearX, dy = y - nearY;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len === 0) { x += radius; continue; }
-      const push = radius - len;
-      x += (dx / len) * push;
-      y += (dy / len) * push;
+    let moved = false;
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        if (grid[r][c] !== CELL.WALL && grid[r][c] !== CELL.COLLAPSIBLE) continue;
+        if (!circleOverlapsTile(x, y, radius, c, r)) continue;
+
+        const tx = c * TILE, ty = r * TILE;
+        const nearX = Math.max(tx, Math.min(x, tx + TILE));
+        const nearY = Math.max(ty, Math.min(y, ty + TILE));
+        const dx = x - nearX, dy = y - nearY;
+        const len = Math.sqrt(dx * dx + dy * dy);
+
+        if (len < 1e-9) {
+          // Player center is fully inside the tile — use minimum penetration to
+          // push out through the nearest face rather than blindly adding to x.
+          const dL = x - tx, dR = (tx + TILE) - x;
+          const dT = y - ty, dB = (ty + TILE) - y;
+          if      (dL <= dR && dL <= dT && dL <= dB) { x = tx - radius; }
+          else if (dR <= dT && dR <= dB)             { x = tx + TILE + radius; }
+          else if (dT <= dB)                         { y = ty - radius; }
+          else                                        { y = ty + TILE + radius; }
+        } else {
+          x += (dx / len) * (radius - len);
+          y += (dy / len) * (radius - len);
+        }
+        moved = true;
+      }
     }
+    if (!moved) break;
   }
   return { x, y };
 }
