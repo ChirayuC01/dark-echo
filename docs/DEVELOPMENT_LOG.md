@@ -4,6 +4,51 @@
 
 ---
 
+## [Phase 15 — Complete] Vite Build Pipeline + localStorage Persistence
+
+**Date:** 2026-06-18  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Commit:** `45f729d`  
+**Version:** v1.1.0
+
+### What was done
+
+Implemented Phase 15 in full: Vite build tooling, Cloudflare Pages CI/CD workflow, localStorage level progress persistence, Continue button on title screen, and deletion of the Wave/WaveManager backward-compat shims.
+
+**New files:**
+- `package.json` — Vite 8.0.16 dev dependency; `dev`/`build`/`preview` scripts
+- `vite.config.js` — root `.`, outDir `dist`, target `es2020`, server on port 8080
+- `package-lock.json` — lockfile; 0 vulnerabilities
+- `.gitignore` — standard ignores including `android/` and `ios/` for Phase 21 prep
+- `.github/workflows/deploy.yml` — build on push/PR; deploy to Cloudflare Pages on push to main
+
+**Modified files:**
+- `js/waves.js` — deleted `Wave` and `WaveManager` classes (TD-002 resolved)
+- `index.html` — added `#continue-btn` above "New Game" button; renamed "Begin" → "New Game"
+- `js/ui.js` — added `showContinueButton(levelNum)` and `hideContinueButton()`
+- `js/game.js` — added `SAVE_KEY`, save on level complete, clear on win/restart, `'continue'` action handler, `refreshContinueButton()` helper called in `init()` and when returning to title
+- `docs/CURRENT_STATUS.md` — Phase 15 marked complete; next task = Phase 16
+- `docs/PRODUCTION_ROADMAP.md` — Phase 15 status → ✅ Complete
+- `docs/IMPLEMENTATION_ROADMAP.md` — Phase 15 tasks marked `[x]`
+
+### Verification
+
+- `npm run build` passes cleanly: 47KB JS bundle, 82ms cold build, 0 vulnerabilities
+- Grep confirmed no remaining `Wave` or `WaveManager` imports/references
+- localStorage save/load logic guards against `NaN`, missing key, index 0 (don't show continue from Level 1), and index ≥ TOTAL (game complete)
+
+### Manual steps remaining (user must do)
+
+1. Log into [Cloudflare Pages dashboard](https://dash.cloudflare.com) and connect the `chirayuc01/dark-echo` repo
+2. Set build command `npm run build`, output directory `dist`, Node version 20
+3. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repo secrets
+
+### Next phase
+
+**Phase 16 — Wavefront Visual Upgrade**: replace starburst ray rendering with arc-fill grouped by `burstId`. Files to modify: `js/waves.js` (add `burstId` + `startTime` to `Ray.init()`), `js/renderer.js` (add `drawWavefront()` replacing individual ray tip rendering).
+
+---
+
 ## [Production Audit — Complete] Full Project Audit + Production Roadmap
 
 **Date:** 2026-06-18  

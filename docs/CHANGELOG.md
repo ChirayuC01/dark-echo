@@ -25,6 +25,20 @@
 
 ---
 
+## [v1.1.0] — 2026-06-18 — Phase 15
+
+### Added
+- **Vite build pipeline**: `package.json` + `vite.config.js` (Vite 8.0.16, 0 vulnerabilities). `npm run dev` starts HMR dev server on port 8080; `npm run build` produces 47KB JS bundle in `dist/` in 82ms; `npm run preview` serves production build locally.
+- **GitHub Actions CI/CD** (`.github/workflows/deploy.yml`): builds on every push and PR; deploys to Cloudflare Pages on push to main (requires `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` GitHub secrets).
+- **`.gitignore`**: covers `node_modules/`, `dist/`, `android/`, `ios/`, editor dirs.
+- **localStorage level persistence** (`SAVE_KEY = 'resonance_progress'`): saves 0-based `levelIndex` on every level complete; clears on game win and restart-from-1.
+- **Continue button** on title screen: shown when saved progress exists above Level 1, displaying "Continue — Level N" (1-based); hidden when no save or save is at Level 1.
+
+### Removed
+- **`Wave` and `WaveManager` shim classes** from `js/waves.js` (TD-002 resolved): dead backward-compat code from the circular-wave → DDA-ray migration; confirmed no imports anywhere.
+
+---
+
 ## [Unreleased]
 
 ---
