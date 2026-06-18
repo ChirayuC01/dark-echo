@@ -27,8 +27,10 @@ export class Player {
       * (crouching ? CROUCH_SPEED_MULT : 1)
       * (inWater   ? WATER_SPEED_MULT  : 1);
     this.x += dx * speed * dt;
+    let r = resolveWalls(grid, this.x, this.y, this.radius);
+    this.x = r.x; this.y = r.y;
     this.y += dy * speed * dt;
-    const r = resolveWalls(grid, this.x, this.y, this.radius);
+    r = resolveWalls(grid, this.x, this.y, this.radius);
     this.x = r.x; this.y = r.y;
   }
 }
