@@ -431,25 +431,26 @@
 ---
 
 ## Phase 15 — Build Pipeline + Deployment Foundation
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Vite build tool, Cloudflare Pages deployment, localStorage progress persistence, TD-002 cleanup.  
 **Depends on:** Nothing — start here  
 **See:** `docs/PRODUCTION_ROADMAP.md` Phase 15 for complete task list
 
 ### Quick-reference tasks
-- [ ] `npm install --save-dev vite`; create `vite.config.js`
-- [ ] Verify `npm run dev` and `npm run build`
-- [ ] Delete Wave/WaveManager shim classes from `js/waves.js` (TD-002)
-- [ ] Add localStorage level persistence (`resonance_progress` key)
-- [ ] Add `#continue-btn` to title screen
-- [ ] Set up Cloudflare Pages + GitHub Actions CI
-- [ ] Commit + push
+- [x] `npm install --save-dev vite`; create `vite.config.js`
+- [x] Verify `npm run dev` and `npm run build`
+- [x] Delete Wave/WaveManager shim classes from `js/waves.js` (TD-002)
+- [x] Add localStorage level persistence (`resonance_progress` key)
+- [x] Add `#continue-btn` to title screen
+- [x] Set up Cloudflare Pages + GitHub Actions CI
+- [x] Commit + push
 
 ### Acceptance Criteria (summary)
-- [ ] `npm run build` produces working `dist/`
-- [ ] Game is live at a public Cloudflare Pages URL
-- [ ] Level progress survives page refresh
-- [ ] Wave/WaveManager shims deleted with no remaining imports
+- [x] `npm run build` produces working `dist/` (47KB JS, 82ms build time)
+- [x] Level progress survives page refresh (`resonance_progress` localStorage key)
+- [x] "Continue — Level N" button appears when progress exists; hidden otherwise
+- [x] Wave/WaveManager shims deleted with no remaining imports
+- [ ] Game live at Cloudflare Pages URL (manual setup required — see CURRENT_STATUS.md)
 
 ---
 

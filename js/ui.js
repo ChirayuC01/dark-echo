@@ -39,3 +39,16 @@ export function setHint(text) {
   const el = document.getElementById('hint-text');
   if (el) el.textContent = text;
 }
+
+export function showContinueButton(levelNum) {
+  const btn = document.getElementById('continue-btn');
+  if (btn) {
+    btn.textContent = `Continue — Level ${levelNum}`;
+    btn.style.display = '';
+  }
+}
+
+export function hideContinueButton() {
+  const btn = document.getElementById('continue-btn');
+  if (btn) btn.style.display = 'none';
+}

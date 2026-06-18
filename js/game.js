@@ -13,6 +13,8 @@ import * as Audio from './audio.js';
 import * as Input from './input.js';
 import * as Renderer from './renderer.js';
 import * as UI from './ui.js';
+
+const SAVE_KEY = 'resonance_progress';
 import { LEVELS } from './levels.js';
 import { RaySystem } from './waves.js';
 import { castRay, circlesOverlap, castRayCrushers, circleOverlapsAABB } from './collision.js';
@@ -354,6 +356,7 @@ function checkExit() {
   if (dist(G.player.x, G.player.y, G.exit.x, G.exit.y) < TILE * 0.6) {
     if (G.levelIndex + 1 >= TOTAL) {
       G.screen = 'win';
+      localStorage.removeItem(SAVE_KEY);
       Audio.stopAmbient();
       Audio.playLevelComplete();
       UI.show('screen-win');
@@ -361,6 +364,7 @@ function checkExit() {
     } else {
       Audio.playLevelComplete();
       G.levelIndex++;
+      localStorage.setItem(SAVE_KEY, G.levelIndex);
       loadLevel(G.levelIndex);
       UI.setHint(LEVELS[G.levelIndex].hint);
       UI.show('screen-levelup');
@@ -518,6 +522,17 @@ function handleAction(action) {
       Renderer.setHUDVisible(true);
       Audio.startAmbient();
       break;
+    case 'continue': {
+      const saved = parseInt(localStorage.getItem(SAVE_KEY), 10);
+      const idx = (!isNaN(saved) && saved > 0 && saved < TOTAL) ? saved : 0;
+      G.levelIndex = idx;
+      loadLevel(idx);
+      G.screen = 'playing';
+      UI.hide();
+      Renderer.setHUDVisible(true);
+      Audio.startAmbient();
+      break;
+    }
     case 'resume':
       G.screen = 'playing';
       UI.hide();
@@ -532,6 +547,7 @@ function handleAction(action) {
       break;
     case 'restart-from-1':
       G.levelIndex = 0;
+      localStorage.removeItem(SAVE_KEY);
       loadLevel(0);
       G.screen = 'playing';
       UI.hide();
@@ -550,7 +566,18 @@ function handleAction(action) {
       UI.show('screen-title');
       Renderer.setHUDVisible(false);
       initTitleScreen();
+      refreshContinueButton();
       break;
+  }
+}
+
+// ─── Continue button ──────────────────────────────────────────────────────────
+function refreshContinueButton() {
+  const saved = parseInt(localStorage.getItem(SAVE_KEY), 10);
+  if (!isNaN(saved) && saved > 0 && saved < TOTAL) {
+    UI.showContinueButton(saved + 1); // 1-based display: index 1 → "Level 2"
+  } else {
+    UI.hideContinueButton();
   }
 }
 
@@ -565,6 +592,7 @@ export function init() {
 
   initTitleScreen();
   UI.show('screen-title');
+  refreshContinueButton();
   G.lastTime = performance.now();
   requestAnimationFrame(loop);
 }

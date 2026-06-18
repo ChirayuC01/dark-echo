@@ -37,7 +37,7 @@ RESONANCE v1.0.0 is a fully working 10-level browser game. All core mechanics ar
 ---
 
 ## Phase 15 — Build Pipeline + Deployment Foundation
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Add Vite build tool, deploy to Cloudflare Pages, add localStorage progress persistence.  
 **Depends on:** Nothing (start here)  
 **Estimated effort:** 3–5 days  

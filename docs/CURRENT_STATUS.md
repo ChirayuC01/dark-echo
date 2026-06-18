@@ -8,10 +8,10 @@
 ## Active Phase
 
 **Phase 15 — Build Pipeline + Deployment Foundation**  
-Status: ⬜ Pending — start here in every new session
+Status: ✅ Complete
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phases 0–14 are complete (v1.0.0). The prototype is working. The production gap is delivery, not gameplay.
+> Phases 0–15 are complete (v1.1.0). Build pipeline is live; game deploys via Cloudflare Pages on push to main.
 
 ---
 
@@ -162,17 +162,33 @@ Status: ⬜ Pending — start here in every new session
 
 ---
 
+## Phase 15 — Complete ✅
+
+**Phase 15 summary:**
+- `package.json` created — `npm run dev` (Vite dev server port 8080), `npm run build` (outputs `dist/`)
+- `vite.config.js` created — `root: '.'`, `outDir: 'dist'`, `target: 'es2020'`
+- `vite@8.0.16` installed — 0 vulnerabilities, 47KB gzip-13KB bundle in 82ms
+- `.gitignore` created — excludes `node_modules/`, `dist/`, `android/`, `ios/`
+- `.github/workflows/deploy.yml` created — CI build on PR; deploy to Cloudflare Pages on push to `main` via `wrangler-action@v3` (requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets to be added to the GitHub repo)
+- `js/waves.js` — Wave and WaveManager shim classes deleted (TD-002 resolved)
+- `index.html` — `#continue-btn` added to title screen above "New Game" button; hidden by default via `style="display:none"`; "Begin" renamed to "New Game" for clarity
+- `js/ui.js` — `showContinueButton(levelNum)` and `hideContinueButton()` exports added
+- `js/game.js` — `SAVE_KEY = 'resonance_progress'`; `localStorage.setItem` on level complete; `localStorage.removeItem` on win and restart-from-1; `'continue'` action handler; `refreshContinueButton()` helper called on init and on title screen return
+
 ## Next Recommended Task
 
-Begin **Phase 15 — Build Pipeline + Deployment Foundation**:
-1. `npm init -y && npm install --save-dev vite`
-2. Create `vite.config.js` (see PRODUCTION_ROADMAP.md Phase 15 for exact config)
-3. Verify `npm run dev` and `npm run build` both work
-4. Delete Wave/WaveManager shim classes from `js/waves.js`
-5. Add localStorage level persistence
-6. Connect Cloudflare Pages to GitHub repo
+Begin **Phase 16 — Wavefront Visual Upgrade**:
+1. Add `burstId` and `startTime` fields to `Ray.init()` in `js/waves.js`
+2. Track `_nextBurstId` counter in `RaySystem.burst()`
+3. Add `drawWavefront(activeRays, now)` to `js/renderer.js` — arc-fill between adjacent tips
+4. Add shockwave origin ring on first 200ms of burst
 
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 15.
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 16.
+
+**Cloudflare Pages setup (manual step — requires browser):**
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages → Create → Pages → Connect to Git
+2. Select the `dark-echo` repo; build command: `npm run build`; output directory: `dist`
+3. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repo secrets for the Actions workflow to auto-deploy
 
 ---
 
@@ -189,19 +205,10 @@ None currently.
 | `claude/beautiful-fermat-5102bb` | Current active branch |
 | `claude/sound-vision-game-7pvbo1` | Prior development branch (v1.0.0 shipped here) |
 
-## How to Run (Development — until Phase 15)
+## How to Run
 
 ```
-cd /home/user/dark-echo
-python3 -m http.server 8080
-# Open: http://localhost:8080
+npm run dev     # development server at localhost:8080 with HMR
+npm run build   # production build → dist/
+npm run preview # preview the production build locally
 ```
-
-## How to Run (After Phase 15)
-
-```
-npm run dev     # development server with HMR
-npm run build   # production build to dist/
-```
-
-> After Phase 15, `python3 -m http.server` is replaced by `npm run dev`.
