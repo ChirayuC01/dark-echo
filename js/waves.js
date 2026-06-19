@@ -5,15 +5,11 @@ import { RAY_SPEED, MAX_BOUNCES, ENERGY_DECAY, MIN_ENERGY,
 
 const NUDGE = 0.8; // px to offset after bounce to avoid re-collision
 
-let _nextBurstId = 0;
-
 // ─── Ray ─────────────────────────────────────────────────────────────────────
 export class Ray {
   constructor() {
     this.done = true;
     this.quiet = false;
-    this.burstId   = 0;
-    this.startTime = 0;
     this.segments      = [];
     this.heardEntities = new Set();
   }
@@ -140,9 +136,7 @@ export class RaySystem {
                                       : type === 'step'   ? STEP_RAY_MAX
                                       : HAZARD_RAY_MAX);
 
-    const burstId   = ++_nextBurstId;
-    const startTime = performance.now();
-    const phase     = Math.random() * Math.PI * 2;
+    const phase = Math.random() * Math.PI * 2;
 
     for (let i = 0; i < count; i++) {
       const angle = phase + (i / count) * Math.PI * 2;
@@ -150,8 +144,6 @@ export class RaySystem {
       ray.init(x, y,
                Math.cos(angle), Math.sin(angle),
                energy, type, maxDist, x, y, quiet);
-      ray.burstId   = burstId;
-      ray.startTime = startTime;
       this.active.push(ray);
     }
   }

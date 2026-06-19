@@ -39,12 +39,10 @@ export function draw(state, now) {
 
   // Title screen: show demo pulse to communicate the core mechanic before play
   if (state.screen === 'title') {
-    const fps = state.fps || 60;
     drawEchoTrails(state.echoTrails || [], now, W / 2, H / 2);
     drawActiveRays(state.rays || [], W / 2, H / 2);
-    drawWavefront(state.rays || [], now, W / 2, H / 2, fps);
     drawVignette();
-    if (Debug.isEnabled()) Debug.draw(ctx, state, fps);
+    if (Debug.isEnabled()) Debug.draw(ctx, state, state.fps || 60);
     return;
   }
 
@@ -68,7 +66,6 @@ export function draw(state, now) {
   drawHazards(hazards, now, px, py);
   drawEnemies(enemies, now, px, py);
   drawActiveRays(rays, px, py);
-  drawWavefront(rays, now, px, py, state.fps || 60);
   if (playerInWater) drawWaterZone(player);
   drawPlayer(player);
   drawVignette();
@@ -340,104 +337,17 @@ function drawActiveRays(rays, px, py) {
         ctx.stroke();
       }
 
-    }
-  }
-
-  ctx.restore();
-}
-
-// ─── Wavefront — arc-fill connecting adjacent ray tips ────────────────────────
-// Replaces the "spoke" live-tip segments with a coherent expanding sonar ring.
-function drawWavefront(rays, now, px, py, fps) {
-  if (!rays || rays.length === 0) return;
-
-  // Group active rays by burstId
-  const groups = new Map();
-  for (const ray of rays) {
-    if (!ray.burstId) continue;
-    const g = groups.get(ray.burstId);
-    if (g) g.push(ray);
-    else groups.set(ray.burstId, [ray]);
-  }
-  if (groups.size === 0) return;
-
-  ctx.save();
-  ctx.lineCap = 'round';
-
-  const useBlur = fps >= 45;
-  if (useBlur) ctx.filter = 'blur(1.5px)';
-
-  const ANGLE_THRESH = Math.PI / 16;
-
-  for (const [, group] of groups) {
-    const burstX    = group[0].burstX;
-    const burstY    = group[0].burstY;
-    const startTime = group[0].startTime;
-
-    // Shockwave origin ring — expands 0→32px and fades over 200ms
-    const age = now - startTime;
-    if (age < 200) {
-      const t = age / 200;
-      const ringR     = t * 32;
-      const ringAlpha = (1 - t) * 0.5;
-      const heardRing = hearing(Math.hypot(burstX - px, burstY - py));
-      if (heardRing > 0 && ringR > 0) {
-        ctx.strokeStyle = `rgba(185,220,255,${(ringAlpha * heardRing).toFixed(3)})`;
-        ctx.lineWidth   = 1.8 * (1 - t) + 0.4;
-        ctx.shadowBlur  = 0;
-        ctx.beginPath();
-        ctx.arc(burstX, burstY, ringR, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-    }
-
-    if (group.length < 2) continue;
-
-    // Sort rays by angle of tip from burst origin
-    const sorted = group.slice().sort((a, b) =>
-      Math.atan2(a.tipY - burstY, a.tipX - burstX) -
-      Math.atan2(b.tipY - burstY, b.tipX - burstX)
-    );
-
-    ctx.lineWidth  = 1.0;
-    ctx.shadowBlur = 0;
-
-    const n = sorted.length;
-    for (let i = 0; i < n; i++) {
-      const curr = sorted[i];
-      const next = sorted[(i + 1) % n];
-
-      const aA = Math.atan2(curr.tipY - burstY, curr.tipX - burstX);
-      const aN = Math.atan2(next.tipY - burstY, next.tipX - burstX);
-
-      // Normalize delta to [-π, π] so wrap-around is handled correctly
-      let dAngle = aN - aA;
-      if (dAngle > Math.PI)  dAngle -= Math.PI * 2;
-      if (dAngle < -Math.PI) dAngle += Math.PI * 2;
-
-      if (Math.abs(dAngle) > ANGLE_THRESH) continue;
-
-      // Median radius for the arc
-      const rA = Math.hypot(curr.tipX - burstX, curr.tipY - burstY);
-      const rN = Math.hypot(next.tipX - burstX, next.tipY - burstY);
-      const r  = (rA + rN) / 2;
-      if (r < 4) continue;
-
-      // Hearing attenuation at arc midpoint
-      const midX = burstX + r * Math.cos(aA + dAngle / 2);
-      const midY = burstY + r * Math.sin(aA + dAngle / 2);
-      const heard = hearing(Math.hypot(midX - px, midY - py));
-      if (heard <= 0) continue;
-
-      ctx.strokeStyle = `rgba(185,220,255,${(0.38 * heard).toFixed(3)})`;
-      // Using aA + dAngle instead of aN avoids the ±π wrap-around issue in ctx.arc
+      const heard = hearing(segPtDist(px, py, ray.segX, ray.segY, ray.tipX, ray.tipY));
+      const liveAlpha = ray.energy * 0.88 * heard;
+      if (liveAlpha < 0.01) continue;
+      ctx.strokeStyle = rayColor(type, liveAlpha);
       ctx.beginPath();
-      ctx.arc(burstX, burstY, r, aA, aA + dAngle, dAngle < 0);
+      ctx.moveTo(ray.segX, ray.segY);
+      ctx.lineTo(ray.tipX, ray.tipY);
       ctx.stroke();
     }
   }
 
-  if (useBlur) ctx.filter = 'none';
   ctx.restore();
 }
 
