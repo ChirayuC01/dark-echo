@@ -185,7 +185,7 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 - `vite.config.js` created — `root: '.'`, `outDir: 'dist'`, `target: 'es2020'`
 - `vite@8.0.16` installed — 0 vulnerabilities, 47KB gzip-13KB bundle in 82ms
 - `.gitignore` created — excludes `node_modules/`, `dist/`, `android/`, `ios/`
-- `.github/workflows/deploy.yml` created — CI build on PR; deploy to Cloudflare Pages on push to `main` via `wrangler-action@v3` (requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets to be added to the GitHub repo)
+- `.github/workflows/deploy.yml` created — CI build on PR to `main`; deploy via `wrangler deploy` on push to `main`
 - `js/waves.js` — Wave and WaveManager shim classes deleted (TD-002 resolved)
 - `index.html` — `#continue-btn` added to title screen above "New Game" button; hidden by default via `style="display:none"`; "Begin" renamed to "New Game" for clarity
 - `js/ui.js` — `showContinueButton(levelNum)` and `hideContinueButton()` exports added
@@ -197,8 +197,21 @@ Begin **Phase 18 — Reverb + Environmental Ambient Sounds**.
 
 Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 18.
 
-**Cloudflare deployment (manual step — requires browser):**  
-Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repo secrets for the Actions workflow to auto-deploy on merge to `main`.
+---
+
+## Deployment Setup
+
+Cloudflare Workers Git integration is connected to `ChirayuC01/dark-echo`.
+
+| Setting | Value |
+|---|---|
+| **Production branch** | `main` |
+| **Build command** | `npm run build` |
+| **Deploy command** | `npx wrangler deploy` |
+| **Non-production deploy command** | `npx wrangler versions upload` |
+| **Root directory** | `/` |
+
+**Workflow:** develop on `claude/beautiful-fermat-5102bb` → open PR to `main` → Cloudflare runs `npm run build` + `npx wrangler deploy` automatically on merge.
 
 ---
 
