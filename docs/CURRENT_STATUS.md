@@ -7,11 +7,11 @@
 
 ## Active Phase
 
-**Phase 16 — Wavefront Visual Upgrade**  
-Status: ✅ Complete
+**Phase 17 — Positional Audio + Enemy Footstep Visualization**  
+Status: ⬜ Pending
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phases 0–16 are complete (v1.2.0). Build pipeline is live; wavefront sonar-ring visual replaces starburst spokes.
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Next up is Phase 17.
 
 ---
 
@@ -162,21 +162,9 @@ Status: ✅ Complete
 
 ---
 
-## Phase 16 — Complete ✅
+## Phase 16 — ❌ Skipped
 
-**Phase 16 summary:**
-- `js/waves.js` — module-level `_nextBurstId` counter; each `burst()` call increments it and stamps every ray with `ray.burstId` and `ray.startTime` (via `performance.now()`)
-- `js/renderer.js` — `drawActiveRays()`: removed live tip segment drawing (was the "spoke" look); sealed bounce segments still draw
-- `js/renderer.js` — new `drawWavefront(rays, now, px, py, fps)`:
-  - Groups active rays by `burstId`
-  - Sorts each group by angle of tip from burst origin (`atan2`)
-  - Draws `ctx.arc()` strokes between adjacent tips where angle gap < π/16; uses `aA + dAngle` form to avoid ±π wrap-around bugs
-  - Median radius (`(rA + rN) / 2`) for each arc keeps the ring coherent
-  - Shockwave origin ring: 0→32px expanding circle over 200ms, fades from 0.5→0 opacity
-  - `ctx.filter = 'blur(1.5px)'` applied when FPS ≥ 45 for soft glow
-  - Hearing attenuation applied to each arc via midpoint distance to player
-- Works on both title screen and gameplay paths
-- Build: 48.56KB, 462ms, 0 vulnerabilities
+Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and immediately reverted. The arc-fill sonar ring did not look good — the original spoke/starburst rendering was preferred. This phase is permanently cancelled. Original ray rendering is unchanged.
 
 ## Phase 15 — Complete ✅
 
@@ -193,7 +181,7 @@ Status: ✅ Complete
 
 ## Next Recommended Task
 
-Begin **Phase 17 — Positional Audio + Enemy Footstep Visualization**:
+Phase 16 skipped. Begin **Phase 17 — Positional Audio + Enemy Footstep Visualization**:
 1. Add `createPositionalSource(x, y)` and `updateListener(px, py)` to `js/audio.js`
 2. Route `playAlert`, `playSentryAlert`, `playHazardPulse` through positional audio
 3. Add `stepTimer` and `shouldEmitStep(dt)` to PatrolEnemy, ChaserEnemy, BlindStalker

@@ -93,13 +93,16 @@ Everything downstream (Android packaging, production performance, public sharing
 ---
 
 ## Phase 16 — Wavefront Visual Upgrade
-**Status:** ✅ Complete  
-**Goal:** Transform the ray visualization from "starburst spokes" to "expanding sonar ring." This is the single highest-impact visual change to close the gap with Dark Echo.  
+**Status:** ❌ Cancelled / Descoped  
+**Goal:** Transform the ray visualization from "starburst spokes" to "expanding sonar ring."  
 **Depends on:** Phase 15 complete  
 **Estimated effort:** 5–8 days  
 **Risk:** Medium (renderer changes affect all visual output)
 
-### Context
+### Decision
+Implemented and reverted. The arc-fill wavefront approach (`drawWavefront()` grouping rays by `burstId`, connecting adjacent tips with `ctx.arc()`) did not look good in practice — the original spoke/starburst rendering was preferred. Phase 16 is permanently skipped. Do not re-attempt this approach in future sessions.
+
+### Context (original)
 RESONANCE currently renders active rays as discrete line segments from origin to tip — visually a starburst/spoke pattern. Dark Echo renders sound as a coherent wavefront ring that expands outward. The underlying DDA ray math is equivalent; only the rendering changes.
 
 ### Tasks
