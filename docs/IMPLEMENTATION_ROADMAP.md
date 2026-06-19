@@ -455,17 +455,17 @@
 ---
 
 ## Phase 16 — Wavefront Visual Upgrade
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Render active rays as an expanding sonar ring rather than starburst spokes.  
 **Depends on:** Phase 15  
 **See:** `docs/PRODUCTION_ROADMAP.md` Phase 16
 
 ### Quick-reference tasks
-- [ ] Add `burstId` and `startTime` to Ray in `waves.js`
-- [ ] Add `drawWavefront()` in `renderer.js` — arc-fill between adjacent ray tips
-- [ ] Add shockwave origin ring on first 200ms of burst
-- [ ] Add `blur(1.5px)` filter on wavefront pass; disable if fps < 45
-- [ ] Commit + push
+- [x] Add `burstId` and `startTime` to Ray in `waves.js`
+- [x] Add `drawWavefront()` in `renderer.js` — arc-fill between adjacent ray tips
+- [x] Add shockwave origin ring on first 200ms of burst
+- [x] Add `blur(1.5px)` filter on wavefront pass; disable if fps < 45
+- [x] Commit + push
 
 ---
 

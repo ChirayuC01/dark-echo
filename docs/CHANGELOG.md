@@ -25,6 +25,20 @@
 
 ---
 
+## [v1.2.0] — 2026-06-19 — Phase 16
+
+### Changed
+- **Wavefront visual upgrade**: Active pulse/step bursts now render as an expanding sonar ring instead of a starburst spoke pattern. Each `burst()` call gets a unique `burstId` and `startTime`; `drawWavefront()` groups rays by `burstId`, sorts by angle from burst origin, and connects adjacent tips with `ctx.arc()` strokes at the median radius. Arc connections are only drawn when adjacent rays are within π/16 of each other — gaps appear correctly where sound has hit walls or bounced away.
+- **Shockwave origin ring**: A faint circle expands from 0 to 32px at the burst origin over 200ms then fades, giving each pulse a tactile "impact" feel at the source point.
+- **Soft glow on wavefront**: `ctx.filter = 'blur(1.5px)'` applied to the wavefront arc pass when FPS ≥ 45; disabled automatically on low-end hardware.
+- **Echo trails unchanged**: Historical sealed segments still render as individual line segments — the geometric history of past bounces.
+
+### Technical
+- `js/waves.js`: module-level `_nextBurstId` counter; `burst()` stamps each ray with `burstId` and `startTime` via `performance.now()`
+- `js/renderer.js`: `drawActiveRays()` no longer draws the live tip segment (was the spoke); sealed bounce segments still draw. New `drawWavefront()` function draws the arc ring + origin ring.
+
+---
+
 ## [v1.1.0] — 2026-06-18 — Phase 15
 
 ### Added

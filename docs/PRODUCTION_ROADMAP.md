@@ -93,7 +93,7 @@ Everything downstream (Android packaging, production performance, public sharing
 ---
 
 ## Phase 16 — Wavefront Visual Upgrade
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Transform the ray visualization from "starburst spokes" to "expanding sonar ring." This is the single highest-impact visual change to close the gap with Dark Echo.  
 **Depends on:** Phase 15 complete  
 **Estimated effort:** 5–8 days  

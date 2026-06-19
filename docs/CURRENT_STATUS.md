@@ -7,11 +7,11 @@
 
 ## Active Phase
 
-**Phase 15 — Build Pipeline + Deployment Foundation**  
+**Phase 16 — Wavefront Visual Upgrade**  
 Status: ✅ Complete
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phases 0–15 are complete (v1.1.0). Build pipeline is live; game deploys via Cloudflare Pages on push to main.
+> Phases 0–16 are complete (v1.2.0). Build pipeline is live; wavefront sonar-ring visual replaces starburst spokes.
 
 ---
 
@@ -162,6 +162,22 @@ Status: ✅ Complete
 
 ---
 
+## Phase 16 — Complete ✅
+
+**Phase 16 summary:**
+- `js/waves.js` — module-level `_nextBurstId` counter; each `burst()` call increments it and stamps every ray with `ray.burstId` and `ray.startTime` (via `performance.now()`)
+- `js/renderer.js` — `drawActiveRays()`: removed live tip segment drawing (was the "spoke" look); sealed bounce segments still draw
+- `js/renderer.js` — new `drawWavefront(rays, now, px, py, fps)`:
+  - Groups active rays by `burstId`
+  - Sorts each group by angle of tip from burst origin (`atan2`)
+  - Draws `ctx.arc()` strokes between adjacent tips where angle gap < π/16; uses `aA + dAngle` form to avoid ±π wrap-around bugs
+  - Median radius (`(rA + rN) / 2`) for each arc keeps the ring coherent
+  - Shockwave origin ring: 0→32px expanding circle over 200ms, fades from 0.5→0 opacity
+  - `ctx.filter = 'blur(1.5px)'` applied when FPS ≥ 45 for soft glow
+  - Hearing attenuation applied to each arc via midpoint distance to player
+- Works on both title screen and gameplay paths
+- Build: 48.56KB, 462ms, 0 vulnerabilities
+
 ## Phase 15 — Complete ✅
 
 **Phase 15 summary:**
@@ -177,13 +193,14 @@ Status: ✅ Complete
 
 ## Next Recommended Task
 
-Begin **Phase 16 — Wavefront Visual Upgrade**:
-1. Add `burstId` and `startTime` fields to `Ray.init()` in `js/waves.js`
-2. Track `_nextBurstId` counter in `RaySystem.burst()`
-3. Add `drawWavefront(activeRays, now)` to `js/renderer.js` — arc-fill between adjacent tips
-4. Add shockwave origin ring on first 200ms of burst
+Begin **Phase 17 — Positional Audio + Enemy Footstep Visualization**:
+1. Add `createPositionalSource(x, y)` and `updateListener(px, py)` to `js/audio.js`
+2. Route `playAlert`, `playSentryAlert`, `playHazardPulse` through positional audio
+3. Add `stepTimer` and `shouldEmitStep(dt)` to PatrolEnemy, ChaserEnemy, BlindStalker
+4. In `game.js` update(): fire 8-ray `'step-enemy'` burst per enemy step
+5. Add `'step-enemy'` ray type color branch in renderer (muted red)
 
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 16.
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 17.
 
 **Cloudflare Pages setup (manual step — requires browser):**
 1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages → Create → Pages → Connect to Git

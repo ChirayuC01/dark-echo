@@ -4,6 +4,43 @@
 
 ---
 
+## [Phase 16 — Complete] Wavefront Visual Upgrade
+
+**Date:** 2026-06-19  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v1.2.0
+
+### What was done
+
+Replaced the starburst "spoke" ray rendering with a coherent expanding sonar ring — the single highest-impact visual change to close the gap with Dark Echo.
+
+**Modified files:**
+- `js/waves.js` — added module-level `_nextBurstId = 0`; `burst()` now stamps each ray with `ray.burstId = ++_nextBurstId` and `ray.startTime = performance.now()`
+- `js/renderer.js` — removed live tip segment drawing from `drawActiveRays()` (was the spoke); added `drawWavefront(rays, now, px, py, fps)` function; wired into both title screen and gameplay draw paths
+
+### `drawWavefront()` algorithm
+1. Groups active rays by `burstId`
+2. Sorts each group by `atan2(tip - burstOrigin)` → angular order
+3. For each adjacent pair: computes angle delta (normalized to [-π, π] to handle ±π wrap); skips pairs where |delta| > π/16 (prevents arc artifacts across wall boundaries)
+4. Draws `ctx.arc(burstX, burstY, medianRadius, aA, aA + dAngle)` — using `aA + dAngle` form avoids the ±π discontinuity in `ctx.arc`'s start/end angle interpretation
+5. Hearing attenuation applied to each arc via midpoint distance to player
+6. Origin ring: 0→32px expanding circle over 200ms, fades 0.5→0 with lineWidth tapering
+7. `ctx.filter = 'blur(1.5px)'` when FPS ≥ 45 for soft glow; skipped on low-end hardware
+
+### Visual result
+- 64-ray pulse burst → near-complete ring that expands and breaks where walls intercept
+- 22-ray step burst → partial arcs (gaps where angle spacing > π/16)
+- Echo trails (sealed segments in echoTrails) → still draw as individual lines, unchanged
+- Title screen demo pulse → also uses the wavefront renderer
+
+### Build
+- 48.56KB JS bundle, 462ms build, 0 vulnerabilities
+
+### Next phase
+**Phase 17 — Positional Audio + Enemy Footstep Visualization**: Add PannerNode spatial audio to all alert sounds; add enemy step-ray bursts (8 rays, muted red, every 520ms idle / 340ms hunting); add BlindStalker breathing cue.
+
+---
+
 ## [Phase 15 — Complete] Vite Build Pipeline + localStorage Persistence
 
 **Date:** 2026-06-18  
