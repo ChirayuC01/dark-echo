@@ -136,7 +136,7 @@ RESONANCE currently renders active rays as discrete line segments from origin to
 ---
 
 ## Phase 17 — Positional Audio + Enemy Footstep Visualization
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Add 3D panned audio and enemy-generated ray bursts. This is the most important missing mechanic for Dark Echo parity.  
 **Depends on:** Phase 15 complete  
 **Estimated effort:** 8–12 days  

@@ -7,7 +7,9 @@ import { TILE, PLAYER_SPEED, PLAYER_RADIUS, ENEMY_RADIUS,
          SENTRY_SCAN_RANGE, SENTRY_SCAN_ARC,
          SENTRY_SCAN_SPEED, SENTRY_HUNT_DURATION,
          BLIND_STALKER_SPEED_IDLE, BLIND_STALKER_SPEED_HUNT,
-         BLIND_STALKER_HUNT_DURATION } from './constants.js';
+         BLIND_STALKER_HUNT_DURATION,
+         ENEMY_STEP_INTERVAL_IDLE, ENEMY_STEP_INTERVAL_HUNT,
+         BLIND_STALKER_BREATH_MIN, BLIND_STALKER_BREATH_MAX } from './constants.js';
 import { dist } from './utils.js';
 import { resolveWalls } from './collision.js';
 
@@ -52,6 +54,14 @@ export class PatrolEnemy {
     this.alertTimer  = 0;
     this.alertTargetX = 0;
     this.alertTargetY = 0;
+    this.stepTimer   = 0;
+  }
+
+  shouldEmitStep(dt) {
+    const interval = this.alertTimer > 0 ? ENEMY_STEP_INTERVAL_HUNT : ENEMY_STEP_INTERVAL_IDLE;
+    this.stepTimer += dt * 1000;
+    if (this.stepTimer >= interval) { this.stepTimer = 0; return true; }
+    return false;
   }
 
   hearStep(srcX, srcY) {
@@ -109,6 +119,14 @@ export class ChaserEnemy {
     this.wanderDX = 0; this.wanderDY = 0;
     this.huntTimer = 0;
     this.revealedAt = -Infinity;
+    this.stepTimer = 0;
+  }
+
+  shouldEmitStep(dt) {
+    const interval = this.state === 'hunting' ? ENEMY_STEP_INTERVAL_HUNT : ENEMY_STEP_INTERVAL_IDLE;
+    this.stepTimer += dt * 1000;
+    if (this.stepTimer >= interval) { this.stepTimer = 0; return true; }
+    return false;
   }
 
   hearSound(sourceX, sourceY) {
@@ -258,6 +276,24 @@ export class BlindStalker {
     this.wanderDX = 0; this.wanderDY = 0;
     this.huntTimer = 0;
     this.revealedAt = -Infinity;
+    this.stepTimer = 0;
+    this.breathTimer = BLIND_STALKER_BREATH_MIN + Math.random() * (BLIND_STALKER_BREATH_MAX - BLIND_STALKER_BREATH_MIN);
+  }
+
+  shouldEmitStep(dt) {
+    const interval = this.state === 'hunting' ? ENEMY_STEP_INTERVAL_HUNT : ENEMY_STEP_INTERVAL_IDLE;
+    this.stepTimer += dt * 1000;
+    if (this.stepTimer >= interval) { this.stepTimer = 0; return true; }
+    return false;
+  }
+
+  shouldBreathe(dt) {
+    this.breathTimer -= dt * 1000;
+    if (this.breathTimer <= 0) {
+      this.breathTimer = BLIND_STALKER_BREATH_MIN + Math.random() * (BLIND_STALKER_BREATH_MAX - BLIND_STALKER_BREATH_MIN);
+      return true;
+    }
+    return false;
   }
 
   hearSound(sourceX, sourceY) {
