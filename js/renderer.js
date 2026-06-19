@@ -289,6 +289,8 @@ function drawEchoTrails(trails, now, px, py) {
       ctx.strokeStyle = `rgba(215,95,45,${alpha.toFixed(3)})`;
     } else if (t.type === 'pulse') {
       ctx.strokeStyle = `rgba(175,210,255,${alpha.toFixed(3)})`;
+    } else if (t.type === 'step-enemy') {
+      ctx.strokeStyle = `rgba(165,50,50,${alpha.toFixed(3)})`;
     } else {
       ctx.strokeStyle = `rgba(145,180,225,${alpha.toFixed(3)})`;
     }
@@ -306,8 +308,8 @@ function drawActiveRays(rays, px, py) {
   ctx.save();
   ctx.lineCap = 'round';
 
-  for (let pass = 0; pass < 3; pass++) {
-    const type = pass === 0 ? 'step' : pass === 1 ? 'pulse' : 'hazard';
+  for (let pass = 0; pass < 4; pass++) {
+    const type = pass === 0 ? 'step' : pass === 1 ? 'pulse' : pass === 2 ? 'hazard' : 'step-enemy';
 
     if (type === 'step') {
       ctx.lineWidth = 1.0;
@@ -317,10 +319,14 @@ function drawActiveRays(rays, px, py) {
       ctx.lineWidth = 1.4;
       ctx.shadowBlur = 9;
       ctx.shadowColor = 'rgba(160,210,255,0.75)';
-    } else {
+    } else if (type === 'hazard') {
       ctx.lineWidth = 1.1;
       ctx.shadowBlur = 6;
       ctx.shadowColor = 'rgba(230,100,55,0.6)';
+    } else {
+      ctx.lineWidth = 0.9;
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = 'rgba(180,60,60,0.5)';
     }
 
     for (const ray of rays) {
@@ -352,9 +358,10 @@ function drawActiveRays(rays, px, py) {
 }
 
 function rayColor(type, alpha) {
-  if (type === 'hazard') return `rgba(230,105,55,${alpha.toFixed(3)})`;
-  if (type === 'pulse')  return `rgba(185,220,255,${alpha.toFixed(3)})`;
-  return                        `rgba(155,195,235,${alpha.toFixed(3)})`;
+  if (type === 'hazard')     return `rgba(230,105,55,${alpha.toFixed(3)})`;
+  if (type === 'pulse')      return `rgba(185,220,255,${alpha.toFixed(3)})`;
+  if (type === 'step-enemy') return `rgba(180,60,60,${alpha.toFixed(3)})`;
+  return                            `rgba(155,195,235,${alpha.toFixed(3)})`;
 }
 
 // ─── Doors — amber when locked, faint green when open ────────────────────────

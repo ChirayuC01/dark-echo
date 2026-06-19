@@ -4,6 +4,7 @@ import { TILE, COLS, ROWS, W, H,
          IMPACT_FADE_MS, HEARING_NEAR, HEARING_FAR,
          CELL,
          RAY_COUNT_STEP, STEP_RAY_MAX,
+         ENEMY_STEP_RAYS, ENEMY_STEP_MAX,
          CROUCH_INTERVAL_MULT, CROUCH_RAY_MULT, CROUCH_DIST_MULT,
          WATER_INTERVAL_MULT, WATER_RAY_MULT,
          COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS,
@@ -247,7 +248,7 @@ function processRayEntities(now) {
     }
 
     // Exit reveal (player rays only)
-    if (G.exit && ray.type !== 'hazard') {
+    if (G.exit && ray.type !== 'hazard' && ray.type !== 'step-enemy') {
       const d = segPtDist(G.exit.x, G.exit.y, sx, sy, tx, ty);
       if (d < REVEAL_D) G.exit.revealedAt = now;
     }
@@ -268,11 +269,11 @@ function processRayEntities(now) {
           ray.heardEntities.add(en);
           if (en instanceof BlindStalker) {
             en.hearSound(ray.burstX, ray.burstY);
-            Audio.playAlert();
+            Audio.playAlert(en.x, en.y);
           } else if (en instanceof ChaserEnemy) {
             if (!ray.quiet) {
               en.hearSound(ray.burstX, ray.burstY);
-              Audio.playAlert();
+              Audio.playAlert(en.x, en.y);
             }
           } else if (en instanceof PatrolEnemy) {
             if (ray.type === 'pulse') {
@@ -417,7 +418,7 @@ function update(dt, now) {
       G.raySystem.burst(ev.x, ev.y, 'hazard', G.castFn);
       const d = dist(ev.x, ev.y, G.player.x, G.player.y);
       const vol = Math.max(0, 1 - (d - HEARING_NEAR) / (HEARING_FAR - HEARING_NEAR));
-      Audio.playHazardPulse(Math.min(1, vol));
+      Audio.playHazardPulse(ev.x, ev.y, Math.min(1, vol));
     }
   }
 
@@ -427,12 +428,24 @@ function update(dt, now) {
   processRayEntities(now);
   processWaterReveals(now);
 
+  // Listener position — keep in sync every frame so PannerNodes stay accurate
+  Audio.updateListener(G.player.x, G.player.y);
+
   // Enemy movement — Sentry needs castFn + player for visual LOS detection
   for (const en of G.enemies) {
     if (en instanceof Sentry) {
-      if (en.update(dt, G.grid, G.castFn, G.player)) Audio.playSentryAlert();
+      if (en.update(dt, G.grid, G.castFn, G.player)) Audio.playSentryAlert(en.x, en.y);
     } else {
       en.update(dt, G.grid);
+    }
+    if (en.shouldEmitStep?.(dt)) {
+      G.raySystem.burst(en.x, en.y, 'step-enemy', G.castFn, ENEMY_STEP_RAYS, ENEMY_STEP_MAX);
+      const hunting = en.state === 'hunting' || en.state === 'alert' || (en.alertTimer > 0);
+      if (hunting) Audio.playEnemyFootstepHunting(en.x, en.y);
+      else Audio.playEnemyFootstep(en.x, en.y);
+    }
+    if (en instanceof BlindStalker && en.shouldBreathe(dt)) {
+      Audio.playBlindStalkerBreathing(en.x, en.y);
     }
   }
   for (const cr of G.crushers) cr.update(dt);

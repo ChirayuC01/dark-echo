@@ -66,6 +66,14 @@ export const BLIND_STALKER_SPEED_IDLE     = 30;  // px/s when wandering
 export const BLIND_STALKER_SPEED_HUNT     = 104; // px/s when hunting (CHASER × 1.3)
 export const BLIND_STALKER_HUNT_DURATION  = 4;   // seconds — shorter window than ChaserEnemy
 
+// ─── Enemy footsteps + breathing ─────────────────────────────────────────────
+export const ENEMY_STEP_INTERVAL_IDLE = 520;  // ms between step ray bursts (idle)
+export const ENEMY_STEP_INTERVAL_HUNT = 340;  // ms between step ray bursts (hunting)
+export const ENEMY_STEP_RAYS          = 8;    // rays per enemy step burst
+export const ENEMY_STEP_MAX           = 80;   // max travel distance for enemy step rays (px)
+export const BLIND_STALKER_BREATH_MIN = 2000; // ms min interval between breathing cues
+export const BLIND_STALKER_BREATH_MAX = 3000; // ms max interval between breathing cues
+
 // ─── Doors / keys ────────────────────────────────────────────────────────────
 export const KEY_PICKUP_RADIUS    = 12;
 export const CRUSHER_REVEAL_MS    = 5500;  // crushers stay visible longer than walls

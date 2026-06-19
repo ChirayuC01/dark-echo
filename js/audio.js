@@ -1,6 +1,7 @@
 let _ctx = null;
 let _ambientNode = null;
 let _ambientGain = null;
+let _listenerInitialized = false;
 
 function ctx() {
   if (!_ctx) _ctx = new AudioContext();
@@ -55,6 +56,15 @@ export const SOUND_CONFIG = {
   ambient: {
     freq: 55, gain: 0.035, fadeIn: 1.5, fadeOut: 0.5,
   },
+  enemyFootstep: {
+    gain: 0.07, filterFreq: 240, duration: 0.06,
+  },
+  enemyFootstepHunting: {
+    gain: 0.13, filterFreq: 300, duration: 0.05,
+  },
+  blindStalkerBreath: {
+    freq: 110, freqEnd: 95, gain: 0.03, duration: 0.3,
+  },
 };
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -79,7 +89,7 @@ function noiseBuffer(ac, duration) {
   return buf;
 }
 
-function noiseNode(ac, cfg) {
+function noiseNode(ac, cfg, destination) {
   const src = ac.createBufferSource();
   const g = ac.createGain();
   const filter = ac.createBiquadFilter();
@@ -87,9 +97,26 @@ function noiseNode(ac, cfg) {
   const variation = cfg.pitchVariation ? (Math.random() * 2 - 1) * cfg.pitchVariation : 0;
   filter.frequency.value = cfg.filterFreq * (1 + variation);
   src.buffer = noiseBuffer(ac, cfg.duration);
-  src.connect(filter); filter.connect(g); g.connect(ac.destination);
+  src.connect(filter); filter.connect(g); g.connect(destination || ac.destination);
   g.gain.setValueAtTime(cfg.gain, ac.currentTime);
   src.start();
+}
+
+function createPositionalSource(x, y) {
+  const ac = ctx();
+  const panner = ac.createPanner();
+  panner.panningModel  = 'HRTF';
+  panner.distanceModel = 'inverse';
+  panner.refDistance   = 120;
+  panner.maxDistance   = 600;
+  panner.rolloffFactor = 1.2;
+  if (panner.positionX) {
+    panner.positionX.value = x; panner.positionY.value = 0; panner.positionZ.value = y;
+  } else {
+    panner.setPosition(x, 0, y);
+  }
+  panner.connect(ac.destination);
+  return panner;
 }
 
 // ─── Player sounds ────────────────────────────────────────────────────────────
@@ -121,19 +148,59 @@ export function playPulse() {
 }
 
 // ─── Enemy / alert sounds ─────────────────────────────────────────────────────
-export function playAlert() {
+export function updateListener(px, py) {
   try {
-    const c = SOUND_CONFIG.alert;
-    osc(c.freq1, 'square', c.duration, c.gain, c.freqEnd1);
-    setTimeout(() => osc(c.freq2, 'square', c.duration, c.gain, c.freqEnd2), c.delay);
+    const ac = ctx();
+    const l = ac.listener;
+    if (!_listenerInitialized) {
+      if (l.forwardX) {
+        l.forwardX.value = 0; l.forwardY.value = 0; l.forwardZ.value = 1;
+        l.upX.value = 0;      l.upY.value = 1;      l.upZ.value = 0;
+      } else { l.setOrientation(0, 0, 1, 0, 1, 0); }
+      _listenerInitialized = true;
+    }
+    if (l.positionX) {
+      l.positionX.value = px; l.positionY.value = 0; l.positionZ.value = py;
+    } else { l.setPosition(px, 0, py); }
   } catch (_) {}
 }
 
-export function playSentryAlert() {
+export function playAlert(x, y) {
+  try {
+    const c = SOUND_CONFIG.alert;
+    const dest = (x != null && y != null) ? createPositionalSource(x, y) : ctx().destination;
+    osc(c.freq1, 'square', c.duration, c.gain, c.freqEnd1, dest);
+    setTimeout(() => { try { osc(c.freq2, 'square', c.duration, c.gain, c.freqEnd2, dest); } catch (_) {} }, c.delay);
+  } catch (_) {}
+}
+
+export function playSentryAlert(x, y) {
   try {
     const c = SOUND_CONFIG.sentryAlert;
-    osc(c.freq1, 'square', c.duration, c.gain, c.freqEnd1);
-    setTimeout(() => osc(c.freq2, 'square', c.duration, c.gain, c.freqEnd2), c.delay);
+    const dest = (x != null && y != null) ? createPositionalSource(x, y) : ctx().destination;
+    osc(c.freq1, 'square', c.duration, c.gain, c.freqEnd1, dest);
+    setTimeout(() => { try { osc(c.freq2, 'square', c.duration, c.gain, c.freqEnd2, dest); } catch (_) {} }, c.delay);
+  } catch (_) {}
+}
+
+export function playEnemyFootstep(x, y) {
+  try {
+    const ac = ctx();
+    noiseNode(ac, SOUND_CONFIG.enemyFootstep, createPositionalSource(x, y));
+  } catch (_) {}
+}
+
+export function playEnemyFootstepHunting(x, y) {
+  try {
+    const ac = ctx();
+    noiseNode(ac, SOUND_CONFIG.enemyFootstepHunting, createPositionalSource(x, y));
+  } catch (_) {}
+}
+
+export function playBlindStalkerBreathing(x, y) {
+  try {
+    const c = SOUND_CONFIG.blindStalkerBreath;
+    osc(c.freq, 'triangle', c.duration, c.gain, c.freqEnd, createPositionalSource(x, y));
   } catch (_) {}
 }
 
@@ -156,11 +223,12 @@ export function playLevelComplete() {
   } catch (_) {}
 }
 
-export function playHazardPulse(volume = 1) {
+export function playHazardPulse(x, y, volume = 1) {
   if (volume <= 0.01) return;
   try {
     const c = SOUND_CONFIG.hazardPulse;
-    osc(c.freq, 'triangle', c.duration, c.gain * volume, c.freqEnd);
+    const dest = (x != null && y != null) ? createPositionalSource(x, y) : ctx().destination;
+    osc(c.freq, 'triangle', c.duration, c.gain * volume, c.freqEnd, dest);
   } catch (_) {}
 }
 

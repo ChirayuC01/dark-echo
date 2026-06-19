@@ -1,17 +1,17 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Production Audit complete (2026-06-18)  
+> **Last updated:** Phase 17 complete (2026-06-19)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 17 — Positional Audio + Enemy Footstep Visualization**  
+**Phase 18 — Reverb + Environmental Ambient Sounds**  
 Status: ⬜ Pending
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Next up is Phase 17.
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phase 17 is complete.
 
 ---
 
@@ -48,6 +48,9 @@ Status: ⬜ Pending
 | **10 levels** | `js/levels.js` | Level 10 "The Gauntlet II" — all mechanics + BlindStalker |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | **Ambient drone** | `js/audio.js`, `js/game.js` | 55Hz sine, gain 0.035, 1.5s fade-in/0.5s fade-out; starts on play, stops on death/win/title |
+| **Positional audio** | `js/audio.js`, `js/game.js` | PannerNode HRTF; updateListener() per frame; alert/sentry/hazard sounds positioned |
+| **Enemy footstep rays** | `js/entities.js`, `js/game.js`, `js/renderer.js` | 8-ray `'step-enemy'` burst per enemy step (520ms idle / 340ms hunt); muted red render |
+| **BlindStalker breathing** | `js/entities.js`, `js/audio.js`, `js/game.js` | Positional 110Hz breath every 2–3s; audio cue only, no rays |
 | **Debug overlay** | `js/debug.js`, `js/input.js`, `js/game.js`, `js/renderer.js` | Backtick toggle; FPS, rays, trails, glints, player state, all enemy states |
 | Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
@@ -162,6 +165,15 @@ Status: ⬜ Pending
 
 ---
 
+## Phase 17 — Complete ✅
+
+**Phase 17 summary:**
+- `js/constants.js`: 6 new constants — `ENEMY_STEP_INTERVAL_IDLE=520`, `ENEMY_STEP_INTERVAL_HUNT=340`, `ENEMY_STEP_RAYS=8`, `ENEMY_STEP_MAX=80`, `BLIND_STALKER_BREATH_MIN=2000`, `BLIND_STALKER_BREATH_MAX=3000`
+- `js/entities.js`: `stepTimer` + `shouldEmitStep(dt)` added to PatrolEnemy (uses `alertTimer>0` for hunt state), ChaserEnemy, BlindStalker; `breathTimer` + `shouldBreathe(dt)` added to BlindStalker
+- `js/audio.js`: `createPositionalSource(x,y)` private helper; `updateListener(px,py)` export (sets HRTF listener position + orientation once on first call); `playAlert(x,y)` / `playSentryAlert(x,y)` / `playHazardPulse(x,y,volume)` updated to route through PannerNode when coordinates provided; `playEnemyFootstep(x,y)`, `playEnemyFootstepHunting(x,y)`, `playBlindStalkerBreathing(x,y)` new exports
+- `js/game.js`: `Audio.updateListener()` called each frame; enemy loop dispatches `shouldEmitStep?.(dt)` → `burst('step-enemy', ...)` + audio; BlindStalker `shouldBreathe(dt)` → `playBlindStalkerBreathing`; exit reveal guard extended to exclude `'step-enemy'` rays; `playSentryAlert`, `playAlert`, `playHazardPulse` callers updated with positional args
+- `js/renderer.js`: `drawActiveRays` extended to 4 passes (adds `'step-enemy'`); `rayColor()` returns `rgba(180,60,60,α)` for step-enemy; `drawEchoTrails` adds `rgba(165,50,50,α)` branch for step-enemy trails
+
 ## Phase 16 — ❌ Skipped
 
 Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and immediately reverted. The arc-fill sonar ring did not look good — the original spoke/starburst rendering was preferred. This phase is permanently cancelled. Original ray rendering is unchanged.
@@ -181,19 +193,12 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 
 ## Next Recommended Task
 
-Phase 16 skipped. Begin **Phase 17 — Positional Audio + Enemy Footstep Visualization**:
-1. Add `createPositionalSource(x, y)` and `updateListener(px, py)` to `js/audio.js`
-2. Route `playAlert`, `playSentryAlert`, `playHazardPulse` through positional audio
-3. Add `stepTimer` and `shouldEmitStep(dt)` to PatrolEnemy, ChaserEnemy, BlindStalker
-4. In `game.js` update(): fire 8-ray `'step-enemy'` burst per enemy step
-5. Add `'step-enemy'` ray type color branch in renderer (muted red)
+Begin **Phase 18 — Reverb + Environmental Ambient Sounds**.
 
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 17.
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 18.
 
-**Cloudflare Pages setup (manual step — requires browser):**
-1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages → Create → Pages → Connect to Git
-2. Select the `dark-echo` repo; build command: `npm run build`; output directory: `dist`
-3. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repo secrets for the Actions workflow to auto-deploy
+**Cloudflare deployment (manual step — requires browser):**  
+Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repo secrets for the Actions workflow to auto-deploy on merge to `main`.
 
 ---
 
