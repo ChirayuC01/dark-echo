@@ -141,27 +141,27 @@ Status: ⬜ Pending
 
 ## Production Phase Pending Systems
 
-| System | Phase | Priority | Notes |
-|---|---|---|---|
-| Build pipeline (Vite) + Cloudflare deploy | Phase 15 | **Critical** | Start here — everything else depends on this |
-| localStorage level persistence | Phase 15 | High | Players lose progress on refresh currently |
-| Delete Wave/WaveManager shims | Phase 15 | Low | TD-002, quick win |
-| Wavefront visual upgrade (arc-fill) | Phase 16 | High | Biggest visual gap vs Dark Echo |
-| Positional audio (PannerNode) | Phase 17 | High | Enemies should pan left/right |
-| Enemy footstep ray bursts | Phase 17 | **Critical** | Most important missing mechanic — enemies are silent |
-| Reverb (ConvolverNode) | Phase 18 | High | Acoustic room feel |
-| Environmental ambient sounds | Phase 18 | High | Drips, rumbles, creaks — non-gameplay dread |
-| Player velocity inertia | Phase 19 | Medium | Movement feel |
-| Screen-shake on death/collapse | Phase 19 | Low | FI-007 |
-| Pulse-ready audio cue | Phase 19 | Low | QoL |
-| Act II levels (11–20) | Phase 20 | High | Content volume gap vs Dark Echo |
-| ScreamerEnemy | Phase 20 | Medium | New enemy type for Act II |
-| Android app (Capacitor) | Phase 21 | High | Play Store prerequisite |
-| Website + landing page | Phase 22 | High | No public presence currently |
-| Performance hardening (60fps mobile) | Phase 23 | High | Must pass on mid-range Android |
-| Level select screen | Phase 24 | Medium | Quality-of-life for 20-level game |
-| Achievements (10 total) | Phase 24 | Medium | Retention and replay incentive |
-| Google Play Store submission | Phase 25 | High | Final commercial goal |
+| System | Phase | Status | Priority | Notes |
+|---|---|---|---|---|
+| Build pipeline (Vite) + Cloudflare deploy | Phase 15 | ✅ Done | — | Live and working |
+| localStorage level persistence | Phase 15 | ✅ Done | — | Survives page refresh |
+| Delete Wave/WaveManager shims | Phase 15 | ✅ Done | — | TD-002 resolved |
+| Wavefront visual upgrade (arc-fill) | Phase 16 | ❌ Skipped | — | Original spoke rendering preferred |
+| Positional audio (PannerNode) | Phase 17 | ✅ Done | — | HRTF spatial audio live |
+| Enemy footstep ray bursts | Phase 17 | ✅ Done | — | 8-ray burst per step, muted red |
+| Reverb (ConvolverNode) | Phase 18 | ⬜ Pending | High | Acoustic room feel |
+| Environmental ambient sounds | Phase 18 | ⬜ Pending | High | Drips, rumbles, creaks — non-gameplay dread |
+| Player velocity inertia | Phase 19 | ⬜ Pending | Medium | Movement feel |
+| Screen-shake on death/collapse | Phase 19 | ⬜ Pending | Low | FI-007 |
+| Pulse-ready audio cue | Phase 19 | ⬜ Pending | Low | QoL |
+| Act II levels (11–20) | Phase 20 | ⬜ Pending | High | Content volume gap vs Dark Echo |
+| ScreamerEnemy | Phase 20 | ⬜ Pending | Medium | New enemy type for Act II |
+| Android app (Capacitor) | Phase 21 | ⬜ Pending | High | Play Store prerequisite |
+| Website + landing page | Phase 22 | ⬜ Pending | High | No public presence currently |
+| Performance hardening (60fps mobile) | Phase 23 | ⬜ Pending | High | Must pass on mid-range Android |
+| Level select screen | Phase 24 | ⬜ Pending | Medium | Quality-of-life for 20-level game |
+| Achievements (10 total) | Phase 24 | ⬜ Pending | Medium | Retention and replay incentive |
+| Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
 
@@ -185,7 +185,8 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 - `vite.config.js` created — `root: '.'`, `outDir: 'dist'`, `target: 'es2020'`
 - `vite@8.0.16` installed — 0 vulnerabilities, 47KB gzip-13KB bundle in 82ms
 - `.gitignore` created — excludes `node_modules/`, `dist/`, `android/`, `ios/`
-- `.github/workflows/deploy.yml` created — CI build on PR to `main`; deploy via `wrangler deploy` on push to `main`
+- `.github/workflows/deploy.yml` created — CI build on PR to `main`; deploy via `wrangler deploy` on push to `main`; `wranglerVersion: '4'` pinned (action defaults to 3.x which does not support Workers Static Assets)
+- `wrangler.jsonc` — `assets.directory` corrected to `"dist"` (was `"."`); Cloudflare Workers Static Assets confirmed as deploy target (not Pages)
 - `js/waves.js` — Wave and WaveManager shim classes deleted (TD-002 resolved)
 - `index.html` — `#continue-btn` added to title screen above "New Game" button; hidden by default via `style="display:none"`; "Begin" renamed to "New Game" for clarity
 - `js/ui.js` — `showContinueButton(levelNum)` and `hideContinueButton()` exports added
@@ -199,9 +200,13 @@ Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase
 
 ---
 
-## Deployment Setup
+## Deployment Setup ✅ Live
 
-Cloudflare Workers Git integration is connected to `ChirayuC01/dark-echo`.
+Deployment is confirmed working. Two parallel pipelines exist; both target the same Cloudflare Workers project (`resonance`).
+
+### Cloudflare Git Integration (primary)
+
+Cloudflare is connected directly to `ChirayuC01/dark-echo` and triggers its own build on every push.
 
 | Setting | Value |
 |---|---|
@@ -211,7 +216,16 @@ Cloudflare Workers Git integration is connected to `ChirayuC01/dark-echo`.
 | **Non-production deploy command** | `npx wrangler versions upload` |
 | **Root directory** | `/` |
 
-**Workflow:** develop on `claude/beautiful-fermat-5102bb` → open PR to `main` → Cloudflare runs `npm run build` + `npx wrangler deploy` automatically on merge.
+### GitHub Actions (`.github/workflows/deploy.yml`)
+
+Runs on push to `main`; also runs a build-only CI check on PRs to catch broken builds before merge.
+
+- Build + deploy on push to `main` via `cloudflare/wrangler-action@v3` with `wranglerVersion: '4'`
+- `wranglerVersion: '4'` is required — the action defaults to wrangler 3.x which does not support Workers Static Assets (`assets.directory` config)
+
+### Dev workflow
+
+Develop on `claude/beautiful-fermat-5102bb` → open PR to `main` → CI build runs → merge → both pipelines deploy automatically.
 
 ---
 
