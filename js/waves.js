@@ -203,20 +203,3 @@ export class RaySystem {
     this.echoTrails.length = 0;
   }
 }
-
-// ─── Backward-compat shim (used only by Hazard in entities.js if not yet updated) ──
-export class Wave {
-  constructor(x, y, _max, _speed, _alpha, type) {
-    this.x = x; this.y = y; this.type = type;
-    this.radius = 0; this.prevRadius = 0; this.done = false;
-    this._shim = true;
-  }
-  update() { this.done = true; }
-  opacity() { return 0; }
-}
-export class WaveManager {
-  constructor() { this.waves = []; }
-  add(w) { this.waves.push(w); }
-  update() { this.waves = this.waves.filter(w => !w.done); }
-  clear()  { this.waves = []; }
-}

@@ -4,6 +4,166 @@
 
 ---
 
+## [Phase 16 — Complete] Wavefront Visual Upgrade
+
+**Date:** 2026-06-19  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v1.2.0
+
+### What was done
+
+Replaced the starburst "spoke" ray rendering with a coherent expanding sonar ring — the single highest-impact visual change to close the gap with Dark Echo.
+
+**Modified files:**
+- `js/waves.js` — added module-level `_nextBurstId = 0`; `burst()` now stamps each ray with `ray.burstId = ++_nextBurstId` and `ray.startTime = performance.now()`
+- `js/renderer.js` — removed live tip segment drawing from `drawActiveRays()` (was the spoke); added `drawWavefront(rays, now, px, py, fps)` function; wired into both title screen and gameplay draw paths
+
+### `drawWavefront()` algorithm
+1. Groups active rays by `burstId`
+2. Sorts each group by `atan2(tip - burstOrigin)` → angular order
+3. For each adjacent pair: computes angle delta (normalized to [-π, π] to handle ±π wrap); skips pairs where |delta| > π/16 (prevents arc artifacts across wall boundaries)
+4. Draws `ctx.arc(burstX, burstY, medianRadius, aA, aA + dAngle)` — using `aA + dAngle` form avoids the ±π discontinuity in `ctx.arc`'s start/end angle interpretation
+5. Hearing attenuation applied to each arc via midpoint distance to player
+6. Origin ring: 0→32px expanding circle over 200ms, fades 0.5→0 with lineWidth tapering
+7. `ctx.filter = 'blur(1.5px)'` when FPS ≥ 45 for soft glow; skipped on low-end hardware
+
+### Visual result
+- 64-ray pulse burst → near-complete ring that expands and breaks where walls intercept
+- 22-ray step burst → partial arcs (gaps where angle spacing > π/16)
+- Echo trails (sealed segments in echoTrails) → still draw as individual lines, unchanged
+- Title screen demo pulse → also uses the wavefront renderer
+
+### Build
+- 48.56KB JS bundle, 462ms build, 0 vulnerabilities
+
+### Next phase
+**Phase 17 — Positional Audio + Enemy Footstep Visualization**: Add PannerNode spatial audio to all alert sounds; add enemy step-ray bursts (8 rays, muted red, every 520ms idle / 340ms hunting); add BlindStalker breathing cue.
+
+---
+
+## [Phase 15 — Complete] Vite Build Pipeline + localStorage Persistence
+
+**Date:** 2026-06-18  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Commit:** `45f729d`  
+**Version:** v1.1.0
+
+### What was done
+
+Implemented Phase 15 in full: Vite build tooling, Cloudflare Pages CI/CD workflow, localStorage level progress persistence, Continue button on title screen, and deletion of the Wave/WaveManager backward-compat shims.
+
+**New files:**
+- `package.json` — Vite 8.0.16 dev dependency; `dev`/`build`/`preview` scripts
+- `vite.config.js` — root `.`, outDir `dist`, target `es2020`, server on port 8080
+- `package-lock.json` — lockfile; 0 vulnerabilities
+- `.gitignore` — standard ignores including `android/` and `ios/` for Phase 21 prep
+- `.github/workflows/deploy.yml` — build on push/PR; deploy to Cloudflare Pages on push to main
+
+**Modified files:**
+- `js/waves.js` — deleted `Wave` and `WaveManager` classes (TD-002 resolved)
+- `index.html` — added `#continue-btn` above "New Game" button; renamed "Begin" → "New Game"
+- `js/ui.js` — added `showContinueButton(levelNum)` and `hideContinueButton()`
+- `js/game.js` — added `SAVE_KEY`, save on level complete, clear on win/restart, `'continue'` action handler, `refreshContinueButton()` helper called in `init()` and when returning to title
+- `docs/CURRENT_STATUS.md` — Phase 15 marked complete; next task = Phase 16
+- `docs/PRODUCTION_ROADMAP.md` — Phase 15 status → ✅ Complete
+- `docs/IMPLEMENTATION_ROADMAP.md` — Phase 15 tasks marked `[x]`
+
+### Verification
+
+- `npm run build` passes cleanly: 47KB JS bundle, 82ms cold build, 0 vulnerabilities
+- Grep confirmed no remaining `Wave` or `WaveManager` imports/references
+- localStorage save/load logic guards against `NaN`, missing key, index 0 (don't show continue from Level 1), and index ≥ TOTAL (game complete)
+
+### Manual steps remaining (user must do)
+
+1. Log into [Cloudflare Pages dashboard](https://dash.cloudflare.com) and connect the `chirayuc01/dark-echo` repo
+2. Set build command `npm run build`, output directory `dist`, Node version 20
+3. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repo secrets
+
+### Next phase
+
+**Phase 16 — Wavefront Visual Upgrade**: replace starburst ray rendering with arc-fill grouped by `burstId`. Files to modify: `js/waves.js` (add `burstId` + `startTime` to `Ray.init()`), `js/renderer.js` (add `drawWavefront()` replacing individual ray tip rendering).
+
+---
+
+## [Production Audit — Complete] Full Project Audit + Production Roadmap
+
+**Date:** 2026-06-18  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v1.0.1 (documentation only — no game code changed)
+
+### What was done
+
+Performed a comprehensive audit of the v1.0.0 prototype across all dimensions (architecture, gameplay, audio, visuals, level design, mobile, performance) and produced a full commercial production roadmap for taking RESONANCE from a local prototype to a deployed browser game + Android app.
+
+**New document created:**
+- `docs/PRODUCTION_ROADMAP.md` — 11 phases (15–25) with complete task lists, file lists, acceptance criteria, effort estimates, risk ratings, and dependency chains.
+
+**Existing documents updated:**
+- `docs/CURRENT_STATUS.md` — Active phase set to Phase 15; production pending systems table; updated branch and run instructions.
+- `docs/IMPLEMENTATION_ROADMAP.md` — Phases 15–25 appended as pending with quick-reference summaries.
+- `docs/PROJECT_MASTER_SPEC.md` — Deployment targets added to identity table; Out of Scope revised; Sections 14–15 added (Production Scope + New Systems).
+- `docs/KNOWN_ISSUES.md` — 8 new tech debt items (TD-007 through TD-014); Future Improvements table extended with 5 new items and target phases.
+- `docs/CHANGELOG.md` — v1.0.1 entry added.
+- `docs/DEVELOPMENT_LOG.md` — this entry.
+
+### Key audit findings
+
+**What is working well:**
+- DDA ray propagation, echo trails, entity reveal — geometrically correct and performant
+- 5 distinct enemy types with clear behavioral differences
+- 10 levels with correct mechanic introduction curve
+- Web Audio synthesis architecture (SOUND_CONFIG) is excellent and extensible
+- Codebase is clean, modular, well-documented — zero circular dependencies
+
+**Critical gaps vs Dark Echo (prioritized):**
+1. **Silent enemies** (TD-011) — Dark Echo's enemies generate footstep sounds that propagate visually. Completely absent in RESONANCE. Phase 17 fixes this.
+2. **No positional/binaural audio** (TD-012) — Sounds do not pan left/right based on source position. Phase 17 fixes this.
+3. **Ray visual looks like starburst, not wavefront** (TD-014) — Pulse renders as spokes, not expanding ring. Phase 16 fixes this via arc-fill rendering grouped by burstId.
+4. **No reverb** (TD-013) — Sounds feel disconnected from any physical space. Phase 18 fixes this via procedural ConvolverNode.
+5. **No public deployment** — Game exists only locally. Phase 15 (Vite + Cloudflare Pages) fixes this.
+6. **No Android app** — Phase 21 (Capacitor) fixes this.
+7. **Content volume** — 10 levels vs Dark Echo's ~50. Phase 20 adds Act II (levels 11–20).
+
+**What does NOT need to change:**
+- DDA ray mechanics — these are correct and performant
+- SOUND_CONFIG architecture — correctly extensible for all new sounds
+- Module structure — no refactoring needed, only additive changes
+- Level format — fully extensible for new mechanics
+
+### Production roadmap summary
+
+```
+Phase 15 — Vite build + Cloudflare deploy + localStorage       3–5 days
+Phase 16 — Wavefront visual upgrade (arc-fill renderer)        5–8 days
+Phase 17 — Positional audio + enemy footstep rays              8–12 days
+Phase 18 — Reverb + environmental sounds                       5–7 days
+Phase 19 — Movement inertia + screen-shake + micro-polish      3–4 days
+Phase 20 — Act II: 10 new levels + ScreamerEnemy               10–15 days
+Phase 21 — Android app (Capacitor)                             5–8 days
+Phase 22 — Website + landing page                              5–8 days
+Phase 23 — Performance hardening (60fps mobile)                4–6 days
+Phase 24 — Level select + achievements                         3–5 days
+Phase 25 — Google Play Store submission                        3–5 + review
+─────────────────────────────────────────────────────────────
+Total:                                                         55–83 days
+```
+
+### Recommended entry point for next session
+
+> Read `docs/CURRENT_STATUS.md` first, then `docs/PRODUCTION_ROADMAP.md` Phase 15.  
+> Phase 15 is entirely standalone — no gameplay changes, only build tooling and deployment. Begin with `npm init -y && npm install --save-dev vite`.
+
+### Decisions
+
+- **Keep vanilla JS** — No migration to React, TypeScript, Phaser, or PixiJS warranted. The codebase is clean and capable. Vite adds a build step without changing the code.
+- **Capacitor over PWA** — PWA on Android has audio latency issues in Web Audio. Capacitor wraps the existing web code in a WebView with native audio configuration.
+- **Cloudflare Pages over Netlify/Vercel** — Best global CDN, most generous free tier, fastest for a static game.
+- **No backend for v1.0** — localStorage handles all persistence. Supabase recommended only if leaderboards are added post-launch.
+- **Phase 17 (enemy sounds) is the highest-impact gameplay change** — It is also the most complex. It should be implemented after Phase 15 (build pipeline) and Phase 16 (visual) to avoid shipping complexity before the foundation is solid.
+
+---
+
 ## [Phase 14 — Complete] Final Polish & Balance
 
 **Date:** 2026-06-17  

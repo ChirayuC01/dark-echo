@@ -1,14 +1,17 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 14 complete (2026-06-17)  
+> **Last updated:** Production Audit complete (2026-06-18)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 14 — Final Polish & Balance**  
-Status: ✅ Complete
+**Phase 17 — Positional Audio + Enemy Footstep Visualization**  
+Status: ⬜ Pending
+
+> See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Next up is Phase 17.
 
 ---
 
@@ -133,33 +136,64 @@ Status: ✅ Complete
 
 ---
 
-## Pending Systems
+## Production Phase Pending Systems
 
-| System | Phase | Priority |
-|---|---|---|
-| ~~Water zones~~ | ~~Phase 2~~ | ~~High~~ |
-| ~~Collapsible walls~~ | ~~Phase 3~~ | ~~High~~ |
-| ~~Crushers~~ | ~~Phase 4~~ | ~~Medium~~ |
-| ~~Doors & keys~~ | ~~Phase 5~~ | ~~Medium~~ |
-| ~~Switches / triggers~~ | ~~Phase 6~~ | ~~Medium~~ |
-| ~~Sentry enemy~~ | ~~Phase 7~~ | ~~Medium~~ |
-| ~~BlindStalker enemy~~ | ~~Phase 8~~ | ~~Low~~ |
-| ~~Level 10 (full polish)~~ | ~~Phase 9~~ | ~~High~~ |
-| ~~Ambient audio~~ | ~~Phase 10~~ | ~~Medium~~ |
-| ~~Debug overlay~~ | ~~Phase 11~~ | ~~Low~~ |
-| ~~Audio polish~~ | ~~Phase 12~~ | ~~Low~~ |
-| ~~Mobile polish~~ | ~~Phase 13~~ | ~~Medium~~ |
-| ~~Final balance/polish~~ | ~~Phase 14~~ | ~~Low~~ |
+| System | Phase | Priority | Notes |
+|---|---|---|---|
+| Build pipeline (Vite) + Cloudflare deploy | Phase 15 | **Critical** | Start here — everything else depends on this |
+| localStorage level persistence | Phase 15 | High | Players lose progress on refresh currently |
+| Delete Wave/WaveManager shims | Phase 15 | Low | TD-002, quick win |
+| Wavefront visual upgrade (arc-fill) | Phase 16 | High | Biggest visual gap vs Dark Echo |
+| Positional audio (PannerNode) | Phase 17 | High | Enemies should pan left/right |
+| Enemy footstep ray bursts | Phase 17 | **Critical** | Most important missing mechanic — enemies are silent |
+| Reverb (ConvolverNode) | Phase 18 | High | Acoustic room feel |
+| Environmental ambient sounds | Phase 18 | High | Drips, rumbles, creaks — non-gameplay dread |
+| Player velocity inertia | Phase 19 | Medium | Movement feel |
+| Screen-shake on death/collapse | Phase 19 | Low | FI-007 |
+| Pulse-ready audio cue | Phase 19 | Low | QoL |
+| Act II levels (11–20) | Phase 20 | High | Content volume gap vs Dark Echo |
+| ScreamerEnemy | Phase 20 | Medium | New enemy type for Act II |
+| Android app (Capacitor) | Phase 21 | High | Play Store prerequisite |
+| Website + landing page | Phase 22 | High | No public presence currently |
+| Performance hardening (60fps mobile) | Phase 23 | High | Must pass on mid-range Android |
+| Level select screen | Phase 24 | Medium | Quality-of-life for 20-level game |
+| Achievements (10 total) | Phase 24 | Medium | Retention and replay incentive |
+| Google Play Store submission | Phase 25 | High | Final commercial goal |
 
 ---
 
+## Phase 16 — ❌ Skipped
+
+Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and immediately reverted. The arc-fill sonar ring did not look good — the original spoke/starburst rendering was preferred. This phase is permanently cancelled. Original ray rendering is unchanged.
+
+## Phase 15 — Complete ✅
+
+**Phase 15 summary:**
+- `package.json` created — `npm run dev` (Vite dev server port 8080), `npm run build` (outputs `dist/`)
+- `vite.config.js` created — `root: '.'`, `outDir: 'dist'`, `target: 'es2020'`
+- `vite@8.0.16` installed — 0 vulnerabilities, 47KB gzip-13KB bundle in 82ms
+- `.gitignore` created — excludes `node_modules/`, `dist/`, `android/`, `ios/`
+- `.github/workflows/deploy.yml` created — CI build on PR; deploy to Cloudflare Pages on push to `main` via `wrangler-action@v3` (requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets to be added to the GitHub repo)
+- `js/waves.js` — Wave and WaveManager shim classes deleted (TD-002 resolved)
+- `index.html` — `#continue-btn` added to title screen above "New Game" button; hidden by default via `style="display:none"`; "Begin" renamed to "New Game" for clarity
+- `js/ui.js` — `showContinueButton(levelNum)` and `hideContinueButton()` exports added
+- `js/game.js` — `SAVE_KEY = 'resonance_progress'`; `localStorage.setItem` on level complete; `localStorage.removeItem` on win and restart-from-1; `'continue'` action handler; `refreshContinueButton()` helper called on init and on title screen return
+
 ## Next Recommended Task
 
-Begin **Phase 14 — Final Polish & Balance**:
-1. Playtest all 10 levels; tune enemy speeds and hazard intervals where needed
-2. Title screen: fire a demo pulse from center on load (shows mechanic before play)
-3. Screen transitions: brief CSS opacity fade on level-up screen
-4. Verify echo trail cap holds under stress (rapid pulse spam)
+Phase 16 skipped. Begin **Phase 17 — Positional Audio + Enemy Footstep Visualization**:
+1. Add `createPositionalSource(x, y)` and `updateListener(px, py)` to `js/audio.js`
+2. Route `playAlert`, `playSentryAlert`, `playHazardPulse` through positional audio
+3. Add `stepTimer` and `shouldEmitStep(dt)` to PatrolEnemy, ChaserEnemy, BlindStalker
+4. In `game.js` update(): fire 8-ray `'step-enemy'` burst per enemy step
+5. Add `'step-enemy'` ray type color branch in renderer (muted red)
+
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 17.
+
+**Cloudflare Pages setup (manual step — requires browser):**
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages → Create → Pages → Connect to Git
+2. Select the `dark-echo` repo; build command: `npm run build`; output directory: `dist`
+3. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repo secrets for the Actions workflow to auto-deploy
 
 ---
 
@@ -169,16 +203,17 @@ None currently.
 
 ---
 
-## Branch
+## Branches
 
-`claude/sound-vision-game-7pvbo1`
+| Branch | Purpose |
+|---|---|
+| `claude/beautiful-fermat-5102bb` | Current active branch |
+| `claude/sound-vision-game-7pvbo1` | Prior development branch (v1.0.0 shipped here) |
 
 ## How to Run
 
 ```
-cd /home/user/dark-echo
-python3 -m http.server 8080
-# Open: http://localhost:8080
+npm run dev     # development server at localhost:8080 with HMR
+npm run build   # production build → dist/
+npm run preview # preview the production build locally
 ```
-
-> Must use HTTP server (not `file://`) due to ES module CORS restrictions.

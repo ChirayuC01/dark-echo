@@ -4,3 +4,18 @@
 !.dev.vars.example
 .env*
 !.env.example
+node_modules/
+dist/
+
+# Capacitor (Phase 21)
+android/
+ios/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.local

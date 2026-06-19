@@ -25,7 +25,53 @@
 
 ---
 
+## [v1.2.0] — 2026-06-19 — Phase 16
+
+### Changed
+- **Wavefront visual upgrade**: Active pulse/step bursts now render as an expanding sonar ring instead of a starburst spoke pattern. Each `burst()` call gets a unique `burstId` and `startTime`; `drawWavefront()` groups rays by `burstId`, sorts by angle from burst origin, and connects adjacent tips with `ctx.arc()` strokes at the median radius. Arc connections are only drawn when adjacent rays are within π/16 of each other — gaps appear correctly where sound has hit walls or bounced away.
+- **Shockwave origin ring**: A faint circle expands from 0 to 32px at the burst origin over 200ms then fades, giving each pulse a tactile "impact" feel at the source point.
+- **Soft glow on wavefront**: `ctx.filter = 'blur(1.5px)'` applied to the wavefront arc pass when FPS ≥ 45; disabled automatically on low-end hardware.
+- **Echo trails unchanged**: Historical sealed segments still render as individual line segments — the geometric history of past bounces.
+
+### Technical
+- `js/waves.js`: module-level `_nextBurstId` counter; `burst()` stamps each ray with `burstId` and `startTime` via `performance.now()`
+- `js/renderer.js`: `drawActiveRays()` no longer draws the live tip segment (was the spoke); sealed bounce segments still draw. New `drawWavefront()` function draws the arc ring + origin ring.
+
+---
+
+## [v1.1.0] — 2026-06-18 — Phase 15
+
+### Added
+- **Vite build pipeline**: `package.json` + `vite.config.js` (Vite 8.0.16, 0 vulnerabilities). `npm run dev` starts HMR dev server on port 8080; `npm run build` produces 47KB JS bundle in `dist/` in 82ms; `npm run preview` serves production build locally.
+- **GitHub Actions CI/CD** (`.github/workflows/deploy.yml`): builds on every push and PR; deploys to Cloudflare Pages on push to main (requires `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` GitHub secrets).
+- **`.gitignore`**: covers `node_modules/`, `dist/`, `android/`, `ios/`, editor dirs.
+- **localStorage level persistence** (`SAVE_KEY = 'resonance_progress'`): saves 0-based `levelIndex` on every level complete; clears on game win and restart-from-1.
+- **Continue button** on title screen: shown when saved progress exists above Level 1, displaying "Continue — Level N" (1-based); hidden when no save or save is at Level 1.
+
+### Removed
+- **`Wave` and `WaveManager` shim classes** from `js/waves.js` (TD-002 resolved): dead backward-compat code from the circular-wave → DDA-ray migration; confirmed no imports anywhere.
+
+---
+
 ## [Unreleased]
+
+---
+
+## [v1.0.1] — 2026-06-18 — Production Audit
+
+### Added
+- `docs/PRODUCTION_ROADMAP.md` — complete specifications for Phases 15–25 covering: Vite build pipeline, Cloudflare Pages deployment, wavefront visual upgrade, positional audio + enemy footstep rays, reverb + environmental sounds, movement inertia + micro-polish, Act II (10 more levels + ScreamerEnemy), Android Capacitor packaging, website + landing page, performance hardening, achievements + level select, and Google Play Store submission.
+
+### Changed
+- `docs/CURRENT_STATUS.md` — active phase updated to Phase 15; production pending systems table added; branch table updated; run instructions updated to reflect post-Vite workflow.
+- `docs/IMPLEMENTATION_ROADMAP.md` — Phases 15–25 appended as pending with quick-reference task lists, referencing PRODUCTION_ROADMAP.md for full specs.
+- `docs/PROJECT_MASTER_SPEC.md` — project identity updated with deployment targets; Out of Scope revised; Section 14 (Production Scope) and Section 15 (New Systems v1.1+) added.
+- `docs/KNOWN_ISSUES.md` — 8 new tech debt entries (TD-007–TD-014); Future Improvements table updated with target phases.
+- `docs/DEVELOPMENT_LOG.md` — Production Audit session entry added.
+
+### Notes
+- No game code changed in this session. Documentation only.
+- v1.0.0 game is feature-complete and playable locally. This documents the production planning audit.
 
 ---
 
