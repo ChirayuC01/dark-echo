@@ -2,6 +2,12 @@ let _ctx = null;
 let _ambientNode = null;
 let _ambientGain = null;
 let _listenerInitialized = false;
+let _convolver = null;
+let _reverbSend = null;
+let _pendingReverbSize = 'medium';
+let _envActive = false;
+let _envTimers = [];
+let _envSources = [];
 
 function ctx() {
   if (!_ctx) _ctx = new AudioContext();
@@ -12,10 +18,10 @@ function ctx() {
 // ─── Centralized sound config — tune all sounds here ─────────────────────────
 export const SOUND_CONFIG = {
   footstep: {
-    gain: 0.18, filterFreq: 180, duration: 0.06, pitchVariation: 0.05,
+    gain: 0.18, filterFreq: 180, duration: 0.06, pitchVariation: 0.05, reverb: true,
   },
   footstepWater: {
-    gain: 0.28, filterFreq: 320, duration: 0.09, pitchVariation: 0.05,
+    gain: 0.28, filterFreq: 320, duration: 0.09, pitchVariation: 0.05, reverb: true,
   },
   pulse: {
     freq1: 90, freq2: 55, gain1: 0.5, gain2: 0.3,
@@ -45,7 +51,7 @@ export const SOUND_CONFIG = {
   },
   collapse: {
     freq: 120, freqEnd: 40, gain: 0.4, duration: 0.35,
-    noiseGain: 0.5, noiseDuration: 0.25, noiseFilterFreq: 300,
+    noiseGain: 0.5, noiseDuration: 0.25, noiseFilterFreq: 300, reverb: true,
   },
   doorOpen: {
     freq: 280, freqEnd: 380, gain: 0.2, duration: 0.25,
@@ -57,22 +63,56 @@ export const SOUND_CONFIG = {
     freq: 55, gain: 0.035, fadeIn: 1.5, fadeOut: 0.5,
   },
   enemyFootstep: {
-    gain: 0.07, filterFreq: 240, duration: 0.06,
+    gain: 0.07, filterFreq: 240, duration: 0.06, reverb: true,
   },
   enemyFootstepHunting: {
-    gain: 0.13, filterFreq: 300, duration: 0.05,
+    gain: 0.13, filterFreq: 300, duration: 0.05, reverb: true,
+  },
+  environmental: {
+    drip:   { filterFreq: 300, duration: 0.04, gain: 0.06, minInterval: 4000,  maxInterval: 12000 },
+    rumble: { filterFreq: 60,  duration: 1.2,  gain: 0.02, minInterval: 18000, maxInterval: 35000 },
+    creak:  { filterFreq: 800, filterQ: 3, duration: 0.3, gain: 0.04, minInterval: 12000, maxInterval: 28000 },
   },
   blindStalkerBreath: {
     freq: 110, freqEnd: 95, gain: 0.03, duration: 0.3,
   },
 };
 
+// ─── Reverb helpers ───────────────────────────────────────────────────────────
+function createImpulseResponse(ac, duration, decay) {
+  const len = Math.ceil(ac.sampleRate * duration);
+  const buf = ac.createBuffer(2, len, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) {
+      d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ac.sampleRate * decay));
+    }
+  }
+  return buf;
+}
+
+function initReverb() {
+  const ac = ctx();
+  _convolver = ac.createConvolver();
+  _reverbSend = ac.createGain();
+  const sizes = { small: [1.2, 0.4], medium: [2.0, 0.7], large: [3.5, 1.2] };
+  const [dur, dec] = sizes[_pendingReverbSize] ?? sizes.medium;
+  _convolver.buffer = createImpulseResponse(ac, dur, dec);
+  _reverbSend.gain.value = 0.25;
+  _convolver.connect(_reverbSend); _reverbSend.connect(ac.destination);
+}
+
+function addReverb(gainNode) {
+  if (_convolver) gainNode.connect(_convolver);
+}
+
 // ─── Internal helpers ─────────────────────────────────────────────────────────
-function osc(freq, type, dur, gain, freqEnd, destination) {
+function osc(freq, type, dur, gain, freqEnd, destination, reverb) {
   const ac = ctx();
   const o = ac.createOscillator();
   const g = ac.createGain();
   o.connect(g); g.connect(destination || ac.destination);
+  if (reverb) addReverb(g);
   o.type = type; o.frequency.setValueAtTime(freq, ac.currentTime);
   if (freqEnd != null) o.frequency.exponentialRampToValueAtTime(freqEnd, ac.currentTime + dur);
   g.gain.setValueAtTime(gain, ac.currentTime);
@@ -98,6 +138,7 @@ function noiseNode(ac, cfg, destination) {
   filter.frequency.value = cfg.filterFreq * (1 + variation);
   src.buffer = noiseBuffer(ac, cfg.duration);
   src.connect(filter); filter.connect(g); g.connect(destination || ac.destination);
+  if (cfg.reverb) addReverb(g);
   g.gain.setValueAtTime(cfg.gain, ac.currentTime);
   src.start();
 }
@@ -137,8 +178,8 @@ export function playPulse() {
   try {
     const c = SOUND_CONFIG.pulse;
     const ac = ctx();
-    osc(c.freq1, 'sine', c.dur1, c.gain1, c.freqEnd1);
-    osc(c.freq2, 'sine', c.dur2, c.gain2, c.freqEnd2);
+    osc(c.freq1, 'sine', c.dur1, c.gain1, c.freqEnd1, null, true);
+    osc(c.freq2, 'sine', c.dur2, c.gain2, c.freqEnd2, null, true);
     const src = ac.createBufferSource();
     const g = ac.createGain();
     src.buffer = noiseBuffer(ac, c.clickDur);
@@ -236,13 +277,14 @@ export function playCollapse() {
   try {
     const c = SOUND_CONFIG.collapse;
     const ac = ctx();
-    osc(c.freq, 'sine', c.duration, c.gain, c.freqEnd);
+    osc(c.freq, 'sine', c.duration, c.gain, c.freqEnd, null, true);
     const src = ac.createBufferSource();
     const g = ac.createGain();
     const filter = ac.createBiquadFilter();
     filter.type = 'lowpass'; filter.frequency.value = c.noiseFilterFreq;
     src.buffer = noiseBuffer(ac, c.noiseDuration);
     src.connect(filter); filter.connect(g); g.connect(ac.destination);
+    addReverb(g);
     g.gain.setValueAtTime(c.noiseGain, ac.currentTime);
     src.start();
   } catch (_) {}
@@ -262,11 +304,103 @@ export function playKeyPickup() {
   } catch (_) {}
 }
 
+// ─── Environmental sounds ─────────────────────────────────────────────────────
+function playDrip() {
+  if (!_envActive) return;
+  try {
+    const ac = ctx();
+    const c = SOUND_CONFIG.environmental.drip;
+    const src = ac.createBufferSource();
+    const g = ac.createGain();
+    const filter = ac.createBiquadFilter();
+    const panner = ac.createStereoPanner();
+    filter.type = 'bandpass'; filter.frequency.value = c.filterFreq;
+    panner.pan.value = (Math.random() * 2 - 1);
+    src.buffer = noiseBuffer(ac, c.duration);
+    src.connect(filter); filter.connect(g); g.connect(panner); panner.connect(ac.destination);
+    g.gain.setValueAtTime(c.gain, ac.currentTime);
+    src.start();
+  } catch (_) {}
+  if (!_envActive) return;
+  const next = c => c.minInterval + Math.random() * (c.maxInterval - c.minInterval);
+  const cfg = SOUND_CONFIG.environmental.drip;
+  _envTimers.push(setTimeout(playDrip, next(cfg)));
+}
+
+function playRumble() {
+  if (!_envActive) return;
+  try {
+    const ac = ctx();
+    const c = SOUND_CONFIG.environmental.rumble;
+    const src = ac.createBufferSource();
+    const g = ac.createGain();
+    const filter = ac.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = c.filterFreq;
+    src.buffer = noiseBuffer(ac, c.duration);
+    src.connect(filter); filter.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime(c.gain, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + c.duration);
+    src.start();
+  } catch (_) {}
+  if (!_envActive) return;
+  const next = c => c.minInterval + Math.random() * (c.maxInterval - c.minInterval);
+  const cfg = SOUND_CONFIG.environmental.rumble;
+  _envTimers.push(setTimeout(playRumble, next(cfg)));
+}
+
+function playCreak() {
+  if (!_envActive) return;
+  try {
+    const ac = ctx();
+    const c = SOUND_CONFIG.environmental.creak;
+    const src = ac.createBufferSource();
+    const g = ac.createGain();
+    const filter = ac.createBiquadFilter();
+    filter.type = 'bandpass'; filter.frequency.value = c.filterFreq; filter.Q.value = c.filterQ;
+    src.buffer = noiseBuffer(ac, c.duration);
+    src.connect(filter); filter.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime(c.gain, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + c.duration);
+    src.start();
+  } catch (_) {}
+  if (!_envActive) return;
+  const next = c => c.minInterval + Math.random() * (c.maxInterval - c.minInterval);
+  const cfg = SOUND_CONFIG.environmental.creak;
+  _envTimers.push(setTimeout(playCreak, next(cfg)));
+}
+
+export function setReverbSize(size) {
+  _pendingReverbSize = size;
+  if (_convolver) {
+    const ac = ctx();
+    const sizes = { small: [1.2, 0.4], medium: [2.0, 0.7], large: [3.5, 1.2] };
+    const [dur, dec] = sizes[size] ?? sizes.medium;
+    _convolver.buffer = createImpulseResponse(ac, dur, dec);
+  }
+}
+
+export function startEnvironmental() {
+  if (_envActive) return;
+  _envActive = true;
+  const rand = (min, max) => min + Math.random() * (max - min);
+  const { drip, rumble, creak } = SOUND_CONFIG.environmental;
+  _envTimers.push(setTimeout(playDrip,   rand(drip.minInterval,   drip.maxInterval)));
+  _envTimers.push(setTimeout(playRumble, rand(rumble.minInterval, rumble.maxInterval)));
+  _envTimers.push(setTimeout(playCreak,  rand(creak.minInterval,  creak.maxInterval)));
+}
+
+export function stopEnvironmental() {
+  _envActive = false;
+  for (const id of _envTimers) clearTimeout(id);
+  _envTimers = [];
+}
+
 // ─── Ambient drone ────────────────────────────────────────────────────────────
 export function startAmbient() {
   try {
     if (_ambientNode) return;
     const ac = ctx();
+    initReverb();
     const c = SOUND_CONFIG.ambient;
     _ambientNode = ac.createOscillator();
     _ambientGain = ac.createGain();

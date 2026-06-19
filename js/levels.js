@@ -6,6 +6,7 @@ export const LEVELS = [
   {
     name: 'The Awakening',
     hint: 'Move with WASD · Footsteps reveal walls · SPACE for a loud pulse · Reach the exit',
+    reverb: 'small',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -30,6 +31,7 @@ export const LEVELS = [
   {
     name: 'The Patrol',
     hint: 'A guard patrols the corridor · Time your crossing · Pulse is loud – use it wisely',
+    reverb: 'medium',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,2,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
@@ -56,6 +58,7 @@ export const LEVELS = [
   {
     name: 'The Chamber',
     hint: 'Hazards emit scan pulses · Listen and watch · Don\'t get caught in the sweep',
+    reverb: 'medium',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -86,6 +89,7 @@ export const LEVELS = [
   {
     name: 'The Hunt',
     hint: 'It hunts by sound · Move quietly · Every pulse gives away your position',
+    reverb: 'medium',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,2,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
@@ -112,6 +116,7 @@ export const LEVELS = [
   {
     name: 'The Gauntlet',
     hint: 'All threats combined · Silence is survival · Trust the echoes',
+    reverb: 'large',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,2,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,1],
@@ -147,6 +152,7 @@ export const LEVELS = [
   {
     name: 'The Whisper',
     hint: 'Hold SHIFT (or C) to crouch · The guard hears every footstep · Silence is survival',
+    reverb: 'small',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start, wide open
@@ -177,6 +183,7 @@ export const LEVELS = [
   {
     name: 'Flooded',
     hint: 'Water slows your steps — but every splash is louder · Cross the flood carefully',
+    reverb: 'large',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start (col 1)
@@ -209,6 +216,7 @@ export const LEVELS = [
   {
     name: 'The Collapse',
     hint: 'Find the key · Shatter the walls · The door will open',
+    reverb: 'medium',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1
@@ -242,6 +250,7 @@ export const LEVELS = [
   {
     name: 'The Corridor',
     hint: 'Find the switch · Time the crushers · Dodge the sentry at the exit',
+    reverb: 'large',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1, open row
@@ -284,6 +293,7 @@ export const LEVELS = [
   {
     name: 'The Gauntlet II',
     hint: 'It hears everything · Silence is survival · Combine all you\'ve learned',
+    reverb: 'large',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
       [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1: start col 1

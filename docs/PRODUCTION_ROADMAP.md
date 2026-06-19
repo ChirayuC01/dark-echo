@@ -186,7 +186,7 @@ Dark Echo's core tension comes from enemies that generate their own sounds. Thei
 ---
 
 ## Phase 18 — Reverb + Environmental Ambient Sounds
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Add room acoustics via ConvolverNode and procedural environmental sounds that build atmosphere without providing gameplay information.  
 **Depends on:** Phase 17 complete  
 **Estimated effort:** 5–7 days  

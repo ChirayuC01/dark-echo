@@ -163,6 +163,7 @@ function loadLevel(idx) {
     }
   }
 
+  Audio.setReverbSize(def.reverb ?? 'medium');
   UI.setLevelName(def.name);
   UI.setHint(def.hint);
 }
@@ -329,6 +330,7 @@ function die(reason) {
   G.deathReason = reason;
   G.screen = 'dead';
   Audio.stopAmbient();
+  Audio.stopEnvironmental();
   Audio.playDeath();
   UI.setDeathMessage(reason);
   UI.show('screen-dead');
@@ -359,6 +361,7 @@ function checkExit() {
       G.screen = 'win';
       localStorage.removeItem(SAVE_KEY);
       Audio.stopAmbient();
+      Audio.stopEnvironmental();
       Audio.playLevelComplete();
       UI.show('screen-win');
       Renderer.setHUDVisible(false);
@@ -534,6 +537,7 @@ function handleAction(action) {
       UI.hide();
       Renderer.setHUDVisible(true);
       Audio.startAmbient();
+      Audio.startEnvironmental();
       break;
     case 'continue': {
       const saved = parseInt(localStorage.getItem(SAVE_KEY), 10);
@@ -544,6 +548,7 @@ function handleAction(action) {
       UI.hide();
       Renderer.setHUDVisible(true);
       Audio.startAmbient();
+      Audio.startEnvironmental();
       break;
     }
     case 'resume':
@@ -556,7 +561,9 @@ function handleAction(action) {
       G.screen = 'playing';
       UI.hide();
       Renderer.setHUDVisible(true);
+      Audio.stopEnvironmental();
       Audio.startAmbient();
+      Audio.startEnvironmental();
       break;
     case 'restart-from-1':
       G.levelIndex = 0;
@@ -565,17 +572,22 @@ function handleAction(action) {
       G.screen = 'playing';
       UI.hide();
       Renderer.setHUDVisible(true);
+      Audio.stopEnvironmental();
       Audio.startAmbient();
+      Audio.startEnvironmental();
       break;
     case 'next-level':
       G.screen = 'playing';
       UI.hide();
       Renderer.setHUDVisible(true);
+      Audio.stopEnvironmental();
       Audio.startAmbient();
+      Audio.startEnvironmental();
       break;
     case 'title':
       G.screen = 'title';
       Audio.stopAmbient();
+      Audio.stopEnvironmental();
       UI.show('screen-title');
       Renderer.setHUDVisible(false);
       initTitleScreen();

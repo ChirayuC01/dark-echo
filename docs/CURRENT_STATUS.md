@@ -1,17 +1,17 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 17 complete (2026-06-19)  
+> **Last updated:** Phase 18 complete (2026-06-19)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 18 — Reverb + Environmental Ambient Sounds**  
+**Phase 19 — Polish + Screen-shake + Velocity Inertia**  
 Status: ⬜ Pending
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phase 17 is complete.
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17 and 18 are complete.
 
 ---
 
@@ -149,8 +149,8 @@ Status: ⬜ Pending
 | Wavefront visual upgrade (arc-fill) | Phase 16 | ❌ Skipped | — | Original spoke rendering preferred |
 | Positional audio (PannerNode) | Phase 17 | ✅ Done | — | HRTF spatial audio live |
 | Enemy footstep ray bursts | Phase 17 | ✅ Done | — | 8-ray burst per step, muted red |
-| Reverb (ConvolverNode) | Phase 18 | ⬜ Pending | High | Acoustic room feel |
-| Environmental ambient sounds | Phase 18 | ⬜ Pending | High | Drips, rumbles, creaks — non-gameplay dread |
+| Reverb (ConvolverNode) | Phase 18 | ✅ Done | — | Per-level impulse response; small/medium/large |
+| Environmental ambient sounds | Phase 18 | ✅ Done | — | Drip/rumble/creak loops; scheduled randomly |
 | Player velocity inertia | Phase 19 | ⬜ Pending | Medium | Movement feel |
 | Screen-shake on death/collapse | Phase 19 | ⬜ Pending | Low | FI-007 |
 | Pulse-ready audio cue | Phase 19 | ⬜ Pending | Low | QoL |
@@ -164,6 +164,15 @@ Status: ⬜ Pending
 | Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
+
+## Phase 18 — Complete ✅
+
+**Phase 18 summary:**
+- `js/audio.js`: `createImpulseResponse(ac, duration, decay)` — stereo noise buffer with exponential decay for ConvolverNode; `initReverb()` — creates `_convolver` + `_reverbSend` (gain 0.25) routed to destination, called from `startAmbient()`; `addReverb(gainNode)` — taps any gain node into the convolver when it exists; `setReverbSize(size)` export — accepts `'small'`/`'medium'`/`'large'`, updates `_pendingReverbSize` and hot-swaps convolver buffer if live; `startEnvironmental()` / `stopEnvironmental()` exports — schedule drip/rumble/creak via setTimeout chains with `_envActive` guard and `clearTimeout` cleanup
+- `SOUND_CONFIG.environmental`: `drip` (bandpass 300Hz, 0.04s, random stereo pan), `rumble` (lowpass 60Hz, 1.2s), `creak` (bandpass 800Hz Q=3, 0.3s); each with min/max interval ranges
+- Reverb routing: `osc()` gains 7th `reverb` param; `noiseNode()` checks `cfg.reverb`; `playPulse()`, `playCollapse()` updated to use reverb; enemy footstep sounds (`enemyFootstep`, `enemyFootstepHunting`) flagged with `reverb: true`
+- `js/game.js`: `Audio.setReverbSize(def.reverb ?? 'medium')` in `loadLevel()`; `Audio.startEnvironmental()` added to `'start'`/`'continue'`/`'restart'`/`'restart-from-1'`/`'next-level'` cases; `Audio.stopEnvironmental()` added to `die()`, `checkExit()` win branch, and `'title'` case
+- `js/levels.js`: `reverb` property added to all 10 levels — `'small'` (L1 Awakening, L6 Whisper), `'medium'` (L2 Patrol, L3 Chamber, L4 Hunt, L8 Collapse), `'large'` (L5 Gauntlet, L7 Flooded, L9 Corridor, L10 Gauntlet II)
 
 ## Phase 17 — Complete ✅
 
