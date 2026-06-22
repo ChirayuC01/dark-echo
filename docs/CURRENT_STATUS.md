@@ -1,17 +1,17 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 18 complete (2026-06-19)  
+> **Last updated:** Phase 19 complete (2026-06-22)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 19 — Polish + Screen-shake + Velocity Inertia**  
+**Phase 20 — Level Expansion (Act II)**  
 Status: ⬜ Pending
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17 and 18 are complete.
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17, 18, and 19 are complete.
 
 ---
 
@@ -151,9 +151,9 @@ Status: ⬜ Pending
 | Enemy footstep ray bursts | Phase 17 | ✅ Done | — | 8-ray burst per step, muted red |
 | Reverb (ConvolverNode) | Phase 18 | ✅ Done | — | Per-level impulse response; small/medium/large |
 | Environmental ambient sounds | Phase 18 | ✅ Done | — | Drip/rumble/creak loops; scheduled randomly |
-| Player velocity inertia | Phase 19 | ⬜ Pending | Medium | Movement feel |
-| Screen-shake on death/collapse | Phase 19 | ⬜ Pending | Low | FI-007 |
-| Pulse-ready audio cue | Phase 19 | ⬜ Pending | Low | QoL |
+| Player velocity inertia | Phase 19 | ✅ Done | — | Lerp-based vx/vy; crouch reduces accel |
+| Screen-shake on death/collapse | Phase 19 | ✅ Done | — | triggerShake(); crusher near-miss shake |
+| Pulse-ready audio cue | Phase 19 | ✅ Done | — | 1800Hz click on cooldown expiry |
 | Act II levels (11–20) | Phase 20 | ⬜ Pending | High | Content volume gap vs Dark Echo |
 | ScreamerEnemy | Phase 20 | ⬜ Pending | Medium | New enemy type for Act II |
 | Android app (Capacitor) | Phase 21 | ⬜ Pending | High | Play Store prerequisite |
@@ -164,6 +164,15 @@ Status: ⬜ Pending
 | Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
+
+## Phase 19 — Complete ✅
+
+**Phase 19 summary:**
+- `js/constants.js`: `PLAYER_ACCEL = 12` (velocity lerp factor), `DANGER_NEAR_PX = 100` (proximity threshold)
+- `js/entities.js`: Player gains `vx = 0`, `vy = 0` fields; `move()` rewrites position increments as velocity lerp — `this.vx += (targetVx - this.vx) * Math.min(1, accel * dt)` — with crouch reducing accel by 45% for more deliberate feel
+- `js/audio.js`: `SOUND_CONFIG.pulseReady` — 1800Hz sine, 0.04s, gain 0.08; `playPulseReady()` export; `setDangerLevel(t)` export — modulates `_ambientGain` via `setTargetAtTime(0.035 + t * 0.05, now, 0.1)` as enemies approach
+- `js/game.js`: `G.shake = { x, y, timer, intensity, duration }` state field; `triggerShake(intensity, duration)` helper; shake decays each frame with linear amplitude falloff; collapse → `triggerShake(4, 0.25)`, death → `triggerShake(6, 0.35)`, crusher near-miss (within 12px margin, debounced by shake timer) → `triggerShake(2, 0.15)`; pulse-ready tracking via `prevCooldown` local; danger level calculated as nearest enemy fraction of `DANGER_NEAR_PX`; level entry pulse fires 300ms after `loadLevel()` without consuming cooldown
+- `js/renderer.js`: `ctx.save(); ctx.translate(shake.x, shake.y)` wraps all game drawing; `ctx.restore()` before vignette so overlay stays fixed
 
 ## Phase 18 — Complete ✅
 

@@ -48,9 +48,13 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
+
+  // Screen shake — translate game content; vignette and debug stay fixed
+  const shakeActive = shake && shake.timer > 0;
+  if (shakeActive) { ctx.save(); ctx.translate(shake.x, shake.y); }
 
   // Walls are intentionally never drawn — the world exists only as sound,
   // and all sound is rendered relative to how close the player is to it.
@@ -68,6 +72,9 @@ export function draw(state, now) {
   drawActiveRays(rays, px, py);
   if (playerInWater) drawWaterZone(player);
   drawPlayer(player);
+
+  if (shakeActive) ctx.restore();
+
   drawVignette();
   if (Debug.isEnabled()) Debug.draw(ctx, state, state.fps || 60);
 }

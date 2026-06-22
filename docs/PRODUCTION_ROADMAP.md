@@ -232,7 +232,7 @@ Dark Echo's core tension comes from enemies that generate their own sounds. Thei
 ---
 
 ## Phase 19 — Movement Feel + Micro-Polish
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Add player velocity inertia, screen-shake, pulse-ready audio cue, and danger proximity feedback.  
 **Depends on:** Phase 15 complete (can run in parallel with 17–18)  
 **Estimated effort:** 3–4 days  

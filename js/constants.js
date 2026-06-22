@@ -78,6 +78,10 @@ export const BLIND_STALKER_BREATH_MAX = 3000; // ms max interval between breathi
 export const KEY_PICKUP_RADIUS    = 12;
 export const CRUSHER_REVEAL_MS    = 5500;  // crushers stay visible longer than walls
 
+// ─── Movement + polish ───────────────────────────────────────────────────────
+export const PLAYER_ACCEL    = 12;   // velocity lerp factor (unitless, not px/s²)
+export const DANGER_NEAR_PX  = 100; // enemy proximity threshold for danger audio
+
 // ─── Cell types ──────────────────────────────────────────────────────────────
 export const CELL = {
   EMPTY:       0,

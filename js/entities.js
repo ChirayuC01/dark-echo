@@ -9,7 +9,8 @@ import { TILE, PLAYER_SPEED, PLAYER_RADIUS, ENEMY_RADIUS,
          BLIND_STALKER_SPEED_IDLE, BLIND_STALKER_SPEED_HUNT,
          BLIND_STALKER_HUNT_DURATION,
          ENEMY_STEP_INTERVAL_IDLE, ENEMY_STEP_INTERVAL_HUNT,
-         BLIND_STALKER_BREATH_MIN, BLIND_STALKER_BREATH_MAX } from './constants.js';
+         BLIND_STALKER_BREATH_MIN, BLIND_STALKER_BREATH_MAX,
+         PLAYER_ACCEL } from './constants.js';
 import { dist } from './utils.js';
 import { resolveWalls } from './collision.js';
 
@@ -17,6 +18,7 @@ import { resolveWalls } from './collision.js';
 export class Player {
   constructor(x, y) {
     this.x = x; this.y = y;
+    this.vx = 0; this.vy = 0;
     this.radius = PLAYER_RADIUS;
     this.crouching = false;
     this.dead = false;
@@ -28,10 +30,13 @@ export class Player {
     const speed = PLAYER_SPEED
       * (crouching ? CROUCH_SPEED_MULT : 1)
       * (inWater   ? WATER_SPEED_MULT  : 1);
-    this.x += dx * speed * dt;
+    const accel = PLAYER_ACCEL * (crouching ? 0.55 : 1);
+    this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt);
+    this.vy += (dy * speed - this.vy) * Math.min(1, accel * dt);
+    this.x += this.vx * dt;
     let r = resolveWalls(grid, this.x, this.y, this.radius);
     this.x = r.x; this.y = r.y;
-    this.y += dy * speed * dt;
+    this.y += this.vy * dt;
     r = resolveWalls(grid, this.x, this.y, this.radius);
     this.x = r.x; this.y = r.y;
   }

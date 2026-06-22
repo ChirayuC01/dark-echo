@@ -8,7 +8,8 @@ import { TILE, COLS, ROWS, W, H,
          CROUCH_INTERVAL_MULT, CROUCH_RAY_MULT, CROUCH_DIST_MULT,
          WATER_INTERVAL_MULT, WATER_RAY_MULT,
          COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS,
-         KEY_PICKUP_RADIUS, CRUSHER_REVEAL_MS } from './constants.js';
+         KEY_PICKUP_RADIUS, CRUSHER_REVEAL_MS,
+         DANGER_NEAR_PX } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -50,7 +51,14 @@ const G = {
   keys: new Map(),                // id → {id, col, row, x, y, collected, doorId, revealedAt}
   doorsByCell: new Map(),         // "row,col" → door obj; used for fast ray-hit lookups
   triggers: [],                   // [{col, row, x, y, action, targetId, fired, revealedAt}]
+  shake: { x: 0, y: 0, timer: 0, intensity: 0, duration: 0.001 },
 };
+
+function triggerShake(intensity, duration) {
+  G.shake.intensity = intensity;
+  G.shake.duration = duration;
+  G.shake.timer = duration;
+}
 
 const TOTAL = LEVELS.length;
 
@@ -166,6 +174,13 @@ function loadLevel(idx) {
   Audio.setReverbSize(def.reverb ?? 'medium');
   UI.setLevelName(def.name);
   UI.setHint(def.hint);
+
+  // Reset shake and fire one free entry pulse after 300ms
+  G.shake = { x: 0, y: 0, timer: 0, intensity: 0, duration: 0.001 };
+  const entryX = G.player.x, entryY = G.player.y;
+  setTimeout(() => {
+    if (G.screen === 'playing') G.raySystem.burst(entryX, entryY, 'pulse', G.castFn);
+  }, 300);
 }
 
 // ─── Title screen demo pulse ───────────────────────────────────────────────────
@@ -204,6 +219,7 @@ function applyWallHits(hits, now) {
       G.grid[h.row][h.col] = CELL.EMPTY;
       G.raySystem.burst(h.x, h.y, 'pulse', G.castFn, COLLAPSE_BURST_RAYS, 80);
       Audio.playCollapse();
+      triggerShake(4, 0.25);
     }
   }
   let wi = 0;
@@ -329,6 +345,7 @@ function checkDeath() {
 function die(reason) {
   G.deathReason = reason;
   G.screen = 'dead';
+  triggerShake(6, 0.35);
   Audio.stopAmbient();
   Audio.stopEnvironmental();
   Audio.playDeath();
@@ -406,8 +423,10 @@ function update(dt, now) {
     Audio.playFootstepSurface(G.playerInWater ? 'water' : 'normal');
   }
 
-  // Pulse rays
+  // Pulse rays — track ready transition for audio cue
+  const prevCooldown = G.pulseCooldown;
   G.pulseCooldown = Math.max(0, G.pulseCooldown - dt * 1000);
+  if (prevCooldown > 0 && G.pulseCooldown === 0) Audio.playPulseReady();
   if (Input.consumePulse() && G.pulseCooldown === 0) {
     G.pulseCooldown = PULSE_COOLDOWN;
     G.raySystem.burst(G.player.x, G.player.y, 'pulse', G.castFn);
@@ -453,6 +472,18 @@ function update(dt, now) {
   }
   for (const cr of G.crushers) cr.update(dt);
 
+  // Crusher near-miss shake — fire once per approach (debounced by shake timer)
+  if (G.shake.timer <= 0) {
+    for (const cr of G.crushers) {
+      const b = cr.bounds();
+      if (circleOverlapsAABB(G.player.x, G.player.y, PLAYER_RADIUS + 12, b.x1, b.y1, b.x2, b.y2) &&
+          !circleOverlapsAABB(G.player.x, G.player.y, PLAYER_RADIUS, b.x1, b.y1, b.x2, b.y2)) {
+        triggerShake(2, 0.15);
+        break;
+      }
+    }
+  }
+
   // Key pickup — proximity triggers collection and opens the matching door
   for (const [, key] of G.keys) {
     if (key.collected) continue;
@@ -481,6 +512,24 @@ function update(dt, now) {
   // Death & exit
   checkDeath();
   if (G.screen === 'playing') checkExit();
+
+  // Screen shake decay
+  if (G.shake.timer > 0) {
+    G.shake.timer = Math.max(0, G.shake.timer - dt);
+    const frac = G.shake.timer / G.shake.duration;
+    G.shake.x = (Math.random() * 2 - 1) * G.shake.intensity * frac;
+    G.shake.y = (Math.random() * 2 - 1) * G.shake.intensity * frac;
+  } else {
+    G.shake.x = 0; G.shake.y = 0;
+  }
+
+  // Danger proximity — modulate ambient drone based on nearest enemy
+  let minEnemyDist = Infinity;
+  for (const en of G.enemies) {
+    const d = dist(G.player.x, G.player.y, en.x, en.y);
+    if (d < minEnemyDist) minEnemyDist = d;
+  }
+  Audio.setDangerLevel(minEnemyDist < DANGER_NEAR_PX ? 1 - minEnemyDist / DANGER_NEAR_PX : 0);
 
   // HUD
   Renderer.updateHUD(G.pulseCooldown, PULSE_COOLDOWN, G.levelIndex, TOTAL, crouching);

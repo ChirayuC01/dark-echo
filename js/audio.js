@@ -76,6 +76,9 @@ export const SOUND_CONFIG = {
   blindStalkerBreath: {
     freq: 110, freqEnd: 95, gain: 0.03, duration: 0.3,
   },
+  pulseReady: {
+    freq: 1800, gain: 0.08, duration: 0.04,
+  },
 };
 
 // ─── Reverb helpers ───────────────────────────────────────────────────────────
@@ -424,6 +427,21 @@ export function stopAmbient() {
     _ambientNode = null;
     _ambientGain = null;
     nodeToStop.stop(ac.currentTime + c.fadeOut + 0.05);
+  } catch (_) {}
+}
+
+export function playPulseReady() {
+  try {
+    const c = SOUND_CONFIG.pulseReady;
+    osc(c.freq, 'sine', c.duration, c.gain);
+  } catch (_) {}
+}
+
+export function setDangerLevel(t) {
+  try {
+    if (!_ambientGain) return;
+    const ac = ctx();
+    _ambientGain.gain.setTargetAtTime(0.035 + t * 0.05, ac.currentTime, 0.1);
   } catch (_) {}
 }
 
