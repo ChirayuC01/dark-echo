@@ -10,7 +10,7 @@ import { TILE, PLAYER_SPEED, PLAYER_RADIUS, ENEMY_RADIUS,
          BLIND_STALKER_HUNT_DURATION,
          ENEMY_STEP_INTERVAL_IDLE, ENEMY_STEP_INTERVAL_HUNT,
          BLIND_STALKER_BREATH_MIN, BLIND_STALKER_BREATH_MAX,
-         PLAYER_ACCEL } from './constants.js';
+         PLAYER_ACCEL, SCREAMER_ALERT_RADIUS } from './constants.js';
 import { dist } from './utils.js';
 import { resolveWalls } from './collision.js';
 
@@ -351,6 +351,33 @@ export class Hazard {
       return { x: this.x, y: this.y };
     }
     return null;
+  }
+
+  killsPlayer(playerX, playerY) {
+    return dist(this.x, this.y, playerX, playerY) < this.radius + PLAYER_RADIUS;
+  }
+}
+
+// ─── ScreamerEnemy ────────────────────────────────────────────────────────────
+// Stationary sound trap. Any ray that passes within its radius triggers a burst
+// and alerts all enemies within SCREAMER_ALERT_RADIUS. Kills on player contact.
+export class ScreamerEnemy {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.radius = HAZARD_RADIUS;
+    this.shape = 'screamer';
+    this.triggered = false;
+    this.revealedAt = -Infinity;
+  }
+
+  alertNearbyEnemies(enemies) {
+    for (const en of enemies) {
+      const d = dist(this.x, this.y, en.x, en.y);
+      if (d < SCREAMER_ALERT_RADIUS) {
+        if (en.hearSound) en.hearSound(this.x, this.y);
+        if (en.hearStep)  en.hearStep(this.x, this.y);
+      }
+    }
   }
 
   killsPlayer(playerX, playerY) {

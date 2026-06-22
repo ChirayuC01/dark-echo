@@ -48,7 +48,7 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
@@ -68,6 +68,7 @@ export function draw(state, now) {
   drawTriggers(triggers, now, px, py);
   drawCrushers(crushers, now, px, py);
   drawHazards(hazards, now, px, py);
+  drawScreamers(screamers, now, px, py);
   drawEnemies(enemies, now, px, py);
   drawActiveRays(rays, px, py);
   if (playerInWater) drawWaterZone(player);
@@ -163,6 +164,43 @@ function drawHazards(hazards, now, px, py) {
     ctx.beginPath(); ctx.arc(h.x, h.y, h.radius + 8, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = `rgba(255,100,60,${alpha})`;
     ctx.beginPath(); ctx.arc(h.x, h.y, 4.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ─── Screamers ────────────────────────────────────────────────────────────────
+function drawScreamers(screamers, now, px, py) {
+  if (!screamers || !screamers.length) return;
+  ctx.save();
+  for (const s of screamers) {
+    const heard = hearing(Math.hypot(s.x - px, s.y - py));
+    if (heard <= 0) continue;
+    const alpha = revealAlpha(s.revealedAt, now) * heard;
+    if (alpha < 0.004) continue;
+    const pulse = 0.5 + 0.5 * Math.sin(now / 200);
+    const r = s.triggered ? 'rgba(255,40,40' : 'rgba(255,130,30';
+    ctx.shadowBlur = 14 * alpha * (s.triggered ? 1 : pulse);
+    ctx.shadowColor = `${r},${(alpha * 0.6).toFixed(3)})`;
+    // Outer glow ring
+    const grd = ctx.createRadialGradient(s.x, s.y, 3, s.x, s.y, s.radius + 10);
+    grd.addColorStop(0, `${r},${(alpha * 0.5).toFixed(3)})`);
+    grd.addColorStop(1, `${r},0)`);
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.radius + 10, 0, Math.PI * 2); ctx.fill();
+    // Core dot
+    ctx.fillStyle = `${r},${alpha.toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, Math.PI * 2); ctx.fill();
+    // Radiating spikes (4 lines at 45° offsets) to distinguish from Hazard
+    ctx.strokeStyle = `${r},${(alpha * 0.7).toFixed(3)})`;
+    ctx.lineWidth = 1.2;
+    for (let i = 0; i < 4; i++) {
+      const a = (Math.PI / 4) + i * (Math.PI / 2);
+      const len = (s.triggered ? 12 : 8 + 4 * pulse);
+      ctx.beginPath();
+      ctx.moveTo(s.x + Math.cos(a) * 6, s.y + Math.sin(a) * 6);
+      ctx.lineTo(s.x + Math.cos(a) * len, s.y + Math.sin(a) * len);
+      ctx.stroke();
+    }
   }
   ctx.restore();
 }

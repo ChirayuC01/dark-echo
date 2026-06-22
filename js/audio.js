@@ -79,6 +79,10 @@ export const SOUND_CONFIG = {
   pulseReady: {
     freq: 1800, gain: 0.08, duration: 0.04,
   },
+  screamer: {
+    freq1: 2400, freq2: 1800, freq3: 3200,
+    gain: 0.4, duration: 1.5,
+  },
 };
 
 // ─── Reverb helpers ───────────────────────────────────────────────────────────
@@ -427,6 +431,22 @@ export function stopAmbient() {
     _ambientNode = null;
     _ambientGain = null;
     nodeToStop.stop(ac.currentTime + c.fadeOut + 0.05);
+  } catch (_) {}
+}
+
+export function playScreamer() {
+  try {
+    const c = SOUND_CONFIG.screamer;
+    const ac = ctx();
+    osc(c.freq1, 'sawtooth', c.duration,       c.gain,       c.freq2);
+    osc(c.freq3, 'sine',     c.duration * 0.8,  c.gain * 0.5, c.freq1);
+    osc(c.freq2, 'square',   c.duration * 0.6,  c.gain * 0.3, c.freq3);
+    const src = ac.createBufferSource();
+    const g = ac.createGain();
+    src.buffer = noiseBuffer(ac, 0.12);
+    src.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime(c.gain * 0.8, ac.currentTime);
+    src.start();
   } catch (_) {}
 }
 

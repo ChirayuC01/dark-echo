@@ -9,7 +9,8 @@ import { TILE, COLS, ROWS, W, H,
          WATER_INTERVAL_MULT, WATER_RAY_MULT,
          COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS,
          KEY_PICKUP_RADIUS, CRUSHER_REVEAL_MS,
-         DANGER_NEAR_PX } from './constants.js';
+         DANGER_NEAR_PX,
+         SCREAMER_BURST_RAYS } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -20,7 +21,7 @@ const SAVE_KEY = 'resonance_progress';
 import { LEVELS } from './levels.js';
 import { RaySystem } from './waves.js';
 import { castRay, circlesOverlap, castRayCrushers, circleOverlapsAABB } from './collision.js';
-import { Player, PatrolEnemy, ChaserEnemy, Hazard, Crusher, Sentry, BlindStalker } from './entities.js';
+import { Player, PatrolEnemy, ChaserEnemy, Hazard, Crusher, Sentry, BlindStalker, ScreamerEnemy } from './entities.js';
 import * as Debug from './debug.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ const G = {
   doorsByCell: new Map(),         // "row,col" → door obj; used for fast ray-hit lookups
   triggers: [],                   // [{col, row, x, y, action, targetId, fired, revealedAt}]
   shake: { x: 0, y: 0, timer: 0, intensity: 0, duration: 0.001 },
+  screamers: [],
 };
 
 function triggerShake(intensity, duration) {
@@ -79,6 +81,7 @@ function loadLevel(idx) {
   G.enemies = [];
   G.hazards = [];
   G.crushers = [];
+  G.screamers = [];
   G.doors = new Map();
   G.keys = new Map();
   G.doorsByCell = new Map();
@@ -123,6 +126,8 @@ function loadLevel(idx) {
       G.enemies.push(new Sentry(ex, ey, e.angle ?? 0));
     } else if (e.type === 'stalker') {
       G.enemies.push(new BlindStalker(ex, ey));
+    } else if (e.type === 'screamer') {
+      G.screamers.push(new ScreamerEnemy(ex, ey));
     }
   }
 
@@ -245,6 +250,19 @@ function processRayEntities(now) {
       if (d < ent.radius + REVEAL_D) ent.revealedAt = now;
     }
 
+    // Screamer reveal + trigger (any ray type activates)
+    for (const sc of G.screamers) {
+      const d = segPtDist(sc.x, sc.y, sx, sy, tx, ty);
+      if (d < sc.radius + REVEAL_D) sc.revealedAt = now;
+      if (!sc.triggered && d < sc.radius + 4) {
+        sc.triggered = true;
+        G.raySystem.burst(sc.x, sc.y, 'pulse', G.castFn, SCREAMER_BURST_RAYS, 320);
+        sc.alertNearbyEnemies(G.enemies);
+        Audio.playScreamer();
+        triggerShake(5, 0.4);
+      }
+    }
+
     // Crusher reveal — larger radius than entities so player can track from safe zone
     for (const cr of G.crushers) {
       const d = segPtDist(cr.x, cr.y, sx, sy, tx, ty);
@@ -333,6 +351,12 @@ function checkDeath() {
       return;
     }
   }
+  for (const sc of G.screamers) {
+    if (sc.killsPlayer(p.x, p.y)) {
+      die('Silenced.');
+      return;
+    }
+  }
   for (const cr of G.crushers) {
     const b = cr.bounds();
     if (circleOverlapsAABB(p.x, p.y, PLAYER_RADIUS, b.x1, b.y1, b.x2, b.y2)) {
@@ -367,6 +391,13 @@ function fireTrigger(tr) {
   } else if (tr.action === 'remove_wall') {
     const [r, c] = tr.targetId.split(',').map(Number);
     G.grid[r][c] = CELL.EMPTY;
+  } else if (tr.action === 'spawn_enemy') {
+    const [type, col, row] = tr.targetId.split(',');
+    const ex = parseInt(col) * TILE + TILE / 2;
+    const ey = parseInt(row) * TILE + TILE / 2;
+    if (type === 'chaser')  G.enemies.push(new ChaserEnemy(ex, ey));
+    else if (type === 'stalker') G.enemies.push(new BlindStalker(ex, ey));
+    else if (type === 'screamer') G.screamers.push(new ScreamerEnemy(ex, ey));
   }
 }
 
@@ -523,10 +554,14 @@ function update(dt, now) {
     G.shake.x = 0; G.shake.y = 0;
   }
 
-  // Danger proximity — modulate ambient drone based on nearest enemy
+  // Danger proximity — modulate ambient drone based on nearest enemy/screamer
   let minEnemyDist = Infinity;
   for (const en of G.enemies) {
     const d = dist(G.player.x, G.player.y, en.x, en.y);
+    if (d < minEnemyDist) minEnemyDist = d;
+  }
+  for (const sc of G.screamers) {
+    const d = dist(G.player.x, G.player.y, sc.x, sc.y);
     if (d < minEnemyDist) minEnemyDist = d;
   }
   Audio.setDangerLevel(minEnemyDist < DANGER_NEAR_PX ? 1 - minEnemyDist / DANGER_NEAR_PX : 0);
