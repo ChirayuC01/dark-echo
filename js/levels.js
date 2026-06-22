@@ -282,6 +282,8 @@ export const LEVELS = [
     triggers: [{ col: 10, row: 9, action: 'remove_wall', targetId: '13,16' }],
   },
 
+  // ─── ACT II ──────────────────────────────────────────────────────────────────
+
   // ─── Level 10 ─── "The Gauntlet II"  (all mechanics + BlindStalker)
   // BlindStalker starts in the mid-section (row 5, col 15). It hears everything —
   // even crouched footsteps. The player must pulse the collapsible wall at col 5, row 5
@@ -321,5 +323,347 @@ export const LEVELS = [
     ],
     keys:  [{ id: 'key-g2', col: 2, row: 7, doorId: 'door-g2' }],
     doors: [{ id: 'door-g2', col: 10, row: 10 }],
+  },
+
+  // ─── Level 11 ─── "The Corridor II"  (patrol showcase — step echoes)
+  // Three parallel east-west corridors connected by short north-south gaps.
+  // Three step-aware patrols occupy each corridor. Player must crouch to cross.
+  {
+    name: 'The Corridor II',
+    hint: 'Three guards, three corridors · Crouch to cross · Step-echoes betray you',
+    reverb: 'large',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1 start
+      [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1], // 2 wall — gaps col 1,18
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 3 corridor A
+      [1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1], // 4 wall — gaps col 6,13
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5 corridor B
+      [1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1], // 6 wall — gaps col 6,13
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7 corridor C
+      [1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1], // 8 wall — gaps col 6,13
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9 corridor D
+      [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1], // 10 wall — gaps col 1,18
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11 open
+      [1,1,0,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,0,1], // 12 obstacles
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13 exit col 18
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'patrol', col: 2,  row: 3, stepAware: true, waypoints: [[2,3],[17,3]] },
+      { type: 'patrol', col: 17, row: 5, stepAware: true, waypoints: [[17,5],[2,5]] },
+      { type: 'patrol', col: 2,  row: 7, stepAware: true, waypoints: [[2,7],[17,7]] },
+    ],
+  },
+
+  // ─── Level 12 ─── "The Chamber II"  (large open room, screamer intro)
+  // One large open room with pillar obstacles. Two screamers flank the center path.
+  // Player must navigate around them using footsteps only — no pulse allowed safely.
+  {
+    name: 'The Chamber II',
+    hint: 'The red spikes react to any sound ray · Navigate without triggering them',
+    reverb: 'large',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1 start col 1
+      [1,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,1], // 2
+      [1,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,1], // 3
+      [1,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,1], // 4
+      [1,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,1], // 5
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 6 center lane
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7 center lane
+      [1,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,1], // 8
+      [1,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,1], // 9
+      [1,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,1], // 10
+      [1,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,1], // 11
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 12
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13 exit col 18
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'screamer', col: 9,  row: 4 },
+      { type: 'screamer', col: 9,  row: 10 },
+      { type: 'chaser',   col: 17, row: 7 },
+    ],
+  },
+
+  // ─── Level 13 ─── "The Factory"  (crusher gauntlet)
+  // Four crushers in alternating corridors. Each crusher sweeps its entire lane.
+  // Timing windows require sprinting through one corridor at a time.
+  {
+    name: 'The Factory',
+    hint: 'The machines never stop · Watch the rhythm · Sprint when the gap opens',
+    reverb: 'medium',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1 start
+      [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1], // 2 wall — gap col 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 3 crusher corridor A
+      [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1], // 4 wall — gap col 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5 crusher corridor B
+      [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1], // 6 wall — gap col 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7 crusher corridor C
+      [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1], // 8 wall — gap col 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9 crusher corridor D
+      [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1], // 10 wall — gap col 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11 open exit zone
+      [1,0,1,1,1,0,1,0,1,1,1,1,0,1,0,1,1,1,0,1], // 12 scattered walls
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13 exit col 18
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'crusher', col: 5,  row: 3,  axis: 'h', range: 3, period: 7.0 },
+      { type: 'crusher', col: 14, row: 5,  axis: 'h', range: 3, period: 6.0 },
+      { type: 'crusher', col: 5,  row: 7,  axis: 'h', range: 3, period: 8.5 },
+      { type: 'crusher', col: 14, row: 9,  axis: 'h', range: 3, period: 5.5 },
+      { type: 'patrol',  col: 2,  row: 11, waypoints: [[2,11],[17,11]] },
+    ],
+  },
+
+  // ─── Level 14 ─── "The Scream"  (screamer puzzle — pulse-free challenge)
+  // Three screamers form a triangle around the path. The collapsible wall at col 10
+  // row 7 can ONLY be safely pulsed from behind the south wall (row 9+) where the
+  // pulse ray doesn't reach the screamers. A patrol guards the south approach.
+  {
+    name: 'The Scream',
+    hint: 'They react to any ray — plan every step before you move',
+    reverb: 'medium',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1 start
+      [1,0,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,0,1], // 2
+      [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1], // 3
+      [1,1,0,1,1,1,0,1,1,1,1,1,1,0,1,1,1,0,1,1], // 4
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5 open
+      [1,0,1,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1], // 6
+      [1,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,1], // 7 collapsible col 10
+      [1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1], // 8 wall — gaps col 5, 14
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9 safe south zone
+      [1,0,1,1,0,1,1,0,1,1,1,1,0,1,1,0,1,1,0,1], // 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11
+      [1,1,0,1,1,0,1,0,1,1,1,1,0,1,0,1,1,0,1,1], // 12
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13 exit col 18
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'screamer', col: 5,  row: 5 },
+      { type: 'screamer', col: 14, row: 5 },
+      { type: 'screamer', col: 9,  row: 3 },
+      { type: 'patrol',   col: 2,  row: 9, stepAware: true, waypoints: [[2,9],[17,9]] },
+    ],
+  },
+
+  // ─── Level 15 ─── "The Archive"  (3 keys, 3 doors)
+  // Dense maze with 3 key-door pairs. Keys are scattered in dead-end alcoves.
+  // Player must explore all three branches before the exit door opens.
+  {
+    name: 'The Archive',
+    hint: 'Three keys hidden in the dark · Find them all before the way out appears',
+    reverb: 'small',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,1], // 1 start col 1
+      [1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,0,1], // 2
+      [1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1], // 3 key-A alcove at col 2
+      [1,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,1,1,0,1], // 4
+      [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1], // 5
+      [1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,0,1,1,0,1], // 6
+      [1,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1], // 7 key-B alcove at col 18
+      [1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1], // 8
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9 open corridor
+      [1,0,1,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,1,1], // 10 — door-C at col 18 row 10
+      [1,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,1], // 11 key-C alcove at col 9 row 12
+      [1,1,0,1,1,0,1,1,0,1,0,1,0,1,1,0,1,1,0,1], // 12
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13 exit col 18
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'chaser',  col: 10, row: 5 },
+      { type: 'patrol',  col: 3,  row: 9, waypoints: [[3,9],[16,9]] },
+      { type: 'hazard',  col: 5,  row: 12 },
+    ],
+    keys: [
+      { id: 'arc-k1', col: 2,  row: 3,  doorId: 'arc-d1' },
+      { id: 'arc-k2', col: 18, row: 7,  doorId: 'arc-d2' },
+      { id: 'arc-k3', col: 9,  row: 12, doorId: 'arc-d3' },
+    ],
+    doors: [
+      { id: 'arc-d1', col: 6,  row: 5 },
+      { id: 'arc-d2', col: 10, row: 9 },
+      { id: 'arc-d3', col: 14, row: 9 },
+    ],
+  },
+
+  // ─── Level 16 ─── "The Flood II"  (water + screamers — no safe pulse)
+  // Wide water zone bisects the map. Two screamers stand in the water.
+  // Any pulse at the crossing range will hit them. Player must wade through
+  // silently at full speed cost, footsteps amplified.
+  {
+    name: 'The Flood II',
+    hint: 'Water amplifies every step · The sentinels react to any ray · Cross in silence',
+    reverb: 'large',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1 start
+      [1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,1,1,0,0,1], // 2
+      [1,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1], // 3
+      [1,1,0,1,1,0,1,1,0,1,0,1,1,0,1,1,0,1,1,1], // 4
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5 approach
+      [1,1,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,1], // 6 WATER
+      [1,1,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,1], // 7 WATER (screamers here)
+      [1,1,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,1], // 8 WATER
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9 exit approach
+      [1,1,0,1,1,0,1,1,0,1,0,1,1,0,1,1,0,1,1,1], // 10
+      [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1], // 11
+      [1,0,1,0,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,1], // 12
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13 exit col 18
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'screamer', col: 6,  row: 7 },
+      { type: 'screamer', col: 13, row: 7 },
+      { type: 'hazard',   col: 5,  row: 3 },
+      { type: 'hazard',   col: 14, row: 3 },
+    ],
+  },
+
+  // ─── Level 17 ─── "The Awakening II"  (BlindStalker stealth test)
+  // One large open space. One BlindStalker. No hazards. Player must reach exit
+  // without the stalker locking on. Moving in short bursts with long pauses.
+  {
+    name: 'The Awakening II',
+    hint: 'One hunter · Open space · It hears everything — move in silence, wait in darkness',
+    reverb: 'large',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1 start col 1
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 2 open
+      [1,0,0,1,1,0,0,0,0,1,0,1,0,0,0,0,1,1,0,1], // 3 sparse cover
+      [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1], // 4
+      [1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1], // 5
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 6 wide open
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7 wide open
+      [1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1], // 8
+      [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1], // 9
+      [1,0,0,1,1,0,0,0,0,1,0,1,0,0,0,0,1,1,0,1], // 10 sparse cover
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11 open
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 12 open
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13 exit col 18
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'stalker', col: 10, row: 7 },
+    ],
+  },
+
+  // ─── Level 18 ─── "The Web"  (trigger chain — spawn_enemy + open_door)
+  // Two trigger tiles: first spawns a chaser mid-map, second removes a wall
+  // that blocks the exit path. The player must trip both triggers to progress
+  // but the spawned chaser immediately starts hunting.
+  {
+    name: 'The Web',
+    hint: 'Step on the switch — but something will wake · Plan your escape route first',
+    reverb: 'medium',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,1], // 1 start
+      [1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,0,1], // 2
+      [1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1], // 3
+      [1,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,1,1,0,1], // 4
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5 trigger-1 row (col 5)
+      [1,0,1,0,1,1,1,0,1,1,1,1,0,1,1,1,0,1,0,1], // 6
+      [1,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,1], // 7
+      [1,0,1,1,0,0,1,1,0,1,1,0,1,1,0,0,1,1,0,1], // 8
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9 trigger-2 row (col 14)
+      [1,1,0,1,1,1,0,1,1,1,1,1,1,0,1,1,1,0,1,1], // 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11
+      [1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,1,0,1,0,1], // 12
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13 exit — wall at 13,15 blocks until trigger-2
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'patrol', col: 3, row: 11, waypoints: [[3,11],[16,11]] },
+      { type: 'hazard', col: 9, row: 3 },
+    ],
+    triggers: [
+      { col: 5,  row: 5, action: 'spawn_enemy', targetId: 'chaser,10,7' },
+      { col: 14, row: 9, action: 'remove_wall',  targetId: '13,15' },
+    ],
+  },
+
+  // ─── Level 19 ─── "The Vault"  (all Act II mechanics combined)
+  // Screamers guard the key alcove. A crusher patrols the main corridor.
+  // A BlindStalker wanders the exit hall. Player must collect the key,
+  // avoid the screamers, cross the crusher, and slip past the stalker.
+  {
+    name: 'The Vault',
+    hint: 'Key behind the sentinels · Crusher in the hall · Stalker at the gate',
+    reverb: 'large',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 1 start
+      [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1,0,1], // 2
+      [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1], // 3 key at col 17 row 3
+      [1,1,0,1,1,1,0,1,1,0,1,1,1,1,0,1,1,1,0,1], // 4
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5 open
+      [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1], // 6 wall — gap col 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 7 crusher corridor
+      [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1], // 8 wall — gap col 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9 open
+      [1,0,1,1,1,0,1,1,0,1,1,0,1,1,0,1,1,1,0,1], // 10
+      [1,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1,0,1], // 11
+      [1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1], // 12 wall — gaps col 6, 14; door at col 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13 exit
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'screamer', col: 9,  row: 3 },
+      { type: 'screamer', col: 13, row: 3 },
+      { type: 'crusher',  col: 5,  row: 7, axis: 'h', range: 3, period: 7.0 },
+      { type: 'stalker',  col: 10, row: 12 },
+      { type: 'sentry',   col: 3,  row: 13, angle: 0 },
+    ],
+    keys:  [{ id: 'vault-k1', col: 17, row: 3, doorId: 'vault-d1' }],
+    doors: [{ id: 'vault-d1', col: 10, row: 12 }],
+  },
+
+  // ─── Level 20 ─── "The Deep"  (final — all mechanics, hardest execution)
+  // The largest and most complex level. Four zones divided by walls.
+  // Zone A (rows 1-5): upper maze with a screamer and patrol.
+  // Zone B (rows 6-8): water crossing with a screamer in the center.
+  // Zone C (rows 9-11): crusher gauntlet guarded by a stalker.
+  // Zone D (rows 12-13): exit hall with a sentry and collapsible barrier.
+  // Key in zone A unlocks the door between zones B and C.
+  {
+    name: 'The Deep',
+    hint: 'Four zones · Every threat combined · Only silence survives the dark',
+    reverb: 'large',
+    grid: [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
+      [1,2,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1], // 1 start col 1; key at col 17 row 1
+      [1,0,1,1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,0,1], // 2 zone A maze
+      [1,0,0,1,0,0,1,0,0,0,1,0,0,0,1,0,0,1,0,1], // 3 zone A maze
+      [1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1,1,1], // 4
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 5 open connector
+      [1,1,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,1], // 6 WATER zone B
+      [1,1,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,1], // 7 WATER (screamer at col 9)
+      [1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1], // 8 door at col 10; rest open; gap col 10
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 9 zone C — crusher corridor
+      [1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1], // 10 wall — gaps col 5, 14
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // 11 open
+      [1,0,1,1,1,1,1,1,1,4,1,1,1,1,1,1,1,1,0,1], // 12 collapsible col 9; gaps col 1, 18
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // 13 exit col 18; sentry at col 15
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 14
+    ],
+    enemies: [
+      { type: 'screamer', col: 6,  row: 3 },
+      { type: 'patrol',   col: 2,  row: 5, stepAware: true, waypoints: [[2,5],[17,5]] },
+      { type: 'screamer', col: 9,  row: 7 },
+      { type: 'crusher',  col: 9,  row: 9, axis: 'h', range: 3, period: 6.5 },
+      { type: 'stalker',  col: 14, row: 11 },
+      { type: 'sentry',   col: 15, row: 13, angle: Math.PI },
+    ],
+    keys:  [{ id: 'deep-k1', col: 17, row: 1, doorId: 'deep-d1' }],
+    doors: [{ id: 'deep-d1', col: 10, row: 8 }],
   },
 ];
