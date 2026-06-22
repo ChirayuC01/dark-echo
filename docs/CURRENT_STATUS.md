@@ -1,17 +1,17 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 19 complete (2026-06-22)  
+> **Last updated:** Phase 20 complete (2026-06-22)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 20 — Level Expansion (Act II)**  
+**Phase 21 — Android App (Capacitor)**  
 Status: ⬜ Pending
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17, 18, and 19 are complete.
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17, 18, 19, and 20 are complete.
 
 ---
 
@@ -46,6 +46,9 @@ Status: ⬜ Pending
 | **Sentry Enemy** | `js/entities.js`, `js/game.js`, `js/renderer.js`, `js/levels.js` | Rotating ±45° scan cone, 180px LOS detection, 8s pursuit; stunned by pulse |
 | **BlindStalker Enemy** | `js/entities.js`, `js/game.js`, `js/levels.js` | Hears all sounds (step+pulse, incl. crouched); 104px/s hunt speed; 4s timer |
 | **10 levels** | `js/levels.js` | Level 10 "The Gauntlet II" — all mechanics + BlindStalker |
+| **ScreamerEnemy** | `js/entities.js`, `js/game.js`, `js/renderer.js` | Stationary trap; any ray triggers 48-ray burst + nearby enemy alert; killed on contact |
+| **`spawn_enemy` trigger** | `js/game.js` | `targetId = "type,col,row"`; spawns chaser / stalker / screamer mid-level |
+| **20 levels** | `js/levels.js` | Act II (Levels 11–20): Corridor II → The Deep; all mechanics, ScreamerEnemy, spawn_enemy |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | **Ambient drone** | `js/audio.js`, `js/game.js` | 55Hz sine, gain 0.035, 1.5s fade-in/0.5s fade-out; starts on play, stops on death/win/title |
 | **Positional audio** | `js/audio.js`, `js/game.js` | PannerNode HRTF; updateListener() per frame; alert/sentry/hazard sounds positioned |
@@ -154,8 +157,8 @@ Status: ⬜ Pending
 | Player velocity inertia | Phase 19 | ✅ Done | — | Lerp-based vx/vy; crouch reduces accel |
 | Screen-shake on death/collapse | Phase 19 | ✅ Done | — | triggerShake(); crusher near-miss shake |
 | Pulse-ready audio cue | Phase 19 | ✅ Done | — | 1800Hz click on cooldown expiry |
-| Act II levels (11–20) | Phase 20 | ⬜ Pending | High | Content volume gap vs Dark Echo |
-| ScreamerEnemy | Phase 20 | ⬜ Pending | Medium | New enemy type for Act II |
+| Act II levels (11–20) | Phase 20 | ✅ Done | — | Levels 11–20; commits `37f8ef2` + `ec08a1c` |
+| ScreamerEnemy | Phase 20 | ✅ Done | — | Stationary ray trap; 48-ray burst; alerts enemies within 300px |
 | Android app (Capacitor) | Phase 21 | ⬜ Pending | High | Play Store prerequisite |
 | Website + landing page | Phase 22 | ⬜ Pending | High | No public presence currently |
 | Performance hardening (60fps mobile) | Phase 23 | ⬜ Pending | High | Must pass on mid-range Android |
@@ -164,6 +167,26 @@ Status: ⬜ Pending
 | Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
+
+## Phase 20 — Complete ✅
+
+**Phase 20 summary:**
+- `js/constants.js`: `SCREAMER_ALERT_RADIUS = 300` (px, enemy alert range), `SCREAMER_BURST_RAYS = 48` (ray count on trigger)
+- `js/entities.js`: `ScreamerEnemy` class — stationary; `this.triggered` flag; `alertNearbyEnemies(enemies)` calls `hearSound/hearStep` on all entities within `SCREAMER_ALERT_RADIUS`; `killsPlayer()` proximity kill same as Hazard
+- `js/audio.js`: `SOUND_CONFIG.screamer` — sawtooth 2400Hz + sine 3200Hz + square 1800Hz layered over noise burst (gain 0.4, 1.5s); `playScreamer()` export
+- `js/game.js`: `G.screamers = []`; screamer spawn from `type:'screamer'` in level def; `processRayEntities()` — any non-step-enemy ray within `HAZARD_RADIUS + 4` triggers screamer: `playScreamer()`, 48-ray burst at screamer position, `alertNearbyEnemies()`; `checkDeath()` loop includes screamers; `spawn_enemy` trigger action implemented — parses `"type,col,row"`, pushes new chaser/stalker/screamer at cell center
+- `js/renderer.js`: `drawScreamers()` — orange-red pulsing glow + 4 diagonal spike arms; solid red when triggered
+- `js/levels.js`: 10 new Act II levels (11–20):
+  - L11 "The Corridor II" — 3 step-aware patrols in parallel corridors
+  - L12 "The Chamber II" — 2 screamers + chaser, large open room
+  - L13 "The Factory" — 4 horizontal crushers + patrol, industrial gauntlet
+  - L14 "The Scream" — 3 screamers + collapsible wall + step-aware patrol
+  - L15 "The Archive" — 3 keys + 3 doors + chaser + patrol + hazard, dense maze
+  - L16 "The Flood II" — water zone + 2 screamers in water + 2 hazards
+  - L17 "The Awakening II" — BlindStalker only, pure stealth test
+  - L18 "The Web" — spawn_enemy trigger + remove_wall trigger + patrol + hazard
+  - L19 "The Vault" — 2 screamers + crusher + BlindStalker + sentry + key/door
+  - L20 "The Deep" — all mechanics combined; largest map; hardest level
 
 ## Phase 19 — Complete ✅
 
@@ -212,9 +235,9 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 
 ## Next Recommended Task
 
-Begin **Phase 18 — Reverb + Environmental Ambient Sounds**.
+Begin **Phase 21 — Android App (Capacitor)**.
 
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 18.
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 21.
 
 ---
 

@@ -267,7 +267,7 @@ Dark Echo's core tension comes from enemies that generate their own sounds. Thei
 ---
 
 ## Phase 20 — Level Expansion (Act II)
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Build 10 additional levels (Levels 11–20) forming Act II with new environmental themes and two new enemy behaviors.  
 **Depends on:** Phases 16–18 complete  
 **Estimated effort:** 10–15 days  
