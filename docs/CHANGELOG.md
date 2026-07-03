@@ -5,6 +5,17 @@
 
 ---
 
+## [v2.1.1] — 2026-07-03 — Phase 21.1
+
+### Changed
+- **Mobile touch controls redesigned**: Removed the on-screen joystick, crouch button, and pulse button entirely. The canvas itself is now the whole input surface: hold anywhere to walk toward that point (direction from canvas center — one mechanic covers all 8 directions), tap quickly to crouch-walk in that direction, or tap-and-hold directly on the player to fire pulse continuously.
+- **Mobile canvas cutoff fixed**: `#wrap`/canvas sizing switched from a fixed `820px` breakpoint to an orientation-agnostic `min(800px, 100vw, 100vh*4/3)` aspect-fit, fixing bottom/right clipping that occurred in landscape on physical devices.
+
+### Fixed
+- Quick taps were briefly moving the player at normal (non-crouched) speed before resolving into crouch-walk, due to movement being applied before the tap/hold distinction was known. A touch now only contributes movement once classified — a tap produces crouched movement only.
+
+---
+
 ## [v2.1.0] — 2026-07-03 — Phase 21
 
 ### Added

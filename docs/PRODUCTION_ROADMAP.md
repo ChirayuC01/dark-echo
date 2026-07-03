@@ -375,6 +375,38 @@ Building the debug APK on Windows required two environment fixes not in the orig
 
 ---
 
+## Phase 21.1 — Mobile Touch Controls Redesign + Canvas Cutoff Fix
+**Status:** ✅ Complete  
+**Goal:** Fix two mobile-only issues surfaced by on-device testing of the Phase 21 APK: the joystick/button touch scheme didn't match the desired feel, and the canvas was clipped on-device.  
+**Depends on:** Phase 21 complete (on-device testing)  
+**Risk:** Low — this is a mobile-input-layer change, no gameplay logic touched
+
+Not part of the original Phase 15–25 sequence — an out-of-order fix driven directly by on-device feedback after shipping Phase 21.
+
+### Tasks
+- [x] Remove `#touch-controls` DOM (joystick, crouch button, pulse button) from `index.html` and all associated CSS from `css/style.css`
+- [x] Rewrite `js/input.js`: canvas becomes the full input surface — hold anywhere to walk toward that point (direction = vector from canvas center to touch), quick tap to crouch-walk in that direction, tap-and-hold on the player to fire pulse continuously
+- [x] `game.js`: call `Input.setPlayerScreenPos(G.player.x, G.player.y)` every frame so the pulse hit-test uses the live player position
+- [x] Fix bug where a quick tap briefly moved the player at normal speed before crouch-walk kicked in — gate movement contribution behind the tap/hold threshold
+- [x] Fix `#wrap`/canvas sizing: replace the fixed `820px` breakpoint with an orientation-agnostic `min(800px, 100vw, 100vh*4/3)` aspect-fit that works in any orientation/device size
+- [x] Add `viewport-fit=cover` to the meta viewport tag; add `touch-action: none` to the canvas
+- [x] User rebuilt debug APK and confirmed both fixes on a physical Android device
+
+### Files Modified
+- `index.html` — `#touch-controls` DOM removed; `viewport-fit=cover` added
+- `css/style.css` — joystick/button CSS removed; `#wrap`/canvas sizing rewritten
+- `js/input.js` — rewritten touch handling (tap-zone gestures replace joystick+buttons)
+- `js/game.js` — `Input.setPlayerScreenPos()` call added to `update()`
+
+### Acceptance Criteria
+- [x] No visible touch control buttons on mobile — canvas is the entire input surface
+- [x] Hold anywhere walks the player toward that point; direction covers all 8 compass directions correctly
+- [x] Quick tap produces crouched movement only, no normal-speed movement beforehand
+- [x] Tap-and-hold on the player fires pulse repeatedly while cooldown allows
+- [x] Full level visible with no cutoff in any device orientation
+
+---
+
 ## Phase 22 — Website + Landing Page
 **Status:** ⬜ Pending  
 **Goal:** Build a professional landing page that presents RESONANCE as a commercial product.  

@@ -1,6 +1,6 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 21 verified on-device (2026-07-03)  
+> **Last updated:** Phase 21.1 touch controls redesign, verified on-device (2026-07-03)  
 > Update this file after every completed task or phase.
 
 ---
@@ -30,8 +30,7 @@ Status: ⬜ Pending
 | ChaserEnemy | `js/entities.js` | Idle wander + hunt state |
 | Hazard | `js/entities.js` | Timed pulse emitter, proximity kill |
 | 9 levels | `js/levels.js` | Levels 1–9 complete (Level 9 = The Corridor) |
-| Touch joystick | `js/input.js` | 110px zone, 40px max drag |
-| Touch crouch button | `js/input.js`, `index.html` | #crouch-btn, bottom-center mobile |
+| **Tap-zone touch controls** | `js/input.js`, `js/game.js` | Whole canvas is the input surface — no visible buttons; see Phase 21.1 |
 | All UI screens | `js/ui.js`, `index.html` | title/pause/dead/levelup/win |
 | Web Audio sounds | `js/audio.js` | SOUND_CONFIG + all play*() |
 | Game loop & state | `js/game.js` | G state machine, 6 screens |
@@ -179,6 +178,26 @@ Status: ⬜ Pending
 - `js/game.js`: imports `{ Haptics, ImpactStyle }` from `@capacitor/haptics` and `{ StatusBar }` from `@capacitor/status-bar`; `Haptics.impact({ style: ImpactStyle.Medium })` fires on wall collapse (`applyWallHits`) and on death (`die()`); `StatusBar.hide()` called in `init()` — all Capacitor calls have `.catch(() => {})` so they are silently no-ops in the browser
 - Build verified: `npm run build` → `75.69 kB` bundle (75KB — includes Capacitor web runtime shims), 0 vulnerabilities; `npx cap sync android` → 2 plugins detected and synced
 - **On-device verification (2026-07-03)**: Debug APK built locally on Windows via `cd android && .\gradlew.bat assembleDebug` (required pointing Gradle at Android Studio's bundled JDK 21 via `android/gradle.properties` → `org.gradle.java.home`), then installed via `adb install` / manual sideload. Confirmed: **app installs and launches successfully on a physical Android device.** Signed release APK, multi-device testing, and latency/FPS profiling remain open — tracked in Phase 21's Production Roadmap entry.
+
+## Phase 21.1 — Complete ✅ (post-launch mobile fixes, on-device feedback)
+
+**Phase 21.1 summary:** On-device testing of the Phase 21 APK surfaced two mobile-only issues; both fixed and verified on-device.
+
+**1. Touch controls replaced (joystick + buttons → tap-zone canvas input):**
+- Removed `#touch-controls` DOM entirely (`#joystick-zone`, `#joystick-knob`, `#crouch-btn`, `#pulse-btn`) from `index.html` and all associated CSS from `css/style.css`
+- `js/input.js` rewritten so the canvas itself is the whole input surface:
+  - **Hold** anywhere on canvas → player walks toward the touch point, direction computed as the normalized vector from canvas center (400,300) to the touch — this single mechanic covers left/right/up/down/diagonal without separate zones
+  - **Quick tap** (release before `TAP_MAX_HOLD = 200ms`) → crouch-walks the player in that direction for a `CROUCH_TAP_DECAY = 350ms` window; repeated tapping chains into continuous crouch movement, matching physical Shift/C crouch behavior (45% speed, 50% rays, 45% range)
+  - **Tap-and-hold on the player** (`PULSE_TOUCH_RADIUS = 42px` canvas-space around the live player position) → fires pulse continuously whenever cooldown allows
+  - `game.js` calls `Input.setPlayerScreenPos(G.player.x, G.player.y)` every frame so the pulse hit-test always uses the player's current position
+- **Bug fixed post-implementation**: a quick tap originally moved the player at normal speed for the brief ambiguous window before resolving to a tap — fixed by gating movement contribution in `getMove()` behind `elapsed >= TAP_MAX_HOLD`, so a touch contributes nothing until it's either released (→ crouch-walk) or held past the threshold (→ normal walk). A tap now produces crouched movement only, with no normal-speed sliver first.
+
+**2. Canvas cutoff fixed (bottom/right clipped on-device):**
+- Root cause: `#wrap` sizing used a fixed `max-width: 820px` breakpoint with `height: calc(100vw * 0.75)` — broke down on landscape phone viewports wider than 820px, where actual device height was far less than `width * 0.75`, clipping the bottom/right of the canvas
+- Fixed with orientation-agnostic aspect-fit: `width: min(800px, 100vw, calc(100vh * 4/3))`, `height: min(600px, 100vh, calc(100vw * 3/4))` — always fits the native 4:3 canvas inside the viewport regardless of device size or orientation, no breakpoint needed
+- Added `viewport-fit=cover` to the meta viewport tag and `touch-action: none` on the canvas to prevent OS scroll/zoom gestures from fighting the custom touch handlers
+
+**Verified on-device**: user confirmed both fixes work correctly on a physical Android device.
 
 ## Phase 20 — Complete ✅
 

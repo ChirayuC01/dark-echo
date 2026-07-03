@@ -4,6 +4,58 @@
 
 ---
 
+## [Phase 21.1 — Complete] Mobile Touch Controls Redesign + Canvas Cutoff Fix
+
+**Date:** 2026-07-03  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.1.1
+
+### What was done
+
+Building on the Phase 21 Android APK, on-device testing surfaced two mobile-specific problems that only show up on a physical device (not in a desktop browser): the joystick/button touch scheme didn't match the intended feel, and the canvas was clipped on-device.
+
+**1. Touch controls: joystick + buttons → tap-zone canvas input**
+
+Removed `#touch-controls` and its children (`#joystick-zone`, `#joystick-knob`, `#crouch-btn`, `#pulse-btn`) from `index.html`, and all associated rules from `css/style.css`. Rewrote `js/input.js` so the canvas is the entire input surface, with three gestures:
+
+- **Hold** anywhere → walk toward the touch point. Direction is the normalized vector from canvas center (400, 300 in the game's 800×600 coordinate space) to the touch position — one calculation naturally covers left/right, up/down, and diagonals, matching the requested "tap left/right for that direction, tap corners for diagonal movement" behavior.
+- **Quick tap** (released before `TAP_MAX_HOLD = 200ms`) → crouch-walk in that direction for `CROUCH_TAP_DECAY = 350ms`; tapping repeatedly chains into continuous crouched movement, exactly mirroring the physical Shift/C crouch modifier (45% speed, 50% ray count, 45% ray range).
+- **Tap-and-hold directly on the player** (within `PULSE_TOUCH_RADIUS = 42px` canvas-space of the player's live position) → fires pulse continuously whenever the cooldown allows. `game.js`'s `update()` calls the new `Input.setPlayerScreenPos(G.player.x, G.player.y)` every frame so this hit-test always uses the player's current position, not a stale one.
+
+**Bug found and fixed same session**: initial implementation let a fresh touch contribute movement at normal speed immediately on `touchstart`, before it was known whether the touch would resolve to a tap or a hold. This meant every tap produced a brief normal-speed movement before the crouch-walk kicked in on release — visibly wrong, since the user expected an immediate crouched movement. Fixed by gating movement contribution in `getMove()`: a touch only moves the player once `performance.now() - move.startTime >= TAP_MAX_HOLD`. Below that threshold (still ambiguous), the touch contributes nothing; on release, if it was under the threshold, `crouchTap` activates. A tap now produces crouched movement only, never a normal-speed sliver first.
+
+**2. Canvas cutoff on-device (bottom/right clipped)**
+
+Root cause: `#wrap` sizing relied on a fixed `@media (max-width: 820px)` breakpoint with `height: calc(100vw * 0.75)`. On a phone held in landscape, viewport width frequently exceeds 820px (common landscape widths run 640–915px depending on device), so the breakpoint didn't apply and the layout fell back to the fixed desktop `800px × 600px` box — which overflows a landscape phone's much shorter actual viewport height, clipping the bottom and (due to flex-centering with `overflow: hidden`) part of the right edge too.
+
+Fixed with an orientation-agnostic aspect-preserving fit:
+```css
+#wrap {
+  width: min(800px, 100vw, calc(100vh * 4 / 3));
+  height: min(600px, 100vh, calc(100vw * 3 / 4));
+}
+```
+This clamps the 4:3 canvas to whichever viewport dimension is the limiting factor, in any orientation, without a numeric breakpoint. Desktop is unaffected (large viewport → both `min()` calls resolve to `800px`/`600px`). Also added `viewport-fit=cover` to the meta viewport tag (better edge-to-edge behavior on notched/gesture-nav Android devices) and `touch-action: none` on the canvas so the OS doesn't intercept scroll/zoom gestures that would otherwise fight the new custom touch handlers.
+
+### Design decisions
+
+- **Direction-from-center instead of a visible joystick** — avoids any on-screen UI chrome; the entire screen becomes the control surface, which is closer to the original Dark Echo's minimalist touch feel than a joystick widget.
+- **Tap vs. hold as the crouch/walk switch** — reuses the existing crouch mechanic (speed/ray multipliers) rather than inventing a separate mobile-only movement mode; touch and keyboard end up sharing the same `isCrouching()`-gated code path in `entities.js`.
+- **Pulse-on-player hit test uses live position, not a fixed HUD button** — keeps the "tap the thing you want to affect" feel; since the player is always rendered as a glowing dot, it's discoverable without instructions.
+- **`min()`-based aspect-fit over breakpoints** — a single CSS expression that's correct for literally any viewport dimension, eliminating a whole class of "breakpoint didn't anticipate this device" bugs like the one just fixed.
+
+### Verification
+
+- `npm run build` succeeded after each change (75.9–76.0 kB bundle range)
+- `npx cap sync android` re-synced both Capacitor plugins after each change
+- User rebuilt the debug APK on their Windows machine and confirmed on a physical Android device: tap-to-move/crouch/pulse all work as intended, and the level is no longer cut off in any orientation
+
+### Next phase
+
+**Phase 22 — Website + Landing Page** remains next per the roadmap; this entry was an out-of-sequence fix driven by on-device feedback on the just-shipped Phase 21 APK.
+
+---
+
 ## [Phase 21 — Complete] Android App (Capacitor)
 
 **Date:** 2026-07-03  
