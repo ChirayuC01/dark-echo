@@ -7,11 +7,11 @@
 
 ## Active Phase
 
-**Phase 21 — Android App (Capacitor)**  
+**Phase 22 — Website + Landing Page**  
 Status: ⬜ Pending
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17, 18, 19, and 20 are complete.
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17, 18, 19, 20, and 21 are complete.
 
 ---
 
@@ -159,7 +159,7 @@ Status: ⬜ Pending
 | Pulse-ready audio cue | Phase 19 | ✅ Done | — | 1800Hz click on cooldown expiry |
 | Act II levels (11–20) | Phase 20 | ✅ Done | — | Levels 11–20; commits `37f8ef2` + `ec08a1c` |
 | ScreamerEnemy | Phase 20 | ✅ Done | — | Stationary ray trap; 48-ray burst; alerts enemies within 300px |
-| Android app (Capacitor) | Phase 21 | ⬜ Pending | High | Play Store prerequisite |
+| Android app (Capacitor) | Phase 21 | ✅ Done | — | Capacitor 8 + Haptics + StatusBar; `android/` gitignored; sync ready |
 | Website + landing page | Phase 22 | ⬜ Pending | High | No public presence currently |
 | Performance hardening (60fps mobile) | Phase 23 | ⬜ Pending | High | Must pass on mid-range Android |
 | Level select screen | Phase 24 | ⬜ Pending | Medium | Quality-of-life for 20-level game |
@@ -167,6 +167,17 @@ Status: ⬜ Pending
 | Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
+
+## Phase 21 — Complete ✅
+
+**Phase 21 summary:**
+- `npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/haptics @capacitor/status-bar typescript` — Capacitor 8 + haptics + status-bar (all at v8.0.2)
+- `capacitor.config.ts` created: `appId: 'com.resonance.soundgame'`, `appName: 'Resonance'`, `webDir: 'dist'`, `bundledWebRuntime: false`, StatusBar dark/black plugin config, `androidScheme: 'https'`
+- `npx cap add android` — generated `android/` project (gitignored); synced Haptics + StatusBar plugins
+- `android/app/src/main/AndroidManifest.xml`: added `android:hardwareAccelerated="true"` + `android:largeHeap="true"` to `<application>`
+- `android/app/src/main/java/com/resonance/soundgame/MainActivity.java`: extended with `onCreate()` override calling `getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false)` — required for Web Audio API to auto-play without user gesture on Android WebView
+- `js/game.js`: imports `{ Haptics, ImpactStyle }` from `@capacitor/haptics` and `{ StatusBar }` from `@capacitor/status-bar`; `Haptics.impact({ style: ImpactStyle.Medium })` fires on wall collapse (`applyWallHits`) and on death (`die()`); `StatusBar.hide()` called in `init()` — all Capacitor calls have `.catch(() => {})` so they are silently no-ops in the browser
+- Build verified: `npm run build` → `75.69 kB` bundle (75KB — includes Capacitor web runtime shims), 0 vulnerabilities; `npx cap sync android` → 2 plugins detected and synced
 
 ## Phase 20 — Complete ✅
 
@@ -235,9 +246,9 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 
 ## Next Recommended Task
 
-Begin **Phase 21 — Android App (Capacitor)**.
+Begin **Phase 22 — Website + Landing Page**.
 
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 21.
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 22.
 
 ---
 

@@ -16,6 +16,8 @@ import * as Audio from './audio.js';
 import * as Input from './input.js';
 import * as Renderer from './renderer.js';
 import * as UI from './ui.js';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { StatusBar } from '@capacitor/status-bar';
 
 const SAVE_KEY = 'resonance_progress';
 import { LEVELS } from './levels.js';
@@ -225,6 +227,7 @@ function applyWallHits(hits, now) {
       G.raySystem.burst(h.x, h.y, 'pulse', G.castFn, COLLAPSE_BURST_RAYS, 80);
       Audio.playCollapse();
       triggerShake(4, 0.25);
+      Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
     }
   }
   let wi = 0;
@@ -370,6 +373,7 @@ function die(reason) {
   G.deathReason = reason;
   G.screen = 'dead';
   triggerShake(6, 0.35);
+  Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
   Audio.stopAmbient();
   Audio.stopEnvironmental();
   Audio.playDeath();
@@ -692,6 +696,8 @@ function refreshContinueButton() {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 export function init() {
+  StatusBar.hide().catch(() => {});
+
   const canvas = document.getElementById('canvas');
   Renderer.init(canvas);
   Input.init();

@@ -4,6 +4,54 @@
 
 ---
 
+## [Phase 21 — Complete] Android App (Capacitor)
+
+**Date:** 2026-07-03  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.1.0
+
+### What was done
+
+Packaged RESONANCE as a native Android app using Capacitor 8.
+
+**Package setup:**
+- Installed `@capacitor/core`, `@capacitor/cli`, `@capacitor/android`, `@capacitor/haptics`, `@capacitor/status-bar` (all v8.0.2), plus `typescript` (required for `.ts` config parsing)
+- Created `capacitor.config.ts`: bundle ID `com.resonance.soundgame`, `webDir: 'dist'`, `androidScheme: 'https'`, StatusBar plugin configured for dark/black theme
+
+**Android project generation:**
+- `npx cap add android` — created the full `android/` Gradle project in the gitignored `android/` directory
+- `npx cap sync android` — synced built web assets from `dist/` and detected both Capacitor plugins
+
+**AndroidManifest.xml patches:**
+- `android:hardwareAccelerated="true"` — enables GPU-accelerated Canvas 2D rendering; critical for 60fps on mobile
+- `android:largeHeap="true"` — prevents OOM errors when echo trail arrays grow large on longer play sessions
+
+**MainActivity.java override:**
+- Added `onCreate()` calling `getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false)` — without this, Android 8+ blocks AudioContext from starting until a user gesture, which breaks all game audio on launch
+
+**game.js integration:**
+- Imported `Haptics`/`ImpactStyle` from `@capacitor/haptics` and `StatusBar` from `@capacitor/status-bar`
+- `Haptics.impact({ style: ImpactStyle.Medium })` on wall collapse (in `applyWallHits`) and on death (in `die()`)
+- `StatusBar.hide()` in `init()` for full-screen immersion
+- All Capacitor calls wrapped with `.catch(() => {})` — completely silent no-ops when running in a desktop browser
+
+### Design decisions
+
+- **`android/` gitignored** — the generated Gradle project is large (~20MB), device-specific, and regenerated via `npx cap sync`. Only `capacitor.config.ts` and `package.json` additions need to be version-controlled.
+- **Haptics on collapse + death only** — not on pulse or footstep. Those occur constantly; haptics on every event would drain battery and feel spammy. Collapse and death are rare, impactful moments where physical feedback adds value.
+- **`.catch(() => {})` pattern** — Capacitor plugin calls return Promises and throw on non-native platforms. The catch guard ensures zero impact on the web build without needing platform detection guards around every call.
+- **`setMediaPlaybackRequiresUserGesture(false)`** — this was the single most important Android-specific fix. Without it, the entire Web Audio system (ambient drone, footsteps, positional alerts) is silently blocked until the user taps, breaking the core game loop.
+
+### Build verification
+
+`npm run build` → `✓ 24 modules transformed`, `75.69 kB` bundle, 0 vulnerabilities. `npx cap sync android` → `[info] Found 2 Capacitor plugins for android`.
+
+### Next phase
+
+**Phase 22 — Website + Landing Page**: Build a professional landing page for RESONANCE at the Cloudflare Pages root URL.
+
+---
+
 ## [Phase 20 — Complete] Act II Level Expansion + ScreamerEnemy
 
 **Date:** 2026-06-22  

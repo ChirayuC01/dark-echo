@@ -5,6 +5,23 @@
 
 ---
 
+## [v2.1.0] — 2026-07-03 — Phase 21
+
+### Added
+- **Capacitor Android packaging**: Installed `@capacitor/core`, `@capacitor/cli`, `@capacitor/android`, `@capacitor/haptics`, `@capacitor/status-bar` (all v8.0.2). The `android/` project is generated via `npx cap add android` and gitignored; only `capacitor.config.ts` and `package.json` are committed.
+- **`capacitor.config.ts`**: App ID `com.resonance.soundgame`, display name `Resonance`, `webDir: 'dist'`, `androidScheme: 'https'`. Configures StatusBar plugin for dark/black appearance.
+- **Hardware acceleration + large heap** (`AndroidManifest.xml`): `android:hardwareAccelerated="true"` ensures GPU-accelerated Canvas rendering on Android WebView; `android:largeHeap="true"` prevents OOM on large echo trail maps.
+- **Auto Web Audio unlock** (`MainActivity.java`): `setMediaPlaybackRequiresUserGesture(false)` on the WebView — required for AudioContext to start without a user tap on Android 8+.
+- **Haptic feedback** (`js/game.js`): `Haptics.impact({ style: ImpactStyle.Medium })` fires on wall collapse and on death. Silently no-ops in browser via `.catch(() => {})`.
+- **Status bar hidden** (`js/game.js`): `StatusBar.hide()` called in `init()` — removes the Android status bar during gameplay for full-screen immersion.
+
+### Technical
+- `package.json`: Capacitor dependencies added as `dependencies` (runtime, not devDependencies — required by Vite bundling)
+- Build output grows from 66 kB to 75 kB (Capacitor web runtime shims included in bundle)
+- `npx cap sync android` confirmed: 2 plugins (`@capacitor/haptics`, `@capacitor/status-bar`) detected and synced
+
+---
+
 ## [v0.19.0] — 2026-06-17 — Phase 14
 
 ### Added

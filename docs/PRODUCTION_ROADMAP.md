@@ -327,7 +327,7 @@ Dark Echo has ~50 levels across 5 chapters. RESONANCE at 10 levels is a strong d
 ---
 
 ## Phase 21 — Android App (Capacitor)
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Package the game as a native Android app via Capacitor for Google Play Store submission.  
 **Depends on:** Phase 15 complete  
 **Estimated effort:** 5–8 days  
