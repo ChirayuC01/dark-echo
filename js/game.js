@@ -432,6 +432,7 @@ function checkExit() {
 
 // ─── Update ───────────────────────────────────────────────────────────────────
 function update(dt, now) {
+  Input.setPlayerScreenPos(G.player.x, G.player.y);
   const move = Input.getMove();
   const moving = move.dx !== 0 || move.dy !== 0;
   const crouching = Input.isCrouching();
