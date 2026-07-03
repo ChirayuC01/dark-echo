@@ -115,7 +115,12 @@ export function getMove() {
   if (keys.has('KeyS') || keys.has('ArrowDown'))  dy += 1;
 
   if (move.touchId !== null) {
-    dx += move.dx; dy += move.dy;
+    // Don't move yet while a fresh touch is still ambiguous (could resolve to a
+    // tap → crouch-walk). Only a touch held past the tap threshold counts as
+    // a real hold and walks at normal speed.
+    if (performance.now() - move.startTime >= TAP_MAX_HOLD) {
+      dx += move.dx; dy += move.dy;
+    }
   } else if (crouchTap.active) {
     if (performance.now() < crouchTap.until) {
       dx += crouchTap.dx; dy += crouchTap.dy;
