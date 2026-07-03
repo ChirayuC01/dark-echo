@@ -46,6 +46,24 @@ Packaged RESONANCE as a native Android app using Capacitor 8.
 
 `npm run build` → `✓ 24 modules transformed`, `75.69 kB` bundle, 0 vulnerabilities. `npx cap sync android` → `[info] Found 2 Capacitor plugins for android`.
 
+### On-device verification (2026-07-03)
+
+Debug APK built and installed on a physical Android device (Windows dev machine):
+
+- **Environment issues hit during local build** (Windows, outside the sandboxed session, so not reflected in committed files):
+  - Default system Java was 8; Capacitor 8 / Android Gradle Plugin 8.13 require Java 11+, and the Capacitor Android library itself compiles against Java 21 sources. Fixed by pointing Gradle directly at Android Studio's bundled JDK 21 (`C:\Program Files\Android\Android Studio\jbr`) via `android/gradle.properties` → `org.gradle.java.home`. This file is local-only (inside gitignored `android/`), so no repo changes were needed.
+  - PowerShell requires `.\gradlew.bat` (not bare `gradlew.bat`) to run a script from the current directory.
+- **Build command**: `cd android && .\gradlew.bat assembleDebug` → `BUILD SUCCESSFUL`, APK at `android/app/build/outputs/apk/debug/app-debug.apk`.
+- **Install**: sideloaded via `adb install` (also possible by copying the APK to the device and opening it directly with "install from unknown sources" enabled).
+- **Result**: app installs and launches successfully on a physical device.
+
+**Still open** (not yet verified — tracked in `PRODUCTION_ROADMAP.md` Phase 21 acceptance criteria):
+- Signed release APK / AAB (required before Phase 25 Play Store submission)
+- Audio latency measurement (<80ms target)
+- 60fps profiling on a mid-range device (Phase 23 territory)
+- Multi-device testing (only one physical device confirmed so far)
+- Visual/tactile confirmation that haptics and hidden status bar actually fire correctly on-device
+
 ### Next phase
 
 **Phase 22 — Website + Landing Page**: Build a professional landing page for RESONANCE at the Cloudflare Pages root URL.

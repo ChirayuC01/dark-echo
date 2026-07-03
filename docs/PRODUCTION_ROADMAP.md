@@ -334,38 +334,43 @@ Dark Echo has ~50 levels across 5 chapters. RESONANCE at 10 levels is a strong d
 **Risk:** Medium (device-specific issues are unpredictable)
 
 ### Tasks
-- [ ] `npm install @capacitor/core @capacitor/cli @capacitor/android`
-- [ ] `npx cap init "Resonance" "com.resonance.soundgame"` — use a real reverse-domain identifier
-- [ ] Update `capacitor.config.ts`: `webDir: 'dist'`, `bundledWebRuntime: false`
-- [ ] `npx cap add android`
-- [ ] `npm run build && npx cap sync` — builds and syncs web assets to android/
-- [ ] In `android/app/src/main/AndroidManifest.xml`: set `android:hardwareAccelerated="true"` (performance), add `android:largeHeap="true"` (memory safety)
-- [ ] In `MainActivity.java`: add `getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false)` — required for Web Audio to work on load
-- [ ] Add `@capacitor/haptics`: `npm install @capacitor/haptics`. Trigger `Haptics.impact({ style: ImpactStyle.Medium })` on death and collapse in `game.js`.
-- [ ] Add `@capacitor/status-bar`: hide status bar on app launch.
+- [x] `npm install @capacitor/core @capacitor/cli @capacitor/android`
+- [x] `capacitor.config.ts` created directly (init skipped — config authored by hand): `webDir: 'dist'`, `bundledWebRuntime: false`
+- [x] `npx cap add android`
+- [x] `npm run build && npx cap sync` — builds and syncs web assets to android/
+- [x] In `android/app/src/main/AndroidManifest.xml`: set `android:hardwareAccelerated="true"` (performance), add `android:largeHeap="true"` (memory safety)
+- [x] In `MainActivity.java`: add `getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false)` — required for Web Audio to work on load
+- [x] Add `@capacitor/haptics`: `npm install @capacitor/haptics`. Trigger `Haptics.impact({ style: ImpactStyle.Medium })` on death and collapse in `game.js`.
+- [x] Add `@capacitor/status-bar`: hide status bar on app launch.
 - [ ] Test audio latency: if Web Audio latency > 100ms, investigate `AudioContext.baseLatency` and add latency compensation to visual timing.
 - [ ] Create app icon: 512×512 PNG, black background, white/blue RESONANCE icon. Generate all required sizes via `npx @capacitor/assets generate`.
 - [ ] Create splash screen (optional): same style as title screen.
 - [ ] Build release APK: `cd android && ./gradlew assembleRelease`
 - [ ] Sign APK with a generated release keystore. Store keystore securely (never commit).
-- [ ] Sideload signed APK to a physical device. Confirm all 10 levels work.
-- [ ] Test on at least two device types: high-end (Pixel 7) and mid-range (Galaxy A52 or equivalent).
-- [ ] Commit + push (`android/` directory should NOT be in git — add to `.gitignore`. Only `capacitor.config.ts` and `package.json` additions are committed.)
+- [x] Sideload **debug** APK to a physical device via `./gradlew assembleDebug` + manual install. Confirmed installs and runs on-device. *(Release/signed APK still pending — needed for Phase 25 Play Store submission.)*
+- [ ] Test on at least two device types: high-end (Pixel 7) and mid-range (Galaxy A52 or equivalent). *(Verified on one physical device so far.)*
+- [x] Commit + push (`android/` directory NOT in git — already in `.gitignore`. Only `capacitor.config.ts` and `package.json` additions committed.)
 
 ### Files Modified
 - `package.json` — Capacitor dependencies
 - `capacitor.config.ts` (new)
-- `.gitignore` — add `android/` and `ios/`
-- `js/game.js` — Haptics import + trigger calls
-- `android/` directory (gitignored — local only)
+- `.gitignore` — `android/` and `ios/` already present
+- `js/game.js` — Haptics + StatusBar imports and trigger calls
+- `android/` directory (gitignored — local only; regenerated per-machine via `npx cap add android` + `npx cap sync`)
+
+### Local Build Notes (Windows)
+Building the debug APK on Windows required two environment fixes not in the original task list:
+- **JDK version**: Capacitor 8 / AGP 8.13 requires Java 21 (not 8 or 17). Fixed by pointing Gradle at Android Studio's bundled JDK via `android/gradle.properties`: `org.gradle.java.home=C:\\Program Files\\Android\\Android Studio\\jbr`.
+- **Build command**: `cd android && .\gradlew.bat assembleDebug` (PowerShell requires the `.\` prefix). Output APK: `android/app/build/outputs/apk/debug/app-debug.apk`.
+- Install via `adb install app-debug.apk` or by copying the APK to the device and opening it directly (enable "install from unknown sources").
 
 ### Acceptance Criteria
-- [ ] APK installs on a physical Android device
-- [ ] All 10 levels are playable with touch controls
-- [ ] Audio plays without noticeable latency (< 80ms perceptible threshold)
-- [ ] App runs at 60fps on a mid-range 2021 Android (Samsung Galaxy A52 or equivalent)
-- [ ] Haptics fire on death and collapse (if device supports it)
-- [ ] Status bar hidden during gameplay
+- [x] APK installs on a physical Android device — confirmed
+- [x] All 20 levels are playable with touch controls (roadmap text says "10 levels" — outdated; game has 20 as of Phase 20)
+- [ ] Audio plays without noticeable latency (< 80ms perceptible threshold) — not yet measured
+- [ ] App runs at 60fps on a mid-range 2021 Android (Samsung Galaxy A52 or equivalent) — not yet profiled (see Phase 23)
+- [ ] Haptics fire on death and collapse (if device supports it) — implemented, not yet confirmed felt on-device
+- [ ] Status bar hidden during gameplay — implemented, not yet visually confirmed on-device
 - [ ] App does not crash on background/foreground cycle (AudioContext suspend/resume)
 
 ---

@@ -1,6 +1,6 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 20 complete (2026-06-22)  
+> **Last updated:** Phase 21 verified on-device (2026-07-03)  
 > Update this file after every completed task or phase.
 
 ---
@@ -159,7 +159,7 @@ Status: ⬜ Pending
 | Pulse-ready audio cue | Phase 19 | ✅ Done | — | 1800Hz click on cooldown expiry |
 | Act II levels (11–20) | Phase 20 | ✅ Done | — | Levels 11–20; commits `37f8ef2` + `ec08a1c` |
 | ScreamerEnemy | Phase 20 | ✅ Done | — | Stationary ray trap; 48-ray burst; alerts enemies within 300px |
-| Android app (Capacitor) | Phase 21 | ✅ Done | — | Capacitor 8 + Haptics + StatusBar; `android/` gitignored; sync ready |
+| Android app (Capacitor) | Phase 21 | ✅ Done | — | Capacitor 8 + Haptics + StatusBar; debug APK built + installed on physical device |
 | Website + landing page | Phase 22 | ⬜ Pending | High | No public presence currently |
 | Performance hardening (60fps mobile) | Phase 23 | ⬜ Pending | High | Must pass on mid-range Android |
 | Level select screen | Phase 24 | ⬜ Pending | Medium | Quality-of-life for 20-level game |
@@ -178,6 +178,7 @@ Status: ⬜ Pending
 - `android/app/src/main/java/com/resonance/soundgame/MainActivity.java`: extended with `onCreate()` override calling `getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false)` — required for Web Audio API to auto-play without user gesture on Android WebView
 - `js/game.js`: imports `{ Haptics, ImpactStyle }` from `@capacitor/haptics` and `{ StatusBar }` from `@capacitor/status-bar`; `Haptics.impact({ style: ImpactStyle.Medium })` fires on wall collapse (`applyWallHits`) and on death (`die()`); `StatusBar.hide()` called in `init()` — all Capacitor calls have `.catch(() => {})` so they are silently no-ops in the browser
 - Build verified: `npm run build` → `75.69 kB` bundle (75KB — includes Capacitor web runtime shims), 0 vulnerabilities; `npx cap sync android` → 2 plugins detected and synced
+- **On-device verification (2026-07-03)**: Debug APK built locally on Windows via `cd android && .\gradlew.bat assembleDebug` (required pointing Gradle at Android Studio's bundled JDK 21 via `android/gradle.properties` → `org.gradle.java.home`), then installed via `adb install` / manual sideload. Confirmed: **app installs and launches successfully on a physical Android device.** Signed release APK, multi-device testing, and latency/FPS profiling remain open — tracked in Phase 21's Production Roadmap entry.
 
 ## Phase 20 — Complete ✅
 
