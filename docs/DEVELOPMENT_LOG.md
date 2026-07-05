@@ -4,6 +4,53 @@
 
 ---
 
+## [Phase 22 — Complete] Marketing Landing Page + Multi-Page Build
+
+**Date:** 2026-07-03  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.2.0
+
+### What was done
+
+Built a standalone marketing landing page and wired the project's Vite build to emit two pages.
+
+**Landing page (`landing/index.html` + `landing/style.css`):**
+- Standalone from the game's CSS, but reuses the exact color grammar (`#000`, pale `rgba(155,195,235)`, bright `rgba(185,220,255)`) and monospace type so it reads as the same product.
+- Sections: (1) full-viewport hero with the title, tagline "Sound is your only vision.", and CSS-animated concentric pulse rings expanding from a white core; (2) mechanic explainer pairing a looping CSS wave visualization with prose about the black-screen/echo conceit; (3) three feature bullets; (4) a "put on headphones, turn off the lights" play band with a large CTA; (5) an "Also on Android — Google Play coming soon" badge; (6) a minimal footer.
+- Fully self-contained: inline `data:` SVG favicon, all animations in CSS, a `prefers-reduced-motion` block that freezes the pulse animations, and responsive layout via `clamp()` + auto-fit grid + flex-wrap. Zero external network requests, so it's immune to the strict-CSP concerns and loads instantly.
+
+**Social/meta:**
+- Open Graph + Twitter Card tags on the landing page, plus a 1200×630 SVG social cover (`public/landing/og-cover.svg`) showing the title over pulse rings.
+- Added an inline SVG favicon and OG/Twitter tags to the game's `index.html` too, so sharing the root domain (which is the game) also yields a proper card.
+
+**Multi-page build (`vite.config.js`):**
+- Added `build.rollupOptions.input = { main: index.html, landing: landing/index.html }` (with ESM `__dirname` derived from `import.meta.url`). Vite now emits `dist/index.html`, `dist/landing/index.html`, and a shared `dist/assets/` (hashed `main-*.js`, `main-*.css`, `landing-*.css`).
+- The OG cover lives in `public/landing/` because it's referenced by an absolute URL, not a relative import — Vite copies `public/` verbatim, landing it at `dist/landing/og-cover.svg`.
+
+### Key decision: game stays at root, landing at `/landing/`
+
+The roadmap originally specified landing at `/` and game at `/play/`. I **inverted** this:
+- The Phase 21 Android app loads `dist/index.html` as the game via Capacitor's `webDir`. If root became the landing page, the native app would open the marketing page instead of the game.
+- Vite emits shared, content-hashed assets into `dist/assets/`, and both HTML entries reference them by absolute path (`/assets/...`). The game therefore can't be isolated into a self-contained `/play/` folder for Capacitor without breaking those references.
+- Net: game = `/` (Capacitor-safe, zero risk to the shipped APK), landing = `/landing/`. Social meta was added to both pages so the root domain still shares nicely. A true landing-at-root would require a Cloudflare Worker rewrite or a redirect-flash in the native app — deliberately not done, to avoid risk and scope creep.
+
+### Deferred from spec
+
+- **Analytics (Umami/Plausible)** and **Sentry error tracking** were both in the task list but require an external hosted instance / DSN / account the project doesn't have. Shipping a `<script src="https://analytics.example.com/...">` or an unconfigured Sentry import would be dead or broken code, so both are omitted with a note to add them when the infra exists.
+- `og:url` / `og:image` use a `https://resonance.example.com` placeholder; flagged (in HTML comments and the roadmap) for replacement with the real production domain before public launch, and a PNG cover is recommended over the SVG for the widest social-scraper support.
+
+### Verification
+
+- `npm run build` → 26 modules, emits both HTML pages + shared assets; landing HTML is 5.29 kB (1.70 kB gzip), landing CSS 4.24 kB (1.49 kB gzip).
+- `npm run preview` + curl: `/` (game), `/landing/`, and `/landing/og-cover.svg` all return 200; landing `<title>` resolves correctly. Built landing references the hashed CSS at `/assets/landing-*.css` and the Play CTA links to `/`.
+- `npx cap sync android` re-run so the Android bundle stays consistent (the landing files add a few KB to the APK; harmless — the app still loads `index.html` = game).
+
+### Next phase
+
+**Phase 23 — Performance Hardening**: cache the vignette gradient, audit `shadowBlur` cost, add an adaptive quality tier, and confirm 60fps on a mid-range 2021 Android and CPU-throttled desktop.
+
+---
+
 ## [Phase 21.1 — Complete] Mobile Touch Controls Redesign + Canvas Cutoff Fix
 
 **Date:** 2026-07-03  

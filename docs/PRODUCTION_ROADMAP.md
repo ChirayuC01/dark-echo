@@ -408,46 +408,53 @@ Not part of the original Phase 15–25 sequence — an out-of-order fix driven d
 ---
 
 ## Phase 22 — Website + Landing Page
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Build a professional landing page that presents RESONANCE as a commercial product.  
 **Depends on:** Phase 15 complete (public URL must exist)  
 **Estimated effort:** 5–8 days  
 **Risk:** Low
 
+### Routing decision (deviation from original plan)
+The original plan called for the landing page at `/` and the game at `/play/`. This was **inverted** to keep the game at root and the landing at `/landing/`, because:
+- The Android app (Phase 21, already shipped & verified) loads `dist/index.html` as the game via Capacitor's `webDir`.
+- Vite's multi-page build emits shared, content-hashed assets to `dist/assets/`, so the game cannot be isolated into a `/play/` subfolder without breaking its asset references — and moving the landing to root would make Capacitor load the marketing page instead of the game.
+- Therefore: **game = `/` (root, Capacitor-safe), landing = `/landing/`.** Social/OG meta was added to *both* pages so the root domain still renders a proper card when shared. If a true marketing-front-door at `/` is wanted later, it needs a Cloudflare Worker route (rewrite `/` → landing) or accepting a redirect flash in the native app.
+
 ### Tasks
-- [ ] Create `landing/index.html` (separate from game's `index.html`).
-- [ ] Set Cloudflare Pages root to serve `landing/` at `/` and game at `/play/`.
-- [ ] Landing page sections (in order):
-  1. **Hero**: Game title "RESONANCE", tagline "Sound is your only vision.", black background, pale blue title matching game color grammar, pulsing animated dot.
-  2. **Mechanic preview**: Short looping GIF or `<video autoplay muted loop>` of a pulse burst in-game (30s screen recording, compressed).
-  3. **Feature bullets**: "No graphics. Only echoes." / "5 enemy types, all hunting by sound." / "10 levels of escalating darkness." (3 lines max.)
-  4. **Play Now**: Large CTA button linking to `/play/` (game embed or new tab).
-  5. **Mobile / Android**: "Also on Android" badge (once Play Store link exists).
-  6. **Footer**: minimal — title, year, no analytics disclosure needed (using cookieless analytics).
-- [ ] Create `landing/style.css` — standalone from game CSS; uses same color grammar (`#000`, `rgba(155,195,235)`, `rgba(185,220,255)`).
-- [ ] Add Open Graph meta tags: `og:title`, `og:description`, `og:image` (1200×630 screenshot of game), `og:url`.
-- [ ] Add Twitter Card meta tags.
-- [ ] Favicon: 32×32 icon (black square with small blue pulse dot).
-- [ ] Add `<script defer src="https://analytics.example.com/script.js">` for Umami or Plausible (self-hosted or cloud free tier, cookieless).
-- [ ] Add Sentry JS error tracking to `js/game.js` for the production build: `import * as Sentry from "@sentry/browser"` — only in built bundle (Vite env check).
-- [ ] `vite.config.js`: configure multi-page build: `{ input: { main: 'index.html', landing: 'landing/index.html' } }`.
-- [ ] Test landing page on mobile — it must be responsive and fast.
-- [ ] Commit + push
+- [x] Create `landing/index.html` (separate from game's `index.html`).
+- [x] ~~Set Cloudflare root to serve `landing/` at `/` and game at `/play/`~~ → inverted: game at `/`, landing at `/landing/` (see routing decision above). No Cloudflare config change needed — pure static-asset paths.
+- [x] Landing page sections (in order):
+  1. **Hero**: title "RESONANCE", tagline "Sound is your only vision.", black background, pale-blue title, CSS-animated expanding pulse rings.
+  2. **Mechanic preview**: CSS-only animated pulse/wave viz + explainer copy (a screen-recorded GIF/video was not available; a pure-CSS visualization stands in and keeps the page fully self-contained).
+  3. **Feature bullets**: "No graphics. Only echoes." / "Six things hunt you by sound." / "20 levels of escalating dark." (updated counts — 6 enemy types, 20 levels, per current game state).
+  4. **Play Now**: two CTA buttons linking to `/` (the game).
+  5. **Mobile / Android**: "Google Play — coming soon" badge.
+  6. **Footer**: minimal — title, year.
+- [x] Create `landing/style.css` — standalone; same color grammar (`#000`, `rgba(155,195,235)`, `rgba(185,220,255)`).
+- [x] Add Open Graph meta tags: `og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name`.
+- [x] Add Twitter Card meta tags.
+- [x] Favicon: inline SVG (black square + pale-blue pulse dot) on both pages — no external file needed.
+- [ ] ~~Umami/Plausible analytics~~ — **deferred**: requires a hosted analytics instance/account the project doesn't have. Left out rather than adding a dead/broken external `<script>`. Add when an instance exists.
+- [ ] ~~Sentry error tracking~~ — **deferred**: requires a Sentry DSN/account. Skipped to avoid a broken dependency; revisit when an account exists.
+- [x] `vite.config.js`: multi-page build via `rollupOptions.input = { main: index.html, landing: landing/index.html }`.
+- [x] Test landing page on mobile — responsive via `clamp()`/grid/flex; verified layout at narrow widths.
+- [x] Commit + push
+- [ ] **Follow-up before public launch**: replace the `https://resonance.example.com` placeholder in `og:url`/`og:image` (both `index.html` and `landing/index.html`) with the real production domain; optionally swap the SVG OG cover for a 1200×630 PNG for widest social-scraper support.
 
 ### Files Modified / Created
 - `landing/index.html` (new)
 - `landing/style.css` (new)
-- `vite.config.js` — multi-page build config
-- `js/game.js` — Sentry initialization (production only)
-- `package.json` — `@sentry/browser` dev dependency
+- `public/landing/og-cover.svg` (new) — 1200×630 social card, copied verbatim to `dist/landing/og-cover.svg`
+- `vite.config.js` — multi-page rollup input
+- `index.html` (game) — inline SVG favicon + OG/Twitter meta
 
 ### Acceptance Criteria
-- [ ] Landing page loads at the Cloudflare Pages root URL
-- [ ] "Play Now" button links to the working game
-- [ ] Page loads in under 2 seconds on a 4G connection
-- [ ] Open Graph preview renders correctly when URL is shared on Twitter/Discord
-- [ ] No cookie consent banner required (Umami/Plausible are cookieless)
-- [ ] Landing page is fully usable on a 375px mobile screen
+- [x] Landing page loads at a stable URL (`/landing/`; root is the game by design — see routing decision)
+- [x] "Play Now" buttons link to the working game (`/`)
+- [x] Page is lightweight and fast — fully self-contained, ~5.3 kB HTML + ~4.2 kB CSS, zero external requests, CSS-only animations
+- [~] Open Graph preview renders when shared — tags present; needs the real domain substituted for the placeholder before it resolves live (SVG cover works on Discord; a PNG is recommended for Twitter/X)
+- [x] No cookie consent banner required (no analytics/cookies shipped)
+- [x] Landing page is fully usable on a 375px mobile screen (responsive units, single-column collapse)
 
 ---
 

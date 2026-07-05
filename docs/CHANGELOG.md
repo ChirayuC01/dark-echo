@@ -5,6 +5,19 @@
 
 ---
 
+## [v2.2.0] — 2026-07-03 — Phase 22
+
+### Added
+- **Marketing landing page** (`landing/index.html` + `landing/style.css`): standalone page in the game's color grammar, served at `/landing/`. Sections: animated pulse hero, mechanic explainer, feature bullets, Play-Now CTAs, Android "coming soon" badge, footer. Fully self-contained — inline SVG favicon, CSS-only animations, `prefers-reduced-motion` support, no external requests.
+- **Social cards**: Open Graph + Twitter Card meta on both the landing and the game `index.html`; 1200×630 SVG cover at `public/landing/og-cover.svg` → `dist/landing/og-cover.svg`. Inline SVG favicon on both pages.
+- **Multi-page build**: `vite.config.js` now builds two entry points — `main` (game) and `landing` — sharing hashed assets in `dist/assets/`.
+
+### Notes
+- **Routing**: game remains at `/` (root) and landing is at `/landing/`, inverting the original `/` vs `/play/` plan. The game is the Capacitor/Android entry and Vite's shared hashed assets prevent moving it off root. Rationale in `PRODUCTION_ROADMAP.md` Phase 22.
+- **Deferred**: analytics (Umami/Plausible) and Sentry error tracking — both require external accounts/infra not yet set up. `og:url`/`og:image` use a placeholder domain to be replaced before public launch.
+
+---
+
 ## [v2.1.1] — 2026-07-03 — Phase 21.1
 
 ### Changed

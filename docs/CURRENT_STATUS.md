@@ -1,17 +1,17 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 21.1 touch controls redesign, verified on-device (2026-07-03)  
+> **Last updated:** Phase 22 complete — marketing landing page + multi-page build (2026-07-03)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 22 — Website + Landing Page**  
+**Phase 23 — Performance Hardening**  
 Status: ⬜ Pending
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17, 18, 19, 20, and 21 are complete.
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17, 18, 19, 20, 21, and 22 are complete.
 
 ---
 
@@ -159,13 +159,24 @@ Status: ⬜ Pending
 | Act II levels (11–20) | Phase 20 | ✅ Done | — | Levels 11–20; commits `37f8ef2` + `ec08a1c` |
 | ScreamerEnemy | Phase 20 | ✅ Done | — | Stationary ray trap; 48-ray burst; alerts enemies within 300px |
 | Android app (Capacitor) | Phase 21 | ✅ Done | — | Capacitor 8 + Haptics + StatusBar; debug APK built + installed on physical device |
-| Website + landing page | Phase 22 | ⬜ Pending | High | No public presence currently |
+| Website + landing page | Phase 22 | ✅ Done | — | `landing/` served at `/landing/`; multi-page Vite build; game stays at root |
 | Performance hardening (60fps mobile) | Phase 23 | ⬜ Pending | High | Must pass on mid-range Android |
 | Level select screen | Phase 24 | ⬜ Pending | Medium | Quality-of-life for 20-level game |
 | Achievements (10 total) | Phase 24 | ⬜ Pending | Medium | Retention and replay incentive |
 | Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
+
+## Phase 22 — Complete ✅
+
+**Phase 22 summary:**
+- `landing/index.html` + `landing/style.css`: standalone marketing page in the game's color grammar (`#000`, pale `rgba(155,195,235)`, bright `rgba(185,220,255)`). Sections: CSS-animated expanding-pulse hero, mechanic explainer with a CSS wave visualization, three feature bullets (6 enemy types / 20 levels), two "Play Now" CTAs → `/`, "Google Play — coming soon" Android badge, minimal footer. Fully self-contained: inline SVG favicon, CSS-only animations, `prefers-reduced-motion` fallback, zero external requests.
+- `public/landing/og-cover.svg`: 1200×630 social card, copied verbatim by Vite to `dist/landing/og-cover.svg`; referenced by the OG/Twitter `image` meta.
+- `vite.config.js`: multi-page build via `rollupOptions.input = { main: index.html, landing: landing/index.html }` (ESM `__dirname` computed from `import.meta.url`). Shared assets emit to `dist/assets/`.
+- `index.html` (game): inline SVG favicon + OG/Twitter meta added so the root domain also renders a social card.
+- **Routing:** game stays at `/` (root) — it is the Capacitor/Android entry and Vite's shared hashed assets prevent isolating it into `/play/`. Landing is served at `/landing/`. This inverts the original spec's `/` vs `/play/` split; rationale documented in `PRODUCTION_ROADMAP.md` Phase 22.
+- **Deferred:** Umami/Plausible analytics and Sentry error tracking — both need external accounts/infra the project doesn't have yet; omitted rather than shipping broken external `<script>`/deps. `og:url`/`og:image` use a `resonance.example.com` placeholder flagged for replacement with the real domain before public launch.
+- Build verified: `npm run build` → `dist/index.html` (game) + `dist/landing/index.html` + `dist/landing/og-cover.svg`; `npm run preview` → `/`, `/landing/`, `/landing/og-cover.svg` all return 200.
 
 ## Phase 21 — Complete ✅
 
@@ -266,9 +277,9 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 
 ## Next Recommended Task
 
-Begin **Phase 22 — Website + Landing Page**.
+Begin **Phase 23 — Performance Hardening** (60fps on mid-range Android + low-end desktop; vignette caching, shadowBlur audit, adaptive quality tier).
 
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 22.
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 23.
 
 ---
 
