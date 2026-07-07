@@ -12,12 +12,13 @@
 | Genre | Top-down minimalist stealth / horror exploration |
 | Platform | Browser (primary) + Android (secondary, via Capacitor) |
 | Stack | Canvas 2D, Web Audio API, Vite build (Phase 15+), no frameworks |
-| Target resolution | 800 × 600 px (responsive on mobile) |
-| Entry point | `index.html` → `js/game.js` (ES module) |
+| Target resolution | 800 × 600 px (4:3; scales to fit any viewport/orientation on mobile) |
+| Entry point (web) | `index.html` (landing, `/`) → `play/index.html` (game, `/play/`) → `js/game.js` (ES module) |
+| Entry point (Android) | Capacitor loads `dist/index.html`; a native-only redirect jumps to `play/index.html` |
 | Active branch | `claude/beautiful-fermat-5102bb` |
 | Prior branch | `claude/sound-vision-game-7pvbo1` (v1.0.0 shipped here) |
-| Current version | v1.0.0 (prototype complete, production phases pending) |
-| Deployment target | Cloudflare Pages (web), Google Play Store (Android) |
+| Current version | v2.2.0 (Phases 15–22 complete; Phase 16 cancelled) |
+| Deployment target | Cloudflare Workers Static Assets (web), Google Play Store (Android, packaging done — not yet submitted) |
 
 ---
 
@@ -81,8 +82,8 @@ See KNOWN_ISSUES.md DC-004 for implementation notes.
 ## 4. Player Mechanics
 
 ### 4.1 Movement
-- **Normal walk**: WASD / arrow keys / touch joystick. Speed: `PLAYER_SPEED = 150 px/s`.
-- **Crouch/Stealth**: Hold Shift or C. Speed multiplied by `CROUCH_SPEED_MULT = 0.45`.
+- **Normal walk**: WASD / arrow keys, or (mobile) **hold** anywhere on the canvas — the player walks toward the touch point (direction = vector from screen centre). Speed: `PLAYER_SPEED = 150 px/s`. Velocity is lerped (`PLAYER_ACCEL`) for a slight sense of weight (Phase 19).
+- **Crouch/Stealth**: Hold Shift or C, or (mobile) **quick-tap** the canvas in a direction (release before the tap threshold) to crouch-walk that way; repeated tapping chains continuous crouched movement. Speed multiplied by `CROUCH_SPEED_MULT = 0.45`.
   - Step interval multiplied by `CROUCH_INTERVAL_MULT = 2.5` (less frequent footsteps).
   - Step ray count multiplied by `CROUCH_RAY_MULT = 0.5`.
   - Step ray max distance multiplied by `CROUCH_DIST_MULT = 0.45`.
@@ -94,7 +95,7 @@ See KNOWN_ISSUES.md DC-004 for implementation notes.
 - **Stopping**: No movement = no step rays. Only hazard scans reveal geometry.
 
 ### 4.2 Pulse
-- Spacebar / pulse button. Cooldown: `PULSE_COOLDOWN = 3500ms`.
+- Spacebar, or (mobile) **tap-and-hold directly on the player dot**. Cooldown: `PULSE_COOLDOWN = 3500ms`.
 - Emits `RAY_COUNT_PULSE = 64` rays, max distance `PULSE_RAY_MAX = 340px`, 3 bounces.
 - High visibility. Enemies react. Collapsible walls can collapse on hit.
 - HUD shows cooldown as a fill bar.
@@ -253,6 +254,15 @@ Each ray maintains a `heardEntities` Set. On segment advance, if entity within `
 | Kill condition | Player overlaps crusher segment bounds |
 | Level def | `{ type: 'crusher', col, row, axis, range, period }` |
 
+### 7.7 ScreamerEnemy (Act II — Phase 20)
+| Property | Value |
+|---|---|
+| State machine | Stationary; `triggered` latch |
+| Trigger | Any ray (of any type) within `HAZARD_RADIUS + 4px` → emits a `SCREAMER_BURST_RAYS = 48` ray burst + `playScreamer()`, and alerts every enemy within `SCREAMER_ALERT_RADIUS = 300px` |
+| Hearing | N/A (does not move; cannot be silenced — crouching does not help) |
+| Kill condition | Player proximity (same as Hazard) |
+| Level def | `{ type: 'screamer', col, row }` (or spawned mid-level via the `spawn_enemy` trigger) |
+
 ---
 
 ## 8. Level Structure
@@ -270,7 +280,9 @@ Each ray maintains a `heardEntities` Set. On segment advance, if entity within `
 }
 ```
 
-### 8.2 Progression Plan (10 Levels)
+### 8.2 Progression Plan (20 Levels across 2 Acts)
+
+**Act I — Levels 1–10** (the original prototype arc):
 
 | # | Name | New Mechanic | Enemy Mix |
 |---|---|---|---|
@@ -282,8 +294,23 @@ Each ray maintains a `heardEntities` Set. On segment advance, if entity within `
 | 6 | The Whisper | Crouch mechanic | 1 patrol (react to normal steps) |
 | 7 | Flooded | Water zones | 2 hazards |
 | 8 | The Collapse | Collapsible walls + keys | 1 patrol + 1 chaser |
-| 9 | The Corridor | Crushers | 3 crushers (⚠️ difficulty pending balance — see DC-003) |
+| 9 | The Corridor | Crushers | 3 crushers |
 | 10 | The Gauntlet II | All mechanics + blind stalker | Mixed |
+
+**Act II — Levels 11–20** ("The Facility", added Phase 20; introduces `ScreamerEnemy` and the `spawn_enemy` trigger):
+
+| # | Name | Focus |
+|---|---|---|
+| 11 | The Corridor II | Enemy step echoes (step-aware patrols) |
+| 12 | The Chamber II | Screamers in open space; positional audio |
+| 13 | The Factory | Crusher gauntlet under a patrol |
+| 14 | The Scream | Screamer intro; pulse-free challenge |
+| 15 | The Archive | Multi-key / multi-door maze |
+| 16 | The Flood II | Screamers in water |
+| 17 | The Awakening II | Pure BlindStalker stealth |
+| 18 | The Web | `spawn_enemy` + `remove_wall` trigger chain |
+| 19 | The Vault | Full Act II toolkit combined |
+| 20 | The Deep | All mechanics; largest map; hardest level |
 
 ---
 
@@ -311,6 +338,13 @@ A `SOUND_CONFIG` object in `audio.js` centralizes all tunable parameters. All `p
 | `playKeyPickup()` | Key collected | Brief high ping, 880Hz |
 | `startAmbient()` | Game starts | Continuous 55Hz sine drone, gain 0.04 |
 | `stopAmbient()` | Player dies / wins | Ramp down and disconnect |
+| `playEnemyFootstep(x,y)` / `…Hunting(x,y)` | Enemy step (Phase 17) | Positional noise burst; louder/faster when hunting |
+| `playBlindStalkerBreathing(x,y)` | Stalker nearby (Phase 17) | Quiet positional 110Hz breath every 2–3s |
+| `playPulseReady()` | Pulse cooldown expires (Phase 19) | Brief 1800Hz click |
+| `playScreamer()` | Screamer triggered (Phase 20) | Piercing layered burst, gain 0.4, 1.5s |
+| `startEnvironmental()` / `stopEnvironmental()` | Game start / death+win (Phase 18) | Scheduled drips / rumble / creaks |
+
+> Positional audio (Phase 17): `updateListener(px,py)` each frame; entity sounds routed through `PannerNode` (HRTF). Reverb (Phase 18): `ConvolverNode` wet send, per-level `setReverbSize()`.
 
 ### 9.3 Mixing Categories
 ```
@@ -329,26 +363,34 @@ UI:          gain 0.18  (level complete)
 - **Screens**: title → playing → (pause) → (dead | levelup | win)
 - **Hints**: Short text, shown on level entry, fades or dismissed on first input.
 - **No tutorial popups**. Mechanics are taught through level design.
-- **Mobile**: Touch joystick (bottom-left). Pulse button (bottom-right). Crouch button (NEW, bottom-center or second touch zone).
+- **Mobile** (redesigned Phase 21.1 — no on-screen buttons; the canvas is the whole control surface):
+  - **Hold** anywhere → walk toward the touch point (direction from screen centre).
+  - **Quick tap** in a direction → crouch-walk that way (repeat to chain).
+  - **Tap-and-hold on the player dot** → fire pulse.
+  - The canvas scales to fit any viewport/orientation via a `min()` aspect-fit (no fixed breakpoint); `touch-action: none` prevents OS gesture conflicts.
 
 ---
 
 ## 11. Technical Architecture
 
 ```
+index.html       — landing page (site root /); redirects native app to play/
+play/index.html  — the game (served at /play/)
+landing/style.css— landing page styles
+css/style.css    — game styles
 js/
   constants.js   — all tuning parameters and CELL types
   utils.js       — dist, normalize, clamp, lerp, tileCenter, segPtDist
-  audio.js       — SOUND_CONFIG + all play*() functions
-  input.js       — keyboard, touch joystick, crouch state, debug toggle
-  entities.js    — Player, PatrolEnemy, ChaserEnemy, Hazard, Sentry, BlindStalker, Crusher
+  audio.js       — SOUND_CONFIG + all play*() (incl. positional audio, reverb, environmental)
+  input.js       — keyboard + tap-zone touch controls, crouch state, debug toggle
+  entities.js    — Player, PatrolEnemy, ChaserEnemy, Hazard, Sentry, BlindStalker, Crusher, ScreamerEnemy
   waves.js       — Ray class, RaySystem (burst, update, echoTrails)
   collision.js   — castRay (DDA), resolveWalls, circlesOverlap
-  levels.js      — LEVELS array (all 10 level defs)
-  game.js        — G state, loadLevel, update, loop, handleAction
+  levels.js      — LEVELS array (all 20 level defs, Acts I + II)
+  game.js        — G state, loadLevel, update, loop, handleAction, Capacitor haptics/status-bar
   renderer.js    — draw(), all drawX() helpers, hearing(), revealAlpha()
-  ui.js          — show/hide screens, setHint, setDeathMessage
-  debug.js (NEW) — debug overlay toggle, stat display
+  ui.js          — show/hide screens, setHint, setDeathMessage, continue button
+  debug.js       — debug overlay toggle, stat display
 ```
 
 **Frame order in `game.js` update():**
@@ -393,38 +435,47 @@ js/
 
 ## 14. Production Scope (Added v1.0.0 → commercial)
 
-These were out of scope for the prototype but are active production targets:
+These were out of scope for the prototype. Status as of v2.2.0:
 
-- **Build system**: Vite (Phase 15) — bundling, minification, cache-busting. Replaces `python3 -m http.server`.
-- **Deployment**: Cloudflare Pages — auto-deploy on push to main via GitHub Actions.
-- **Android**: Capacitor wrapper for Google Play Store submission (Phase 21).
-- **Level persistence**: `localStorage` for level progress and best times (Phase 15 / Phase 24).
-- **Website**: Professional landing page at `/` with game playable at `/play/` (Phase 22).
-- **Analytics**: Cookieless (Umami or Plausible). No personal data. GDPR-safe.
-- **Error tracking**: Sentry JS (production build only, free tier).
-- **Content**: Expand to 20 levels across 2 acts (Phase 20).
-- **Save/checkpoint**: `localStorage` best times per level and Act completion flags (Phase 24).
+- ✅ **Build system**: Vite (Phase 15) — bundling, minification, cache-busting. Replaces `python3 -m http.server`.
+- ✅ **Deployment**: Cloudflare **Workers Static Assets** (not Pages) — auto-deploy on push to `main` via both the Cloudflare git integration and GitHub Actions (`wranglerVersion: '4'`).
+- ✅ **Android**: Capacitor wrapper (Phase 21) — debug APK built + installed on a physical device. Store submission still pending (Phase 25).
+- ✅ **Level persistence**: `localStorage` level progress + Continue button (Phase 15).
+- ✅ **Website**: landing page at `/`, game at `/play/` (Phase 22).
+- ⬜ **Analytics**: Cookieless (Umami or Plausible). **Deferred** — needs a hosted instance; not shipped.
+- ⬜ **Error tracking**: Sentry JS. **Deferred** — needs a DSN/account; not shipped.
+- ✅ **Content**: 20 levels across 2 acts (Phase 20).
+- ⬜ **Save/checkpoint**: best times per level + Act completion flags (Phase 24 — pending).
 
 ---
 
-## 15. New Systems (v1.1+)
+## 15. New Systems (v1.1+) — Implemented
 
-The following systems are specified in `docs/PRODUCTION_ROADMAP.md` and not yet implemented:
+The following systems (specified in `docs/PRODUCTION_ROADMAP.md`) are now implemented, except where noted:
 
-### 15.1 Enemy Step Ray System
+### 15.1 Enemy Step Ray System ✅ (Phase 17)
 Enemies emit their own `'step-enemy'` ray bursts as they move. Rays render in muted red `rgba(180,60,60,α)`. Enemy step rays reveal wall geometry. Enemy step rays do NOT trigger hearing on the emitting enemy. Audio: `playEnemyFootstep(x, y)` routed through `PannerNode` at enemy world coordinates.
 
-### 15.2 Positional Audio
+### 15.2 Positional Audio ✅ (Phase 17)
 `AudioContext.listener` updated with player position each frame. All entity sounds routed through `PannerNode` at entity world coordinates. Model: `panningModel: 'HRTF'`, `distanceModel: 'inverse'`.
 
-### 15.3 Reverb System
+### 15.3 Reverb System ✅ (Phase 18)
 Procedural impulse response (exponential noise decay, 2.5s) loaded into `ConvolverNode`. Per-level wet mix via `reverb: 'small'|'medium'|'large'` field in level definition.
 
-### 15.4 Wavefront Renderer (replaces spoke-ray visual)
-Active rays from the same burst grouped by `burstId`, sorted by angle, connected with arc strokes at tip radius. Produces a ring/wavefront visual rather than discrete spokes. Shockwave origin ring added on pulse burst.
+### 15.4 Wavefront Renderer ❌ CANCELLED (Phase 16)
+Was to group rays by `burstId` and draw arc strokes for a ring/wavefront visual. Implemented and reverted — the original spoke/starburst rendering looked better and was kept. Permanently descoped; do not re-attempt.
 
-### 15.5 ScreamerEnemy (Act II)
-Stationary enemy. When any ray hits it, it emits a 48-ray burst and plays a loud audio cue, alerting all enemies within 300px. Cannot be silenced; must be avoided. `type: 'screamer'` in level def.
+### 15.5 ScreamerEnemy (Act II) ✅ (Phase 20)
+Stationary enemy. When any ray hits it, it emits a 48-ray burst and plays a loud audio cue, alerting all enemies within 300px. Cannot be silenced; must be avoided. `type: 'screamer'` in level def. (See §7.7.)
 
-### 15.6 Environmental Ambient Sounds
+### 15.6 Environmental Ambient Sounds ✅ (Phase 18)
 Non-gameplay procedural sounds: drips (all levels), distant rumble (levels 5+), structural creaks (levels 3+). Scheduled via AudioContext time, NOT visualized as rays. Started/stopped alongside ambient drone.
+
+### 15.7 Movement Feel + Micro-Polish ✅ (Phase 19)
+Player velocity inertia (lerp via `PLAYER_ACCEL`), screen-shake (`triggerShake()` on collapse/death/crusher near-miss), pulse-ready click, danger-proximity ambient modulation, and a free level-entry pulse.
+
+### 15.8 Android Packaging ✅ (Phase 21)
+Capacitor 8 wrapper with `@capacitor/haptics` (buzz on death + collapse) and `@capacitor/status-bar` (hidden in play). Build/install steps in `docs/ANDROID_BUILD_GUIDE.md`.
+
+### 15.9 Landing Page + Multi-Page Build ✅ (Phase 22)
+Marketing landing page at `/`, game at `/play/`, via a Vite multi-page build. See `docs/PRODUCTION_ROADMAP.md` Phase 22 for routing details.
