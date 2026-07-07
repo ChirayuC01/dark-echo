@@ -13,10 +13,11 @@ export default defineConfig({
     assetsInlineLimit: 4096,
     rollupOptions: {
       input: {
-        // Game at site root (also the Capacitor/Android entry — do not move off root)
+        // Marketing landing page at site root (/). Also the Capacitor/Android
+        // entry — its inline script redirects the native shell to play/.
         main: resolve(__dirname, 'index.html'),
-        // Marketing landing page, served at /landing/
-        landing: resolve(__dirname, 'landing/index.html'),
+        // The game, served at /play/.
+        game: resolve(__dirname, 'play/index.html'),
       },
     },
   },
