@@ -4,13 +4,37 @@ let _pausePressed  = false;
 let _crouching     = false;
 let _debugToggle   = false;
 
-// Touch joystick state
-const touch = {
-  active: false,
-  startX: 0, startY: 0,
-  dx: 0, dy: 0,
-  pulseBtn: false,
-};
+const CANVAS_W = 800, CANVAS_H = 600;
+const TAP_MAX_HOLD     = 200;  // ms — touch released before this counts as a "tap" (crouch-walk)
+const CROUCH_TAP_DECAY = 350;  // ms — how long a tap keeps the player crouch-walking before stopping
+const PULSE_TOUCH_RADIUS = 42; // canvas-space px — tap-and-hold within this of the player fires pulse
+
+let canvasEl = null;
+let _playerX = -1000, _playerY = -1000; // canvas-space; updated every frame by setPlayerScreenPos()
+
+// Single tracked "movement" touch: held → walk toward tapped direction from screen center.
+const move = { touchId: null, startTime: 0, dx: 0, dy: 0 };
+
+// Crouch-walk state, driven by quick taps (not holds) in the movement zone.
+const crouchTap = { active: false, dx: 0, dy: 0, until: 0 };
+
+// Any touch currently held on the player fires pulse continuously while cooldown allows.
+const pulseTouches = new Set();
+
+function canvasToLocal(clientX, clientY) {
+  const rect = canvasEl.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) / rect.width  * CANVAS_W,
+    y: (clientY - rect.top)  / rect.height * CANVAS_H,
+  };
+}
+
+function dirFromCenter(x, y) {
+  const dx = x - CANVAS_W / 2, dy = y - CANVAS_H / 2;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 1e-3) return { dx: 0, dy: 0 };
+  return { dx: dx / len, dy: dy / len };
+}
 
 export function init() {
   window.addEventListener('keydown', e => {
@@ -25,62 +49,62 @@ export function init() {
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyC') _crouching = false;
   });
 
-  const zone      = document.getElementById('joystick-zone');
-  const knob      = document.getElementById('joystick-knob');
-  const pulseBtn  = document.getElementById('pulse-btn');
-  const crouchBtn = document.getElementById('crouch-btn');
+  canvasEl = document.getElementById('canvas');
+  if (!canvasEl) return;
 
-  if (zone) {
-    zone.addEventListener('touchstart', e => {
-      e.preventDefault();
-      const r = zone.getBoundingClientRect();
-      touch.active = true;
-      touch.startX = r.left + r.width / 2;
-      touch.startY = r.top + r.height / 2;
-      touch.dx = 0; touch.dy = 0;
-    }, { passive: false });
-
-    zone.addEventListener('touchmove', e => {
-      e.preventDefault();
-      if (!touch.active) return;
-      const t = e.touches[0];
-      const MAX = 40;
-      let dx = t.clientX - touch.startX;
-      let dy = t.clientY - touch.startY;
-      const len = Math.sqrt(dx*dx + dy*dy);
-      if (len > MAX) { dx = dx/len*MAX; dy = dy/len*MAX; }
-      touch.dx = dx / MAX;
-      touch.dy = dy / MAX;
-      if (knob) {
-        knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  canvasEl.addEventListener('touchstart', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      const p = canvasToLocal(t.clientX, t.clientY);
+      const distToPlayer = Math.hypot(p.x - _playerX, p.y - _playerY);
+      if (distToPlayer < PULSE_TOUCH_RADIUS) {
+        pulseTouches.add(t.identifier);
+        continue;
       }
-    }, { passive: false });
+      if (move.touchId === null) {
+        move.touchId = t.identifier;
+        move.startTime = performance.now();
+        const d = dirFromCenter(p.x, p.y);
+        move.dx = d.dx; move.dy = d.dy;
+      }
+    }
+  }, { passive: false });
 
-    const endTouch = () => {
-      touch.active = false; touch.dx = 0; touch.dy = 0;
-      if (knob) knob.style.transform = 'translate(-50%,-50%)';
-    };
-    zone.addEventListener('touchend', endTouch);
-    zone.addEventListener('touchcancel', endTouch);
-  }
+  canvasEl.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === move.touchId) {
+        const p = canvasToLocal(t.clientX, t.clientY);
+        const d = dirFromCenter(p.x, p.y);
+        move.dx = d.dx; move.dy = d.dy;
+      }
+    }
+  }, { passive: false });
 
-  if (pulseBtn) {
-    pulseBtn.addEventListener('touchstart', e => {
-      e.preventDefault();
-      touch.pulseBtn = true; _pulsePressed = true;
-    }, { passive: false });
-    pulseBtn.addEventListener('touchend',   () => { touch.pulseBtn = false; });
-    pulseBtn.addEventListener('touchcancel', () => { touch.pulseBtn = false; });
-  }
+  const endTouch = e => {
+    for (const t of e.changedTouches) {
+      if (pulseTouches.has(t.identifier)) {
+        pulseTouches.delete(t.identifier);
+        continue;
+      }
+      if (t.identifier === move.touchId) {
+        const heldFor = performance.now() - move.startTime;
+        if (heldFor < TAP_MAX_HOLD) {
+          crouchTap.active = true;
+          crouchTap.dx = move.dx; crouchTap.dy = move.dy;
+          crouchTap.until = performance.now() + CROUCH_TAP_DECAY;
+        }
+        move.touchId = null; move.dx = 0; move.dy = 0;
+      }
+    }
+  };
+  canvasEl.addEventListener('touchend', endTouch, { passive: true });
+  canvasEl.addEventListener('touchcancel', endTouch, { passive: true });
+}
 
-  if (crouchBtn) {
-    crouchBtn.addEventListener('touchstart', e => {
-      e.preventDefault();
-      _crouching = true;
-    }, { passive: false });
-    crouchBtn.addEventListener('touchend',    () => { _crouching = false; });
-    crouchBtn.addEventListener('touchcancel', () => { _crouching = false; });
-  }
+// Called every frame with the player's canvas-space position (game.js update()).
+export function setPlayerScreenPos(x, y) {
+  _playerX = x; _playerY = y;
 }
 
 export function getMove() {
@@ -90,18 +114,36 @@ export function getMove() {
   if (keys.has('KeyW') || keys.has('ArrowUp'))    dy -= 1;
   if (keys.has('KeyS') || keys.has('ArrowDown'))  dy += 1;
 
-  if (touch.active) { dx += touch.dx; dy += touch.dy; }
+  if (move.touchId !== null) {
+    // Don't move yet while a fresh touch is still ambiguous (could resolve to a
+    // tap → crouch-walk). Only a touch held past the tap threshold counts as
+    // a real hold and walks at normal speed.
+    if (performance.now() - move.startTime >= TAP_MAX_HOLD) {
+      dx += move.dx; dy += move.dy;
+    }
+  } else if (crouchTap.active) {
+    if (performance.now() < crouchTap.until) {
+      dx += crouchTap.dx; dy += crouchTap.dy;
+    } else {
+      crouchTap.active = false;
+    }
+  }
 
   // Normalize diagonal
-  const len = Math.sqrt(dx*dx + dy*dy);
+  const len = Math.sqrt(dx * dx + dy * dy);
   if (len > 1) { dx /= len; dy /= len; }
   return { dx, dy };
 }
 
-export function isCrouching() { return _crouching; }
+export function isCrouching() {
+  const touchCrouching = move.touchId === null && crouchTap.active && performance.now() < crouchTap.until;
+  return _crouching || touchCrouching;
+}
 
 export function consumePulse() {
-  const v = _pulsePressed; _pulsePressed = false; return v;
+  const v = _pulsePressed || pulseTouches.size > 0;
+  _pulsePressed = false;
+  return v;
 }
 
 export function consumePause() {

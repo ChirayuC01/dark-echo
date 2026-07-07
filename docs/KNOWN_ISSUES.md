@@ -11,6 +11,22 @@ _None currently confirmed._
 
 ---
 
+## Recently Resolved (mobile / delivery)
+
+### MB-001 — Mobile touch controls (joystick + buttons) not the desired scheme
+**Status:** ✅ Resolved (Phase 21.1)  
+**Resolution:** Removed the on-screen joystick / crouch / pulse buttons. The canvas is now the whole control surface: hold to walk toward the touch point, quick-tap to crouch-walk, tap-and-hold on the player to pulse. A follow-up fix stopped quick taps from briefly moving at full speed before crouch engaged.
+
+### MB-002 — Level cut off (bottom/right) on device in landscape
+**Status:** ✅ Resolved (Phase 21.1)  
+**Resolution:** Replaced the fixed `820px` breakpoint sizing with a `min()` aspect-fit (`width: min(800px, 100vw, 100vh*4/3)`, height likewise) so the 4:3 canvas always fits any viewport/orientation. Added `viewport-fit=cover` + `touch-action: none`.
+
+### MB-003 — `/`, `/landing`, `/play` all showed the same page
+**Status:** ✅ Resolved (Phase 22 follow-up)  
+**Resolution:** The game had been physically at the site root, so all non-exact paths fell back to it. Restructured: root `index.html` = landing (`/`), `play/index.html` = game (`/play/`); native app redirects to the game; `wrangler.jsonc` `html_handling`/`not_found_handling` set for deterministic routing.
+
+---
+
 ## Tech Debt
 
 ### TD-001 — echoTrails no hard cap
@@ -22,11 +38,10 @@ _None currently confirmed._
 ---
 
 ### TD-002 — Backward-compat shim classes in waves.js
-**Status:** ⬜ Low priority  
+**Status:** ✅ Resolved (Phase 15)  
 **Severity:** Low  
-**File:** `js/waves.js` lines 201–217  
-**Description:** `Wave` and `WaveManager` shim classes at the bottom of waves.js are unused. They were kept for backward compat during the circular→ray migration but nothing imports them.  
-**Fix:** Delete both classes after confirming no remaining imports. Search: `import.*Wave` across all JS files.
+**File:** `js/waves.js`  
+**Resolution:** `Wave` and `WaveManager` shim classes deleted in Phase 15 after confirming no imports remained.
 
 ---
 
@@ -57,10 +72,9 @@ _None currently confirmed._
 ---
 
 ### TD-006 — No save state / level progression persistence
-**Status:** ⬜ Accepted scope decision  
+**Status:** ✅ Resolved (Phase 15 — superseded by TD-010)  
 **Severity:** Low  
-**Description:** Refreshing the page resets to level 1. `G.levelIndex` is in-memory only. Levels are short enough (60–120s each) that this is acceptable.  
-**Fix:** Could add `localStorage.setItem('resonance_level', G.levelIndex)` if requested. Not in current scope.
+**Resolution:** `localStorage` persistence (`resonance_progress`) added in Phase 15; title screen shows a Continue button. See TD-010.
 
 ---
 
@@ -133,7 +147,7 @@ Implementation: `shape` property added to each enemy constructor (`'patrol'`, `'
 ---
 
 ### TD-007 — Vignette gradient recreated every frame
-**Status:** ⬜ Fix in Phase 23  
+**Status:** ⬜ Open — planned for Phase 23  
 **Severity:** Low-Medium (mobile performance impact)  
 **File:** `js/renderer.js` `drawVignette()`  
 **Description:** `createRadialGradient()` is called every frame to draw the vignette. On mobile, this adds GPU upload state per frame. Cache the vignette on an offscreen canvas created once at resize and use `drawImage()` each frame instead.  
@@ -142,65 +156,58 @@ Implementation: `shape` property added to each enemy constructor (`'patrol'`, `'
 ---
 
 ### TD-008 — No error boundary in game loop
-**Status:** ⬜ Fix in Phase 22 (with Sentry)  
+**Status:** ⬜ Still open (Sentry deferred — see below)  
 **Severity:** Medium  
 **File:** `js/game.js` `loop()`  
 **Description:** An uncaught exception in `update()` or `Renderer.draw()` silently kills the `requestAnimationFrame` loop. The canvas freezes with no user feedback.  
-**Fix:** Wrap the loop body in try/catch. On catch: show an error overlay ("Something went wrong — reload the page"). Wire Sentry.captureException() in production build.
+**Update (Phase 22):** Sentry was deferred (needs an external DSN/account not yet set up), so the Sentry-wired part of this is on hold. The try/catch + error overlay could still be added independently of Sentry; not yet done.  
+**Fix:** Wrap the loop body in try/catch. On catch: show an error overlay ("Something went wrong — reload the page"). Wire `Sentry.captureException()` if/when Sentry is added.
 
 ---
 
 ### TD-009 — No build pipeline (ES module HTTP requests on load)
-**Status:** ⬜ Fix in Phase 15  
+**Status:** ✅ Resolved (Phase 15)  
 **Severity:** Medium (performance on mobile 4G)  
-**File:** `index.html`  
-**Description:** The browser makes 12+ separate HTTP requests for ES module files on page load. On localhost this is imperceptible. On a mobile 4G connection with 100ms RTT, this adds ~1.2s to initial load time.  
-**Fix:** Vite build bundles all modules into a single minified JS file. Phase 15 task.
+**Resolution:** Vite build bundles all modules into a single minified, hashed JS file in `dist/assets/`. `npm run build` replaces the raw ES-module HTTP fan-out.
 
 ---
 
 ### TD-010 — No level progress persistence
-**Status:** ⬜ Fix in Phase 15  
+**Status:** ✅ Resolved (Phase 15)  
 **Severity:** Medium (UX regression — players restart at Level 1 on every refresh)  
-**File:** `js/game.js`  
-**Description:** `G.levelIndex` is in-memory only. Refreshing the browser resets to Level 1. Acceptable for prototype; unacceptable for a shipped game.  
-**Fix:** `localStorage.setItem('resonance_progress', G.levelIndex + 1)` on level complete. Read on init. Phase 15 task.
+**Resolution:** `localStorage` key `resonance_progress` written on level complete, cleared on win / restart-from-1; title screen shows a Continue button when a save exists.
 
 ---
 
 ### TD-011 — Enemies are completely silent
-**Status:** ⬜ Fix in Phase 17  
+**Status:** ✅ Resolved (Phase 17)  
 **Severity:** **High** (largest gameplay gap vs Dark Echo)  
 **File:** `js/entities.js`, `js/audio.js`, `js/game.js`  
 **Description:** Enemies do not generate any sound. In Dark Echo, enemy footsteps propagate through the visualization system exactly like the player's, creating tension from ambiguous echoes. In RESONANCE, enemies are invisible and silent until the player's own rays find them. This eliminates ~40% of the psychological tension the concept is capable of generating.  
-**Fix:** Add `shouldEmitStep()` to moving enemies; emit `'step-enemy'` ray bursts + positional audio each step. Phase 17 task. Full spec in PRODUCTION_ROADMAP.md.
+**Resolution:** `shouldEmitStep()` added to moving enemies; they emit `'step-enemy'` ray bursts (muted red) + positional footstep audio each step (louder/faster when hunting). BlindStalker also breathes. Phase 17.
 
 ---
 
 ### TD-012 — No positional / binaural audio
-**Status:** ⬜ Fix in Phase 17  
+**Status:** ✅ Resolved (Phase 17)  
 **Severity:** High (audio immersion gap)  
-**File:** `js/audio.js`  
-**Description:** All sounds route directly to `AudioContext.destination`. Enemy alerts play at constant volume and center pan regardless of enemy position. There is no spatial awareness from audio alone.  
-**Fix:** Route sounds through `PannerNode` at world coordinates. Update `AudioListener` position with player coordinates each frame. Phase 17 task.
+**Resolution:** Entity sounds routed through `PannerNode` (HRTF) at world coordinates; `updateListener(px,py)` syncs the `AudioListener` to the player each frame.
 
 ---
 
 ### TD-013 — No reverb / room acoustics
-**Status:** ⬜ Fix in Phase 18  
+**Status:** ✅ Resolved (Phase 18)  
 **Severity:** Medium-High (atmosphere gap)  
-**File:** `js/audio.js`  
-**Description:** All sounds are "dry" — no room response. In a cave/tunnel environment, absence of reverb makes sounds feel disconnected from the space. Dark Echo's sounds feel physically present in the environment.  
-**Fix:** Add a procedurally-synthesized impulse response buffer → ConvolverNode at 15% wet mix. Phase 18 task.
+**Resolution:** Procedural impulse response → `ConvolverNode` wet send; per-level `setReverbSize('small'|'medium'|'large')` from the level definition.
 
 ---
 
 ### TD-014 — Ray visual looks like starburst, not wavefront
-**Status:** ⬜ Fix in Phase 16  
+**Status:** ❌ Cancelled / Won't fix (Phase 16)  
 **Severity:** High (visual identity gap vs Dark Echo)  
 **File:** `js/renderer.js`  
-**Description:** Active rays render as discrete line segments radiating from origin — a "spoke" or starburst pattern. Dark Echo's sound propagation looks like a coherent expanding ring (sonar wavefront). The underlying DDA mechanics are equivalent; only the rendering differs.  
-**Fix:** Group rays by burstId, sort by angle, draw arcs between adjacent tips. Add shockwave origin ring on burst. Phase 16 task. Full spec in PRODUCTION_ROADMAP.md.
+**Description:** Active rays render as discrete line segments radiating from origin — a "spoke" or starburst pattern rather than a coherent expanding ring.  
+**Resolution:** The wavefront/arc renderer was implemented in Phase 16 and reverted — in practice the original spoke/starburst rendering looked better and was preferred. Phase 16 is permanently descoped; the spoke rendering is the intended visual. Do not re-attempt.
 
 ---
 
@@ -212,9 +219,9 @@ Implementation: `shape` property added to each enemy constructor (`'patrol'`, `'
 | FI-002 | Actual audio samples | Architecture is ready via SOUND_CONFIG | Post-25 |
 | FI-003 | Leaderboard (level time) | Needs backend (Supabase); out of current scope | Post-25 |
 | FI-004 | Level editor | Would require DOM overlay; medium effort | Post-25 |
-| FI-005 | Reverb / echo chamber zones | ConvolverNode — being implemented in Phase 18 | Phase 18 |
+| FI-005 | Reverb / echo chamber zones | ✅ Done (Phase 18) — ConvolverNode per-level wet mix | Phase 18 |
 | FI-006 | Enemy patrol path visualization in debug | Draw waypoints when debug overlay is active | Post-20 |
-| FI-007 | Screen-shake on collapse / death | CSS transform animation — being implemented in Phase 19 | Phase 19 |
+| FI-007 | Screen-shake on collapse / death | ✅ Done (Phase 19) — `triggerShake()` canvas translate | Phase 19 |
 | FI-008 | Sound bleeding through thin walls | Attenuated ray energy passing through 1-cell-wide walls | Post-25 |
 | FI-009 | Chapter select screen | Navigate between Act I and Act II independently | Phase 24 |
 | FI-010 | iOS / App Store release | Capacitor supports iOS; requires Mac + Apple developer account ($99/yr) | Post-25 |

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#000000"/>
+  <!-- concentric pulse rings emanating from center -->
+  <g fill="none" stroke="#b9dcff">
+    <circle cx="600" cy="300" r="60"  stroke-opacity="0.55" stroke-width="1.5"/>
+    <circle cx="600" cy="300" r="130" stroke-opacity="0.35" stroke-width="1.5"/>
+    <circle cx="600" cy="300" r="210" stroke-opacity="0.20" stroke-width="1.5"/>
+    <circle cx="600" cy="300" r="300" stroke-opacity="0.10" stroke-width="1.5"/>
+  </g>
+  <circle cx="600" cy="300" r="6" fill="#ffffff"/>
+  <text x="600" y="470" text-anchor="middle"
+        font-family="Courier New, monospace" font-size="72"
+        letter-spacing="20" fill="#eef2f8">RESONANCE</text>
+  <text x="600" y="530" text-anchor="middle"
+        font-family="Courier New, monospace" font-size="24"
+        letter-spacing="6" fill="#9bc3eb">Sound is your only vision.</text>
+</svg>

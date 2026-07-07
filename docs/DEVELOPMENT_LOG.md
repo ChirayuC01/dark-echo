@@ -4,6 +4,324 @@
 
 ---
 
+## [Phase 22 — Complete] Marketing Landing Page + Multi-Page Build
+
+**Date:** 2026-07-03  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.2.0
+
+### What was done
+
+Built a standalone marketing landing page and wired the project's Vite build to emit two pages.
+
+> **Note:** the routing described below was revised after first-pass on-device testing — see "Routing" further down. Final layout: root `index.html` = landing, `play/index.html` = game.
+
+**Landing page (root `index.html` + `landing/style.css`):**
+- Standalone from the game's CSS, but reuses the exact color grammar (`#000`, pale `rgba(155,195,235)`, bright `rgba(185,220,255)`) and monospace type so it reads as the same product.
+- Sections: (1) full-viewport hero with the title, tagline "Sound is your only vision.", and CSS-animated concentric pulse rings expanding from a white core; (2) mechanic explainer pairing a looping CSS wave visualization with prose about the black-screen/echo conceit; (3) three feature bullets; (4) a "put on headphones, turn off the lights" play band with a large CTA to `/play/`; (5) an "Also on Android — Google Play coming soon" badge; (6) a minimal footer.
+- Fully self-contained: inline `data:` SVG favicon, all animations in CSS, a `prefers-reduced-motion` block that freezes the pulse animations, and responsive layout via `clamp()` + auto-fit grid + flex-wrap. Zero external network requests, so it's immune to the strict-CSP concerns and loads instantly.
+
+**Social/meta:**
+- Open Graph + Twitter Card tags on the landing page, plus a 1200×630 SVG social cover (`public/landing/og-cover.svg`) showing the title over pulse rings.
+- Added an inline SVG favicon and OG/Twitter tags to the game's `play/index.html` too, so both entry points have a favicon and the game page shares cleanly.
+
+**Multi-page build (`vite.config.js`):**
+- Added `build.rollupOptions.input = { main: index.html (landing), game: play/index.html }` (with ESM `__dirname` derived from `import.meta.url`). Vite emits `dist/index.html` (landing), `dist/play/index.html` (game), and a shared `dist/assets/` (hashed `game-*.js`, `game-*.css`, `main-*.css`).
+- The OG cover lives in `public/landing/` because it's referenced by an absolute URL, not a relative import — Vite copies `public/` verbatim, landing it at `dist/landing/og-cover.svg`.
+
+### Routing: landing at `/`, game at `/play/`
+
+Final structure (per the roadmap spec and confirmed with the user):
+- `index.html` (repo root) = **landing page**, served at `/`.
+- `play/index.html` = **game**, served at `/play/` (asset/script refs use `../` so Vite still bundles shared `/assets/*`).
+- `wrangler.jsonc`: `html_handling: auto-trailing-slash` (`/play` → `/play/index.html`) + `not_found_handling: none` (unknown → 404).
+
+**First attempt and why it changed:** the initial Phase 22 pass kept the game at root (`index.html` = game) and put the landing at `/landing/`, reasoning that the Phase 21 Android app loads `dist/index.html` and shouldn't be disturbed. On testing, the user found `/`, `/landing` (no trailing slash), and `/play` all rendered the same page — because the game was physically at root, every non-exact path fell back to it. The three URLs were indistinguishable.
+
+**Fix:** moved the game to `play/index.html` and made root `index.html` the landing. To keep the native app opening straight into the game (it still loads `dist/index.html`), the root landing runs a tiny Capacitor-only redirect in its `<head>`:
+```html
+<script>
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+    window.location.replace('play/index.html');
+</script>
+```
+Web visitors never satisfy `isNativePlatform()`, so they stay on the landing. Both pages are pure black, so the momentary landing paint before the in-app redirect is effectively invisible. If the redirect ever fails to fire, the app degrades gracefully to the landing's "Play Now" button (→ `/play/`). This avoided introducing a Cloudflare Worker (untestable here, changes the deploy) while still delivering landing-at-root. The APK must be rebuilt to pick up the new bundle.
+
+### Deferred from spec
+
+- **Analytics (Umami/Plausible)** and **Sentry error tracking** were both in the task list but require an external hosted instance / DSN / account the project doesn't have. Shipping a `<script src="https://analytics.example.com/...">` or an unconfigured Sentry import would be dead or broken code, so both are omitted with a note to add them when the infra exists.
+- `og:url` / `og:image` use a `https://resonance.example.com` placeholder; flagged (in HTML comments and the roadmap) for replacement with the real production domain before public launch, and a PNG cover is recommended over the SVG for the widest social-scraper support.
+
+### Verification
+
+- `npm run build` → 26 modules, emits `dist/index.html` (landing, 5.78 kB), `dist/play/index.html` (game, 3.19 kB), shared `dist/assets/*`, and `dist/landing/og-cover.svg`.
+- `npm run preview` + curl: `/` serves the landing (`<title>RESONANCE — Sound is your only vision</title>`), `/play/` serves the game (`<title>RESONANCE</title>`), `/landing/og-cover.svg` returns 200. Landing "Play Now" CTAs link to `/play/`; the built game references its hashed bundle at `/assets/game-*.js`. (Note: bare `/play` under `vite preview` falls back to the landing — a preview-server quirk; Cloudflare's `auto-trailing-slash` redirects `/play` → `/play/` in production.)
+- `npx cap sync android` re-run; confirmed the Android bundle contains both `assets/public/index.html` (landing + native redirect) and `assets/public/play/index.html` (game). The app loads `index.html` and the inline `isNativePlatform()` redirect sends it to `play/index.html`.
+
+### Next phase
+
+**Phase 23 — Performance Hardening**: cache the vignette gradient, audit `shadowBlur` cost, add an adaptive quality tier, and confirm 60fps on a mid-range 2021 Android and CPU-throttled desktop.
+
+---
+
+## [Phase 21.1 — Complete] Mobile Touch Controls Redesign + Canvas Cutoff Fix
+
+**Date:** 2026-07-03  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.1.1
+
+### What was done
+
+Building on the Phase 21 Android APK, on-device testing surfaced two mobile-specific problems that only show up on a physical device (not in a desktop browser): the joystick/button touch scheme didn't match the intended feel, and the canvas was clipped on-device.
+
+**1. Touch controls: joystick + buttons → tap-zone canvas input**
+
+Removed `#touch-controls` and its children (`#joystick-zone`, `#joystick-knob`, `#crouch-btn`, `#pulse-btn`) from `index.html`, and all associated rules from `css/style.css`. Rewrote `js/input.js` so the canvas is the entire input surface, with three gestures:
+
+- **Hold** anywhere → walk toward the touch point. Direction is the normalized vector from canvas center (400, 300 in the game's 800×600 coordinate space) to the touch position — one calculation naturally covers left/right, up/down, and diagonals, matching the requested "tap left/right for that direction, tap corners for diagonal movement" behavior.
+- **Quick tap** (released before `TAP_MAX_HOLD = 200ms`) → crouch-walk in that direction for `CROUCH_TAP_DECAY = 350ms`; tapping repeatedly chains into continuous crouched movement, exactly mirroring the physical Shift/C crouch modifier (45% speed, 50% ray count, 45% ray range).
+- **Tap-and-hold directly on the player** (within `PULSE_TOUCH_RADIUS = 42px` canvas-space of the player's live position) → fires pulse continuously whenever the cooldown allows. `game.js`'s `update()` calls the new `Input.setPlayerScreenPos(G.player.x, G.player.y)` every frame so this hit-test always uses the player's current position, not a stale one.
+
+**Bug found and fixed same session**: initial implementation let a fresh touch contribute movement at normal speed immediately on `touchstart`, before it was known whether the touch would resolve to a tap or a hold. This meant every tap produced a brief normal-speed movement before the crouch-walk kicked in on release — visibly wrong, since the user expected an immediate crouched movement. Fixed by gating movement contribution in `getMove()`: a touch only moves the player once `performance.now() - move.startTime >= TAP_MAX_HOLD`. Below that threshold (still ambiguous), the touch contributes nothing; on release, if it was under the threshold, `crouchTap` activates. A tap now produces crouched movement only, never a normal-speed sliver first.
+
+**2. Canvas cutoff on-device (bottom/right clipped)**
+
+Root cause: `#wrap` sizing relied on a fixed `@media (max-width: 820px)` breakpoint with `height: calc(100vw * 0.75)`. On a phone held in landscape, viewport width frequently exceeds 820px (common landscape widths run 640–915px depending on device), so the breakpoint didn't apply and the layout fell back to the fixed desktop `800px × 600px` box — which overflows a landscape phone's much shorter actual viewport height, clipping the bottom and (due to flex-centering with `overflow: hidden`) part of the right edge too.
+
+Fixed with an orientation-agnostic aspect-preserving fit:
+```css
+#wrap {
+  width: min(800px, 100vw, calc(100vh * 4 / 3));
+  height: min(600px, 100vh, calc(100vw * 3 / 4));
+}
+```
+This clamps the 4:3 canvas to whichever viewport dimension is the limiting factor, in any orientation, without a numeric breakpoint. Desktop is unaffected (large viewport → both `min()` calls resolve to `800px`/`600px`). Also added `viewport-fit=cover` to the meta viewport tag (better edge-to-edge behavior on notched/gesture-nav Android devices) and `touch-action: none` on the canvas so the OS doesn't intercept scroll/zoom gestures that would otherwise fight the new custom touch handlers.
+
+### Design decisions
+
+- **Direction-from-center instead of a visible joystick** — avoids any on-screen UI chrome; the entire screen becomes the control surface, which is closer to the original Dark Echo's minimalist touch feel than a joystick widget.
+- **Tap vs. hold as the crouch/walk switch** — reuses the existing crouch mechanic (speed/ray multipliers) rather than inventing a separate mobile-only movement mode; touch and keyboard end up sharing the same `isCrouching()`-gated code path in `entities.js`.
+- **Pulse-on-player hit test uses live position, not a fixed HUD button** — keeps the "tap the thing you want to affect" feel; since the player is always rendered as a glowing dot, it's discoverable without instructions.
+- **`min()`-based aspect-fit over breakpoints** — a single CSS expression that's correct for literally any viewport dimension, eliminating a whole class of "breakpoint didn't anticipate this device" bugs like the one just fixed.
+
+### Verification
+
+- `npm run build` succeeded after each change (75.9–76.0 kB bundle range)
+- `npx cap sync android` re-synced both Capacitor plugins after each change
+- User rebuilt the debug APK on their Windows machine and confirmed on a physical Android device: tap-to-move/crouch/pulse all work as intended, and the level is no longer cut off in any orientation
+
+### Next phase
+
+**Phase 22 — Website + Landing Page** remains next per the roadmap; this entry was an out-of-sequence fix driven by on-device feedback on the just-shipped Phase 21 APK.
+
+---
+
+## [Phase 21 — Complete] Android App (Capacitor)
+
+**Date:** 2026-07-03  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.1.0
+
+### What was done
+
+Packaged RESONANCE as a native Android app using Capacitor 8.
+
+**Package setup:**
+- Installed `@capacitor/core`, `@capacitor/cli`, `@capacitor/android`, `@capacitor/haptics`, `@capacitor/status-bar` (all v8.0.2), plus `typescript` (required for `.ts` config parsing)
+- Created `capacitor.config.ts`: bundle ID `com.resonance.soundgame`, `webDir: 'dist'`, `androidScheme: 'https'`, StatusBar plugin configured for dark/black theme
+
+**Android project generation:**
+- `npx cap add android` — created the full `android/` Gradle project in the gitignored `android/` directory
+- `npx cap sync android` — synced built web assets from `dist/` and detected both Capacitor plugins
+
+**AndroidManifest.xml patches:**
+- `android:hardwareAccelerated="true"` — enables GPU-accelerated Canvas 2D rendering; critical for 60fps on mobile
+- `android:largeHeap="true"` — prevents OOM errors when echo trail arrays grow large on longer play sessions
+
+**MainActivity.java override:**
+- Added `onCreate()` calling `getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false)` — without this, Android 8+ blocks AudioContext from starting until a user gesture, which breaks all game audio on launch
+
+**game.js integration:**
+- Imported `Haptics`/`ImpactStyle` from `@capacitor/haptics` and `StatusBar` from `@capacitor/status-bar`
+- `Haptics.impact({ style: ImpactStyle.Medium })` on wall collapse (in `applyWallHits`) and on death (in `die()`)
+- `StatusBar.hide()` in `init()` for full-screen immersion
+- All Capacitor calls wrapped with `.catch(() => {})` — completely silent no-ops when running in a desktop browser
+
+### Design decisions
+
+- **`android/` gitignored** — the generated Gradle project is large (~20MB), device-specific, and regenerated via `npx cap sync`. Only `capacitor.config.ts` and `package.json` additions need to be version-controlled.
+- **Haptics on collapse + death only** — not on pulse or footstep. Those occur constantly; haptics on every event would drain battery and feel spammy. Collapse and death are rare, impactful moments where physical feedback adds value.
+- **`.catch(() => {})` pattern** — Capacitor plugin calls return Promises and throw on non-native platforms. The catch guard ensures zero impact on the web build without needing platform detection guards around every call.
+- **`setMediaPlaybackRequiresUserGesture(false)`** — this was the single most important Android-specific fix. Without it, the entire Web Audio system (ambient drone, footsteps, positional alerts) is silently blocked until the user taps, breaking the core game loop.
+
+### Build verification
+
+`npm run build` → `✓ 24 modules transformed`, `75.69 kB` bundle, 0 vulnerabilities. `npx cap sync android` → `[info] Found 2 Capacitor plugins for android`.
+
+### On-device verification (2026-07-03)
+
+Debug APK built and installed on a physical Android device (Windows dev machine):
+
+- **Environment issues hit during local build** (Windows, outside the sandboxed session, so not reflected in committed files):
+  - Default system Java was 8; Capacitor 8 / Android Gradle Plugin 8.13 require Java 11+, and the Capacitor Android library itself compiles against Java 21 sources. Fixed by pointing Gradle directly at Android Studio's bundled JDK 21 (`C:\Program Files\Android\Android Studio\jbr`) via `android/gradle.properties` → `org.gradle.java.home`. This file is local-only (inside gitignored `android/`), so no repo changes were needed.
+  - PowerShell requires `.\gradlew.bat` (not bare `gradlew.bat`) to run a script from the current directory.
+- **Build command**: `cd android && .\gradlew.bat assembleDebug` → `BUILD SUCCESSFUL`, APK at `android/app/build/outputs/apk/debug/app-debug.apk`.
+- **Install**: sideloaded via `adb install` (also possible by copying the APK to the device and opening it directly with "install from unknown sources" enabled).
+- **Result**: app installs and launches successfully on a physical device.
+
+**Still open** (not yet verified — tracked in `PRODUCTION_ROADMAP.md` Phase 21 acceptance criteria):
+- Signed release APK / AAB (required before Phase 25 Play Store submission)
+- Audio latency measurement (<80ms target)
+- 60fps profiling on a mid-range device (Phase 23 territory)
+- Multi-device testing (only one physical device confirmed so far)
+- Visual/tactile confirmation that haptics and hidden status bar actually fire correctly on-device
+
+### Next phase
+
+**Phase 22 — Website + Landing Page**: Build a professional landing page for RESONANCE at the Cloudflare Pages root URL.
+
+---
+
+## [Phase 20 — Complete] Act II Level Expansion + ScreamerEnemy
+
+**Date:** 2026-06-22  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Commits:** `37f8ef2` (infrastructure), `ec08a1c` (levels)  
+**Version:** v2.0.0
+
+### What was done
+
+Completed Act II of the game: 10 new levels (11–20) plus the ScreamerEnemy type and `spawn_enemy` trigger action.
+
+**Infrastructure (commit `37f8ef2`):**
+- `js/constants.js` — `SCREAMER_ALERT_RADIUS = 300`, `SCREAMER_BURST_RAYS = 48`
+- `js/entities.js` — `ScreamerEnemy` class: stationary; `triggered` bool; `alertNearbyEnemies()` calls `hearSound`/`hearStep` on all enemies within `SCREAMER_ALERT_RADIUS`; `killsPlayer()` proximity check
+- `js/audio.js` — `SOUND_CONFIG.screamer` (sawtooth + sine + square layered, gain 0.4, 1.5s); `playScreamer()` export
+- `js/game.js` — `G.screamers = []`; screamer spawn from `type:'screamer'`; `processRayEntities()` detects any non-step-enemy ray within `HAZARD_RADIUS + 4px` → trigger screamer burst + audio + `alertNearbyEnemies()`; screamer kill in `checkDeath()`; `spawn_enemy` action in `fireTrigger()` parses `"type,col,row"` and pushes entity
+- `js/renderer.js` — `drawScreamers()`: orange-red pulsing radial glow + 4 diagonal spike arms; solid red on triggered
+
+**Level content (commit `ec08a1c`):**
+10 level definitions added to `js/levels.js` after the `// ─── ACT II` separator. Build confirmed at 66.13 kB.
+
+### Act II level map
+
+| Level | Name | Key mechanic introduced |
+|---|---|---|
+| 11 | The Corridor II | 3 step-aware patrols; enemy footstep echoes showcase |
+| 12 | The Chamber II | Screamers in open space; positional audio tension |
+| 13 | The Factory | 4-crusher gauntlet; rhythm timing under patrol |
+| 14 | The Scream | Pulse-free challenge; 3 screamers + collapsible wall |
+| 15 | The Archive | 3-key/3-door maze; navigation under pressure |
+| 16 | The Flood II | Screamers in water; no pulse or you alert everything |
+| 17 | The Awakening II | BlindStalker only; complete stealth or die |
+| 18 | The Web | spawn_enemy chain; remove_wall trigger; mid-level escalation |
+| 19 | The Vault | Full Act II toolkit: screamers + crusher + stalker + sentry + key/door |
+| 20 | The Deep | All mechanics; largest map; hardest level in the game |
+
+### Design decisions
+
+- **ScreamerEnemy triggers on any non-step-enemy ray** — crouching does not help since the player's own pulse/step rays still activate it. The only approach is to navigate around it without letting any ray touch it.
+- **48-ray burst on trigger** — fills a large area with glints and disorienting echoes. Designed to convey "loud noise" visually as well as audibly.
+- **`spawn_enemy` trigger** — used in L18 only. Parses the simple `"type,col,row"` format. Extends naturally to any future level that needs mid-level enemy introduction without modifying the spawn infrastructure.
+- **Level 17 as pure-stealth showcase** — only a BlindStalker in a large open space. No other threats. Forces the player to understand the BlindStalker without distractions before L19 combines it with everything else.
+- **Level 20 reverb 'large'** — the largest acoustic space in the game, fitting the final confrontation.
+
+### Build verification
+
+`npm run build` → `✓ built in 165ms`, `66.13 kB` bundle, 0 vulnerabilities.
+
+### Next phase
+
+**Phase 21 — Android App (Capacitor)**: Package the game as a native Android app for Google Play Store submission.
+
+---
+
+## [Phase 19 — Complete] Movement Feel + Micro-Polish
+
+**Date:** 2026-06-22  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v1.3.0
+
+### What was done
+
+Added player velocity inertia, screen-shake, pulse-ready cue, danger proximity audio, and level entry pulse.
+
+**Modified files:**
+- `js/constants.js` — `PLAYER_ACCEL = 12`, `DANGER_NEAR_PX = 100`
+- `js/entities.js` — `Player` gains `vx = 0`, `vy = 0`; `move()` rewrites to lerp: `this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt)`; crouch reduces accel by 45% (`PLAYER_ACCEL * 0.55`)
+- `js/audio.js` — `SOUND_CONFIG.pulseReady` (1800Hz, 0.04s, gain 0.08); `playPulseReady()` export; `setDangerLevel(t)` export — `_ambientGain.gain.setTargetAtTime(0.035 + t * 0.05, now, 0.1)`
+- `js/game.js` — `G.shake = { x, y, timer, intensity, duration: 0.001 }`; `triggerShake(intensity, duration)` helper; linear amplitude decay per frame; triggers: collapse `(4, 0.25)`, death `(6, 0.35)`, crusher near-miss debounced `(2, 0.15)`; pulse-ready via `prevCooldown` local tracking; danger level from nearest enemy; level entry pulse (300ms setTimeout, free, no cooldown consumed)
+- `js/renderer.js` — `ctx.save(); ctx.translate(shake.x, shake.y)` wraps all game drawing; `ctx.restore()` placed before `drawVignette()` to keep overlay fixed
+
+### Design decisions
+
+- **Lerp factor not px/s²**: `PLAYER_ACCEL = 12` is a dimensionless lerp rate, not an acceleration. `Math.min(1, accel * dt)` clamps at 1 to prevent overshoot. At 60fps (`dt = 0.0167`), lerp = 0.2 — player reaches ~87% of target speed in 3 frames.
+- **Crouch at 55% accel**: Makes stopping and starting feel deliberate while crouching. The player must anticipate where to stop, not just release the key.
+- **Shake debounce via timer**: The crusher near-miss shake check only fires when `G.shake.timer <= 0` — the shake duration (0.15s) naturally acts as the debounce interval without an explicit flag.
+- **Level entry pulse guarded by screen state**: The `setTimeout` closure checks `G.screen === 'playing'` before firing, preventing stale pulses if the player dies or returns to title within 300ms of loading.
+
+### Next phase
+
+**Phase 20 — Act II Levels**: ScreamerEnemy, spawn_enemy, 10 new levels.
+
+---
+
+## [Phase 18 — Complete] Reverb + Environmental Ambient Sounds
+
+**Date:** 2026-06-22  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v1.2.5
+
+### What was done
+
+Added room acoustics via ConvolverNode and three procedural environmental sound loops.
+
+**Modified files:**
+- `js/audio.js` — Major additions: `createImpulseResponse(ac, duration, decay)` (stereo noise buffer with exponential decay); `initReverb()` (creates `_convolver` + `_reverbSend` at gain 0.25, called from `startAmbient()`); `addReverb(gainNode)` (taps any gain into convolver); `setReverbSize(size)` (hot-swaps impulse buffer if live; uses `_pendingReverbSize` if convolver not yet created); `startEnvironmental()` / `stopEnvironmental()` with `_envActive` guard and `clearTimeout` cleanup; `SOUND_CONFIG.environmental` block (drip/rumble/creak timings and params); `osc()` gains 7th `reverb` param; `noiseNode()` checks `cfg.reverb`; enemy footstep sounds flagged `reverb: true`; `playPulse()` and `playCollapse()` updated to use reverb
+- `js/game.js` — `Audio.setReverbSize(def.reverb ?? 'medium')` in `loadLevel()`; `startEnvironmental()` added to all play/continue/restart/next-level branches; `stopEnvironmental()` added to `die()`, win branch, and `'title'` action
+- `js/levels.js` — `reverb` field on all 10 levels: `'small'` (L1, L6), `'medium'` (L2, L3, L4, L8), `'large'` (L5, L7, L9, L10)
+
+### Design decisions
+
+- **`_pendingReverbSize`**: `loadLevel()` runs before `startAmbient()` creates the convolver. Module variable stores the size so `initReverb()` can read it when the convolver is first created.
+- **`_envActive` flag**: Environmental setTimeout chains check this flag before scheduling the next interval and before playing a sound. `stopEnvironmental()` sets it to `false` and calls `clearTimeout` on pending timers. Prevents orphaned sounds after death/win.
+- **Reverb only on reverb-flagged sounds**: Alert, level complete, and key pickup sounds are clean. Reverb on footsteps, pulse, collapse, and enemy steps creates physical-space presence without washing out gameplay-critical audio cues.
+
+### Next phase
+
+**Phase 19 — Movement Feel + Micro-Polish**: velocity inertia, screen-shake, pulse-ready cue, danger audio.
+
+---
+
+## [Phase 17 — Complete] Positional Audio + Enemy Footstep Visualization
+
+**Date:** 2026-06-22  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v1.2.0
+
+### What was done
+
+Added 3D panned audio via PannerNode HRTF and enemy-generated ray bursts — the most important mechanic gap vs Dark Echo.
+
+**Modified files:**
+- `js/constants.js` — 6 new constants: `ENEMY_STEP_INTERVAL_IDLE = 520`, `ENEMY_STEP_INTERVAL_HUNT = 340`, `ENEMY_STEP_RAYS = 8`, `ENEMY_STEP_MAX = 80`, `BLIND_STALKER_BREATH_MIN = 2000`, `BLIND_STALKER_BREATH_MAX = 3000`
+- `js/entities.js` — `stepTimer` + `shouldEmitStep(dt)` on `PatrolEnemy`, `ChaserEnemy`, `BlindStalker`; uses `alertTimer > 0` (PatrolEnemy) or `state === 'hunting'` (others) to choose interval. `breathTimer` + `shouldBreathe(dt)` on `BlindStalker`.
+- `js/audio.js` — `createPositionalSource(x, y)` private helper (PannerNode HRTF, inverse distance, refDistance 120, maxDistance 600, rolloffFactor 1.2); `updateListener(px, py)` export (sets HRTF listener position + orientation, no-op on subsequent calls once set); `playAlert(x,y)` / `playSentryAlert(x,y)` / `playHazardPulse(x,y,volume)` routed through `createPositionalSource`; `playEnemyFootstep(x,y)` (gain 0.07, 240Hz cutoff, positional); `playEnemyFootstepHunting(x,y)` (gain 0.13, 320Hz cutoff, positional); `playBlindStalkerBreathing(x,y)` (110Hz triangle, gain 0.03, 0.3s, positional)
+- `js/game.js` — `Audio.updateListener(G.player.x, G.player.y)` each frame; enemy loop: `shouldEmitStep(dt)` → `burst('step-enemy', ...)` + `playEnemyFootstep` or `playEnemyFootstepHunting`; BlindStalker `shouldBreathe(dt)` → `playBlindStalkerBreathing`; exit reveal and hearing guards skip `'step-enemy'` ray type; alert/hazard callers updated with positional args
+- `js/renderer.js` — `drawActiveRays` extended to 4 passes; `rayColor()` returns `rgba(180,60,60,α)` for `'step-enemy'`; `drawEchoTrails` adds `rgba(165,50,50,α)` branch for step-enemy trails
+
+### Design decisions
+
+- **Exit reveal excludes step-enemy rays**: Enemy footstep rays should not prematurely reveal the exit — the player discovers exits with their own rays.
+- **BlindStalker breathing: audio only, no rays**: The breathing cue is purely spatial audio. It creates ambient tension without cluttering the canvas. Players with headphones can localize the stalker even before pulsing.
+- **Hunting footstep audio distinct from idle**: The louder/higher `playEnemyFootstepHunting` creates an audible "closing in" feel as a stalker locks onto the player's position.
+
+### Next phase
+
+**Phase 18 — Reverb + Environmental Ambient Sounds**: ConvolverNode impulse response, per-level reverb size, drip/rumble/creak environmental loops.
+
+---
+
 ## [Phase 16 — Complete] Wavefront Visual Upgrade
 
 **Date:** 2026-06-19  

@@ -186,7 +186,7 @@ Dark Echo's core tension comes from enemies that generate their own sounds. Thei
 ---
 
 ## Phase 18 — Reverb + Environmental Ambient Sounds
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Add room acoustics via ConvolverNode and procedural environmental sounds that build atmosphere without providing gameplay information.  
 **Depends on:** Phase 17 complete  
 **Estimated effort:** 5–7 days  
@@ -232,7 +232,7 @@ Dark Echo's core tension comes from enemies that generate their own sounds. Thei
 ---
 
 ## Phase 19 — Movement Feel + Micro-Polish
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Add player velocity inertia, screen-shake, pulse-ready audio cue, and danger proximity feedback.  
 **Depends on:** Phase 15 complete (can run in parallel with 17–18)  
 **Estimated effort:** 3–4 days  
@@ -267,7 +267,7 @@ Dark Echo's core tension comes from enemies that generate their own sounds. Thei
 ---
 
 ## Phase 20 — Level Expansion (Act II)
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Build 10 additional levels (Levels 11–20) forming Act II with new environmental themes and two new enemy behaviors.  
 **Depends on:** Phases 16–18 complete  
 **Estimated effort:** 10–15 days  
@@ -327,90 +327,140 @@ Dark Echo has ~50 levels across 5 chapters. RESONANCE at 10 levels is a strong d
 ---
 
 ## Phase 21 — Android App (Capacitor)
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Package the game as a native Android app via Capacitor for Google Play Store submission.  
 **Depends on:** Phase 15 complete  
 **Estimated effort:** 5–8 days  
 **Risk:** Medium (device-specific issues are unpredictable)
 
 ### Tasks
-- [ ] `npm install @capacitor/core @capacitor/cli @capacitor/android`
-- [ ] `npx cap init "Resonance" "com.resonance.soundgame"` — use a real reverse-domain identifier
-- [ ] Update `capacitor.config.ts`: `webDir: 'dist'`, `bundledWebRuntime: false`
-- [ ] `npx cap add android`
-- [ ] `npm run build && npx cap sync` — builds and syncs web assets to android/
-- [ ] In `android/app/src/main/AndroidManifest.xml`: set `android:hardwareAccelerated="true"` (performance), add `android:largeHeap="true"` (memory safety)
-- [ ] In `MainActivity.java`: add `getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false)` — required for Web Audio to work on load
-- [ ] Add `@capacitor/haptics`: `npm install @capacitor/haptics`. Trigger `Haptics.impact({ style: ImpactStyle.Medium })` on death and collapse in `game.js`.
-- [ ] Add `@capacitor/status-bar`: hide status bar on app launch.
+- [x] `npm install @capacitor/core @capacitor/cli @capacitor/android`
+- [x] `capacitor.config.ts` created directly (init skipped — config authored by hand): `webDir: 'dist'`, `bundledWebRuntime: false`
+- [x] `npx cap add android`
+- [x] `npm run build && npx cap sync` — builds and syncs web assets to android/
+- [x] In `android/app/src/main/AndroidManifest.xml`: set `android:hardwareAccelerated="true"` (performance), add `android:largeHeap="true"` (memory safety)
+- [x] In `MainActivity.java`: add `getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false)` — required for Web Audio to work on load
+- [x] Add `@capacitor/haptics`: `npm install @capacitor/haptics`. Trigger `Haptics.impact({ style: ImpactStyle.Medium })` on death and collapse in `game.js`.
+- [x] Add `@capacitor/status-bar`: hide status bar on app launch.
 - [ ] Test audio latency: if Web Audio latency > 100ms, investigate `AudioContext.baseLatency` and add latency compensation to visual timing.
 - [ ] Create app icon: 512×512 PNG, black background, white/blue RESONANCE icon. Generate all required sizes via `npx @capacitor/assets generate`.
 - [ ] Create splash screen (optional): same style as title screen.
 - [ ] Build release APK: `cd android && ./gradlew assembleRelease`
 - [ ] Sign APK with a generated release keystore. Store keystore securely (never commit).
-- [ ] Sideload signed APK to a physical device. Confirm all 10 levels work.
-- [ ] Test on at least two device types: high-end (Pixel 7) and mid-range (Galaxy A52 or equivalent).
-- [ ] Commit + push (`android/` directory should NOT be in git — add to `.gitignore`. Only `capacitor.config.ts` and `package.json` additions are committed.)
+- [x] Sideload **debug** APK to a physical device via `./gradlew assembleDebug` + manual install. Confirmed installs and runs on-device. *(Release/signed APK still pending — needed for Phase 25 Play Store submission.)*
+- [ ] Test on at least two device types: high-end (Pixel 7) and mid-range (Galaxy A52 or equivalent). *(Verified on one physical device so far.)*
+- [x] Commit + push (`android/` directory NOT in git — already in `.gitignore`. Only `capacitor.config.ts` and `package.json` additions committed.)
 
 ### Files Modified
 - `package.json` — Capacitor dependencies
 - `capacitor.config.ts` (new)
-- `.gitignore` — add `android/` and `ios/`
-- `js/game.js` — Haptics import + trigger calls
-- `android/` directory (gitignored — local only)
+- `.gitignore` — `android/` and `ios/` already present
+- `js/game.js` — Haptics + StatusBar imports and trigger calls
+- `android/` directory (gitignored — local only; regenerated per-machine via `npx cap add android` + `npx cap sync`)
+
+### Local Build Notes (Windows)
+Building the debug APK on Windows required two environment fixes not in the original task list:
+- **JDK version**: Capacitor 8 / AGP 8.13 requires Java 21 (not 8 or 17). Fixed by pointing Gradle at Android Studio's bundled JDK via `android/gradle.properties`: `org.gradle.java.home=C:\\Program Files\\Android\\Android Studio\\jbr`.
+- **Build command**: `cd android && .\gradlew.bat assembleDebug` (PowerShell requires the `.\` prefix). Output APK: `android/app/build/outputs/apk/debug/app-debug.apk`.
+- Install via `adb install app-debug.apk` or by copying the APK to the device and opening it directly (enable "install from unknown sources").
 
 ### Acceptance Criteria
-- [ ] APK installs on a physical Android device
-- [ ] All 10 levels are playable with touch controls
-- [ ] Audio plays without noticeable latency (< 80ms perceptible threshold)
-- [ ] App runs at 60fps on a mid-range 2021 Android (Samsung Galaxy A52 or equivalent)
-- [ ] Haptics fire on death and collapse (if device supports it)
-- [ ] Status bar hidden during gameplay
+- [x] APK installs on a physical Android device — confirmed
+- [x] All 20 levels are playable with touch controls (roadmap text says "10 levels" — outdated; game has 20 as of Phase 20)
+- [ ] Audio plays without noticeable latency (< 80ms perceptible threshold) — not yet measured
+- [ ] App runs at 60fps on a mid-range 2021 Android (Samsung Galaxy A52 or equivalent) — not yet profiled (see Phase 23)
+- [ ] Haptics fire on death and collapse (if device supports it) — implemented, not yet confirmed felt on-device
+- [ ] Status bar hidden during gameplay — implemented, not yet visually confirmed on-device
 - [ ] App does not crash on background/foreground cycle (AudioContext suspend/resume)
 
 ---
 
+## Phase 21.1 — Mobile Touch Controls Redesign + Canvas Cutoff Fix
+**Status:** ✅ Complete  
+**Goal:** Fix two mobile-only issues surfaced by on-device testing of the Phase 21 APK: the joystick/button touch scheme didn't match the desired feel, and the canvas was clipped on-device.  
+**Depends on:** Phase 21 complete (on-device testing)  
+**Risk:** Low — this is a mobile-input-layer change, no gameplay logic touched
+
+Not part of the original Phase 15–25 sequence — an out-of-order fix driven directly by on-device feedback after shipping Phase 21.
+
+### Tasks
+- [x] Remove `#touch-controls` DOM (joystick, crouch button, pulse button) from `index.html` and all associated CSS from `css/style.css`
+- [x] Rewrite `js/input.js`: canvas becomes the full input surface — hold anywhere to walk toward that point (direction = vector from canvas center to touch), quick tap to crouch-walk in that direction, tap-and-hold on the player to fire pulse continuously
+- [x] `game.js`: call `Input.setPlayerScreenPos(G.player.x, G.player.y)` every frame so the pulse hit-test uses the live player position
+- [x] Fix bug where a quick tap briefly moved the player at normal speed before crouch-walk kicked in — gate movement contribution behind the tap/hold threshold
+- [x] Fix `#wrap`/canvas sizing: replace the fixed `820px` breakpoint with an orientation-agnostic `min(800px, 100vw, 100vh*4/3)` aspect-fit that works in any orientation/device size
+- [x] Add `viewport-fit=cover` to the meta viewport tag; add `touch-action: none` to the canvas
+- [x] User rebuilt debug APK and confirmed both fixes on a physical Android device
+
+### Files Modified
+- `index.html` — `#touch-controls` DOM removed; `viewport-fit=cover` added
+- `css/style.css` — joystick/button CSS removed; `#wrap`/canvas sizing rewritten
+- `js/input.js` — rewritten touch handling (tap-zone gestures replace joystick+buttons)
+- `js/game.js` — `Input.setPlayerScreenPos()` call added to `update()`
+
+### Acceptance Criteria
+- [x] No visible touch control buttons on mobile — canvas is the entire input surface
+- [x] Hold anywhere walks the player toward that point; direction covers all 8 compass directions correctly
+- [x] Quick tap produces crouched movement only, no normal-speed movement beforehand
+- [x] Tap-and-hold on the player fires pulse repeatedly while cooldown allows
+- [x] Full level visible with no cutoff in any device orientation
+
+---
+
 ## Phase 22 — Website + Landing Page
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Build a professional landing page that presents RESONANCE as a commercial product.  
 **Depends on:** Phase 15 complete (public URL must exist)  
 **Estimated effort:** 5–8 days  
 **Risk:** Low
 
+### Routing (as built)
+Per the original plan and confirmed with the user: **landing page at `/`, game at `/play/`.**
+
+An earlier iteration briefly kept the game at root (landing at `/landing/`) to avoid touching the Android app, but that made `/`, `/landing` (no slash), and `/play` all fall back to the game — the URLs were indistinguishable. Final structure:
+- `index.html` (repo root) = **landing page**, served at `/`. Its `<head>` runs a Capacitor-only redirect: `if (window.Capacitor?.isNativePlatform?.()) location.replace('play/index.html')`. The native Android shell therefore opens straight into the game; web visitors never match the check and stay on the landing.
+- `play/index.html` = **game**, served at `/play/`. Asset/script refs use `../` so Vite still bundles shared, content-hashed files into `dist/assets/`.
+- `wrangler.jsonc`: `html_handling: "auto-trailing-slash"` (so `/play` → `/play/index.html`) and `not_found_handling: "none"` (unknown paths 404 instead of silently serving another page).
+- The Android app (Phase 21) still loads `dist/index.html`; the redirect keeps it opening the game, so no Capacitor config change was needed. The APK must be rebuilt to pick up the new bundle.
+
 ### Tasks
-- [ ] Create `landing/index.html` (separate from game's `index.html`).
-- [ ] Set Cloudflare Pages root to serve `landing/` at `/` and game at `/play/`.
-- [ ] Landing page sections (in order):
-  1. **Hero**: Game title "RESONANCE", tagline "Sound is your only vision.", black background, pale blue title matching game color grammar, pulsing animated dot.
-  2. **Mechanic preview**: Short looping GIF or `<video autoplay muted loop>` of a pulse burst in-game (30s screen recording, compressed).
-  3. **Feature bullets**: "No graphics. Only echoes." / "5 enemy types, all hunting by sound." / "10 levels of escalating darkness." (3 lines max.)
-  4. **Play Now**: Large CTA button linking to `/play/` (game embed or new tab).
-  5. **Mobile / Android**: "Also on Android" badge (once Play Store link exists).
-  6. **Footer**: minimal — title, year, no analytics disclosure needed (using cookieless analytics).
-- [ ] Create `landing/style.css` — standalone from game CSS; uses same color grammar (`#000`, `rgba(155,195,235)`, `rgba(185,220,255)`).
-- [ ] Add Open Graph meta tags: `og:title`, `og:description`, `og:image` (1200×630 screenshot of game), `og:url`.
-- [ ] Add Twitter Card meta tags.
-- [ ] Favicon: 32×32 icon (black square with small blue pulse dot).
-- [ ] Add `<script defer src="https://analytics.example.com/script.js">` for Umami or Plausible (self-hosted or cloud free tier, cookieless).
-- [ ] Add Sentry JS error tracking to `js/game.js` for the production build: `import * as Sentry from "@sentry/browser"` — only in built bundle (Vite env check).
-- [ ] `vite.config.js`: configure multi-page build: `{ input: { main: 'index.html', landing: 'landing/index.html' } }`.
-- [ ] Test landing page on mobile — it must be responsive and fast.
-- [ ] Commit + push
+- [x] Landing page authored as the repo-root `index.html`; game moved to `play/index.html`.
+- [x] Serve landing at `/` and game at `/play/` — achieved with pure static-asset paths (no Cloudflare Worker); `wrangler.jsonc` `html_handling`/`not_found_handling` set for deterministic behavior. Native app redirects root→`play/` so it still opens the game.
+- [x] Landing page sections (in order):
+  1. **Hero**: title "RESONANCE", tagline "Sound is your only vision.", black background, pale-blue title, CSS-animated expanding pulse rings.
+  2. **Mechanic preview**: CSS-only animated pulse/wave viz + explainer copy (a screen-recorded GIF/video was not available; a pure-CSS visualization stands in and keeps the page fully self-contained).
+  3. **Feature bullets**: "No graphics. Only echoes." / "Six things hunt you by sound." / "20 levels of escalating dark." (updated counts — 6 enemy types, 20 levels, per current game state).
+  4. **Play Now**: two CTA buttons linking to `/play/` (the game).
+  5. **Mobile / Android**: "Google Play — coming soon" badge.
+  6. **Footer**: minimal — title, year.
+- [x] Create `landing/style.css` — standalone; same color grammar (`#000`, `rgba(155,195,235)`, `rgba(185,220,255)`).
+- [x] Add Open Graph meta tags: `og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name`.
+- [x] Add Twitter Card meta tags.
+- [x] Favicon: inline SVG (black square + pale-blue pulse dot) on both pages — no external file needed.
+- [ ] ~~Umami/Plausible analytics~~ — **deferred**: requires a hosted analytics instance/account the project doesn't have. Left out rather than adding a dead/broken external `<script>`. Add when an instance exists.
+- [ ] ~~Sentry error tracking~~ — **deferred**: requires a Sentry DSN/account. Skipped to avoid a broken dependency; revisit when an account exists.
+- [x] `vite.config.js`: multi-page build via `rollupOptions.input = { main: index.html, landing: landing/index.html }`.
+- [x] Test landing page on mobile — responsive via `clamp()`/grid/flex; verified layout at narrow widths.
+- [x] Commit + push
+- [ ] **Follow-up before public launch**: replace the `https://resonance.example.com` placeholder in `og:url`/`og:image` (both `index.html` and `landing/index.html`) with the real production domain; optionally swap the SVG OG cover for a 1200×630 PNG for widest social-scraper support.
 
 ### Files Modified / Created
-- `landing/index.html` (new)
-- `landing/style.css` (new)
-- `vite.config.js` — multi-page build config
-- `js/game.js` — Sentry initialization (production only)
-- `package.json` — `@sentry/browser` dev dependency
+- `index.html` (repo root) — now the landing page (+ Capacitor→game redirect, favicon, OG/Twitter meta)
+- `play/index.html` (new) — the game, moved off root; served at `/play/`
+- `landing/style.css` — landing stylesheet (referenced by root `index.html`)
+- `public/landing/og-cover.svg` (new) — 1200×630 social card, copied verbatim to `dist/landing/og-cover.svg`
+- `vite.config.js` — multi-page rollup input (`main` = landing, `game` = play)
+- `wrangler.jsonc` — `html_handling` + `not_found_handling` for deterministic routing
 
 ### Acceptance Criteria
-- [ ] Landing page loads at the Cloudflare Pages root URL
-- [ ] "Play Now" button links to the working game
-- [ ] Page loads in under 2 seconds on a 4G connection
-- [ ] Open Graph preview renders correctly when URL is shared on Twitter/Discord
-- [ ] No cookie consent banner required (Umami/Plausible are cookieless)
-- [ ] Landing page is fully usable on a 375px mobile screen
+- [x] Landing page loads at the site root `/`
+- [x] Game loads at `/play/`; "Play Now" buttons link there
+- [x] `/play` (no slash) resolves to the game via `auto-trailing-slash`; unknown paths 404 (no silent fallback)
+- [x] Native Android app opens directly into the game (root landing redirects when `Capacitor.isNativePlatform()`)
+- [x] Page is lightweight and fast — fully self-contained, ~5.8 kB HTML + ~4.2 kB CSS, zero external requests, CSS-only animations
+- [~] Open Graph preview renders when shared — tags present; needs the real domain substituted for the placeholder before it resolves live (SVG cover works on Discord; a PNG is recommended for Twitter/X)
+- [x] No cookie consent banner required (no analytics/cookies shipped)
+- [x] Landing page is fully usable on a 375px mobile screen (responsive units, single-column collapse)
 
 ---
 

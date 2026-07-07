@@ -1,5 +1,11 @@
 # IMPLEMENTATION ROADMAP — RESONANCE
 
+> **⚠️ HISTORICAL / COMPLETE.** This document covers Phases 0–14 (the v1.0.0 prototype),
+> which are **all complete**. Production work (Phases 15–25) continues in
+> `docs/PRODUCTION_ROADMAP.md`, and live project state is tracked in
+> `docs/CURRENT_STATUS.md`. Checkbox states below reflect the original in-progress
+> drafting and are not maintained — treat the phase **Status** lines as authoritative.
+>
 > Phases are executed sequentially unless marked as parallelizable.  
 > Each phase must pass its acceptance criteria before the next begins.  
 > Architecture changes require spec update + explicit user approval before implementation.

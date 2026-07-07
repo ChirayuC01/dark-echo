@@ -8,18 +8,22 @@ import { TILE, COLS, ROWS, W, H,
          CROUCH_INTERVAL_MULT, CROUCH_RAY_MULT, CROUCH_DIST_MULT,
          WATER_INTERVAL_MULT, WATER_RAY_MULT,
          COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS,
-         KEY_PICKUP_RADIUS, CRUSHER_REVEAL_MS } from './constants.js';
+         KEY_PICKUP_RADIUS, CRUSHER_REVEAL_MS,
+         DANGER_NEAR_PX,
+         SCREAMER_BURST_RAYS } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
 import * as Renderer from './renderer.js';
 import * as UI from './ui.js';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { StatusBar } from '@capacitor/status-bar';
 
 const SAVE_KEY = 'resonance_progress';
 import { LEVELS } from './levels.js';
 import { RaySystem } from './waves.js';
 import { castRay, circlesOverlap, castRayCrushers, circleOverlapsAABB } from './collision.js';
-import { Player, PatrolEnemy, ChaserEnemy, Hazard, Crusher, Sentry, BlindStalker } from './entities.js';
+import { Player, PatrolEnemy, ChaserEnemy, Hazard, Crusher, Sentry, BlindStalker, ScreamerEnemy } from './entities.js';
 import * as Debug from './debug.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -50,7 +54,15 @@ const G = {
   keys: new Map(),                // id → {id, col, row, x, y, collected, doorId, revealedAt}
   doorsByCell: new Map(),         // "row,col" → door obj; used for fast ray-hit lookups
   triggers: [],                   // [{col, row, x, y, action, targetId, fired, revealedAt}]
+  shake: { x: 0, y: 0, timer: 0, intensity: 0, duration: 0.001 },
+  screamers: [],
 };
+
+function triggerShake(intensity, duration) {
+  G.shake.intensity = intensity;
+  G.shake.duration = duration;
+  G.shake.timer = duration;
+}
 
 const TOTAL = LEVELS.length;
 
@@ -71,6 +83,7 @@ function loadLevel(idx) {
   G.enemies = [];
   G.hazards = [];
   G.crushers = [];
+  G.screamers = [];
   G.doors = new Map();
   G.keys = new Map();
   G.doorsByCell = new Map();
@@ -115,6 +128,8 @@ function loadLevel(idx) {
       G.enemies.push(new Sentry(ex, ey, e.angle ?? 0));
     } else if (e.type === 'stalker') {
       G.enemies.push(new BlindStalker(ex, ey));
+    } else if (e.type === 'screamer') {
+      G.screamers.push(new ScreamerEnemy(ex, ey));
     }
   }
 
@@ -163,8 +178,16 @@ function loadLevel(idx) {
     }
   }
 
+  Audio.setReverbSize(def.reverb ?? 'medium');
   UI.setLevelName(def.name);
   UI.setHint(def.hint);
+
+  // Reset shake and fire one free entry pulse after 300ms
+  G.shake = { x: 0, y: 0, timer: 0, intensity: 0, duration: 0.001 };
+  const entryX = G.player.x, entryY = G.player.y;
+  setTimeout(() => {
+    if (G.screen === 'playing') G.raySystem.burst(entryX, entryY, 'pulse', G.castFn);
+  }, 300);
 }
 
 // ─── Title screen demo pulse ───────────────────────────────────────────────────
@@ -203,6 +226,8 @@ function applyWallHits(hits, now) {
       G.grid[h.row][h.col] = CELL.EMPTY;
       G.raySystem.burst(h.x, h.y, 'pulse', G.castFn, COLLAPSE_BURST_RAYS, 80);
       Audio.playCollapse();
+      triggerShake(4, 0.25);
+      Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
     }
   }
   let wi = 0;
@@ -226,6 +251,19 @@ function processRayEntities(now) {
     for (const ent of allEntities) {
       const d = segPtDist(ent.x, ent.y, sx, sy, tx, ty);
       if (d < ent.radius + REVEAL_D) ent.revealedAt = now;
+    }
+
+    // Screamer reveal + trigger (any ray type activates)
+    for (const sc of G.screamers) {
+      const d = segPtDist(sc.x, sc.y, sx, sy, tx, ty);
+      if (d < sc.radius + REVEAL_D) sc.revealedAt = now;
+      if (!sc.triggered && d < sc.radius + 4) {
+        sc.triggered = true;
+        G.raySystem.burst(sc.x, sc.y, 'pulse', G.castFn, SCREAMER_BURST_RAYS, 320);
+        sc.alertNearbyEnemies(G.enemies);
+        Audio.playScreamer();
+        triggerShake(5, 0.4);
+      }
     }
 
     // Crusher reveal — larger radius than entities so player can track from safe zone
@@ -316,6 +354,12 @@ function checkDeath() {
       return;
     }
   }
+  for (const sc of G.screamers) {
+    if (sc.killsPlayer(p.x, p.y)) {
+      die('Silenced.');
+      return;
+    }
+  }
   for (const cr of G.crushers) {
     const b = cr.bounds();
     if (circleOverlapsAABB(p.x, p.y, PLAYER_RADIUS, b.x1, b.y1, b.x2, b.y2)) {
@@ -328,7 +372,10 @@ function checkDeath() {
 function die(reason) {
   G.deathReason = reason;
   G.screen = 'dead';
+  triggerShake(6, 0.35);
+  Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
   Audio.stopAmbient();
+  Audio.stopEnvironmental();
   Audio.playDeath();
   UI.setDeathMessage(reason);
   UI.show('screen-dead');
@@ -348,6 +395,13 @@ function fireTrigger(tr) {
   } else if (tr.action === 'remove_wall') {
     const [r, c] = tr.targetId.split(',').map(Number);
     G.grid[r][c] = CELL.EMPTY;
+  } else if (tr.action === 'spawn_enemy') {
+    const [type, col, row] = tr.targetId.split(',');
+    const ex = parseInt(col) * TILE + TILE / 2;
+    const ey = parseInt(row) * TILE + TILE / 2;
+    if (type === 'chaser')  G.enemies.push(new ChaserEnemy(ex, ey));
+    else if (type === 'stalker') G.enemies.push(new BlindStalker(ex, ey));
+    else if (type === 'screamer') G.screamers.push(new ScreamerEnemy(ex, ey));
   }
 }
 
@@ -359,6 +413,7 @@ function checkExit() {
       G.screen = 'win';
       localStorage.removeItem(SAVE_KEY);
       Audio.stopAmbient();
+      Audio.stopEnvironmental();
       Audio.playLevelComplete();
       UI.show('screen-win');
       Renderer.setHUDVisible(false);
@@ -377,6 +432,7 @@ function checkExit() {
 
 // ─── Update ───────────────────────────────────────────────────────────────────
 function update(dt, now) {
+  Input.setPlayerScreenPos(G.player.x, G.player.y);
   const move = Input.getMove();
   const moving = move.dx !== 0 || move.dy !== 0;
   const crouching = Input.isCrouching();
@@ -403,8 +459,10 @@ function update(dt, now) {
     Audio.playFootstepSurface(G.playerInWater ? 'water' : 'normal');
   }
 
-  // Pulse rays
+  // Pulse rays — track ready transition for audio cue
+  const prevCooldown = G.pulseCooldown;
   G.pulseCooldown = Math.max(0, G.pulseCooldown - dt * 1000);
+  if (prevCooldown > 0 && G.pulseCooldown === 0) Audio.playPulseReady();
   if (Input.consumePulse() && G.pulseCooldown === 0) {
     G.pulseCooldown = PULSE_COOLDOWN;
     G.raySystem.burst(G.player.x, G.player.y, 'pulse', G.castFn);
@@ -450,6 +508,18 @@ function update(dt, now) {
   }
   for (const cr of G.crushers) cr.update(dt);
 
+  // Crusher near-miss shake — fire once per approach (debounced by shake timer)
+  if (G.shake.timer <= 0) {
+    for (const cr of G.crushers) {
+      const b = cr.bounds();
+      if (circleOverlapsAABB(G.player.x, G.player.y, PLAYER_RADIUS + 12, b.x1, b.y1, b.x2, b.y2) &&
+          !circleOverlapsAABB(G.player.x, G.player.y, PLAYER_RADIUS, b.x1, b.y1, b.x2, b.y2)) {
+        triggerShake(2, 0.15);
+        break;
+      }
+    }
+  }
+
   // Key pickup — proximity triggers collection and opens the matching door
   for (const [, key] of G.keys) {
     if (key.collected) continue;
@@ -478,6 +548,28 @@ function update(dt, now) {
   // Death & exit
   checkDeath();
   if (G.screen === 'playing') checkExit();
+
+  // Screen shake decay
+  if (G.shake.timer > 0) {
+    G.shake.timer = Math.max(0, G.shake.timer - dt);
+    const frac = G.shake.timer / G.shake.duration;
+    G.shake.x = (Math.random() * 2 - 1) * G.shake.intensity * frac;
+    G.shake.y = (Math.random() * 2 - 1) * G.shake.intensity * frac;
+  } else {
+    G.shake.x = 0; G.shake.y = 0;
+  }
+
+  // Danger proximity — modulate ambient drone based on nearest enemy/screamer
+  let minEnemyDist = Infinity;
+  for (const en of G.enemies) {
+    const d = dist(G.player.x, G.player.y, en.x, en.y);
+    if (d < minEnemyDist) minEnemyDist = d;
+  }
+  for (const sc of G.screamers) {
+    const d = dist(G.player.x, G.player.y, sc.x, sc.y);
+    if (d < minEnemyDist) minEnemyDist = d;
+  }
+  Audio.setDangerLevel(minEnemyDist < DANGER_NEAR_PX ? 1 - minEnemyDist / DANGER_NEAR_PX : 0);
 
   // HUD
   Renderer.updateHUD(G.pulseCooldown, PULSE_COOLDOWN, G.levelIndex, TOTAL, crouching);
@@ -534,6 +626,7 @@ function handleAction(action) {
       UI.hide();
       Renderer.setHUDVisible(true);
       Audio.startAmbient();
+      Audio.startEnvironmental();
       break;
     case 'continue': {
       const saved = parseInt(localStorage.getItem(SAVE_KEY), 10);
@@ -544,6 +637,7 @@ function handleAction(action) {
       UI.hide();
       Renderer.setHUDVisible(true);
       Audio.startAmbient();
+      Audio.startEnvironmental();
       break;
     }
     case 'resume':
@@ -556,7 +650,9 @@ function handleAction(action) {
       G.screen = 'playing';
       UI.hide();
       Renderer.setHUDVisible(true);
+      Audio.stopEnvironmental();
       Audio.startAmbient();
+      Audio.startEnvironmental();
       break;
     case 'restart-from-1':
       G.levelIndex = 0;
@@ -565,17 +661,22 @@ function handleAction(action) {
       G.screen = 'playing';
       UI.hide();
       Renderer.setHUDVisible(true);
+      Audio.stopEnvironmental();
       Audio.startAmbient();
+      Audio.startEnvironmental();
       break;
     case 'next-level':
       G.screen = 'playing';
       UI.hide();
       Renderer.setHUDVisible(true);
+      Audio.stopEnvironmental();
       Audio.startAmbient();
+      Audio.startEnvironmental();
       break;
     case 'title':
       G.screen = 'title';
       Audio.stopAmbient();
+      Audio.stopEnvironmental();
       UI.show('screen-title');
       Renderer.setHUDVisible(false);
       initTitleScreen();
@@ -596,6 +697,8 @@ function refreshContinueButton() {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 export function init() {
+  StatusBar.hide().catch(() => {});
+
   const canvas = document.getElementById('canvas');
   Renderer.init(canvas);
   Input.init();

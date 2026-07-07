@@ -78,6 +78,14 @@ export const BLIND_STALKER_BREATH_MAX = 3000; // ms max interval between breathi
 export const KEY_PICKUP_RADIUS    = 12;
 export const CRUSHER_REVEAL_MS    = 5500;  // crushers stay visible longer than walls
 
+// ─── Movement + polish ───────────────────────────────────────────────────────
+export const PLAYER_ACCEL    = 12;   // velocity lerp factor (unitless, not px/s²)
+export const DANGER_NEAR_PX  = 100; // enemy proximity threshold for danger audio
+
+// ─── Screamer ────────────────────────────────────────────────────────────────
+export const SCREAMER_ALERT_RADIUS = 300; // px — enemies within this radius go alert
+export const SCREAMER_BURST_RAYS   = 48;  // rays emitted when screamer triggers
+
 // ─── Cell types ──────────────────────────────────────────────────────────────
 export const CELL = {
   EMPTY:       0,

@@ -6,7 +6,11 @@
     "enabled": true
   },
   "assets": {
-    "directory": "dist"
+    "directory": "dist",
+    // "/play" (no slash) → serves /play/index.html (the game); "/" → /index.html (landing)
+    "html_handling": "auto-trailing-slash",
+    // Unknown paths return a real 404 rather than silently serving another page
+    "not_found_handling": "none"
   },
   "compatibility_flags": [
     "nodejs_compat"

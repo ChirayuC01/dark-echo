@@ -5,6 +5,49 @@
 
 ---
 
+## [v2.2.0] — 2026-07-03 — Phase 22
+
+### Added
+- **Marketing landing page** (`landing/index.html` + `landing/style.css`): standalone page in the game's color grammar, served at `/landing/`. Sections: animated pulse hero, mechanic explainer, feature bullets, Play-Now CTAs, Android "coming soon" badge, footer. Fully self-contained — inline SVG favicon, CSS-only animations, `prefers-reduced-motion` support, no external requests.
+- **Social cards**: Open Graph + Twitter Card meta on both the landing and the game `index.html`; 1200×630 SVG cover at `public/landing/og-cover.svg` → `dist/landing/og-cover.svg`. Inline SVG favicon on both pages.
+- **Multi-page build**: `vite.config.js` now builds two entry points — `main` (game) and `landing` — sharing hashed assets in `dist/assets/`.
+
+### Routing
+- Landing page at `/`, game at `/play/`. Root `index.html` is the landing; `play/index.html` is the game. The root landing runs a Capacitor-only redirect so the native Android app opens straight into the game. `wrangler.jsonc` sets `html_handling: auto-trailing-slash` and `not_found_handling: none` for deterministic paths.
+
+### Notes
+- **Deferred**: analytics (Umami/Plausible) and Sentry error tracking — both require external accounts/infra not yet set up. `og:url`/`og:image` use a placeholder domain to be replaced before public launch.
+
+---
+
+## [v2.1.1] — 2026-07-03 — Phase 21.1
+
+### Changed
+- **Mobile touch controls redesigned**: Removed the on-screen joystick, crouch button, and pulse button entirely. The canvas itself is now the whole input surface: hold anywhere to walk toward that point (direction from canvas center — one mechanic covers all 8 directions), tap quickly to crouch-walk in that direction, or tap-and-hold directly on the player to fire pulse continuously.
+- **Mobile canvas cutoff fixed**: `#wrap`/canvas sizing switched from a fixed `820px` breakpoint to an orientation-agnostic `min(800px, 100vw, 100vh*4/3)` aspect-fit, fixing bottom/right clipping that occurred in landscape on physical devices.
+
+### Fixed
+- Quick taps were briefly moving the player at normal (non-crouched) speed before resolving into crouch-walk, due to movement being applied before the tap/hold distinction was known. A touch now only contributes movement once classified — a tap produces crouched movement only.
+
+---
+
+## [v2.1.0] — 2026-07-03 — Phase 21
+
+### Added
+- **Capacitor Android packaging**: Installed `@capacitor/core`, `@capacitor/cli`, `@capacitor/android`, `@capacitor/haptics`, `@capacitor/status-bar` (all v8.0.2). The `android/` project is generated via `npx cap add android` and gitignored; only `capacitor.config.ts` and `package.json` are committed.
+- **`capacitor.config.ts`**: App ID `com.resonance.soundgame`, display name `Resonance`, `webDir: 'dist'`, `androidScheme: 'https'`. Configures StatusBar plugin for dark/black appearance.
+- **Hardware acceleration + large heap** (`AndroidManifest.xml`): `android:hardwareAccelerated="true"` ensures GPU-accelerated Canvas rendering on Android WebView; `android:largeHeap="true"` prevents OOM on large echo trail maps.
+- **Auto Web Audio unlock** (`MainActivity.java`): `setMediaPlaybackRequiresUserGesture(false)` on the WebView — required for AudioContext to start without a user tap on Android 8+.
+- **Haptic feedback** (`js/game.js`): `Haptics.impact({ style: ImpactStyle.Medium })` fires on wall collapse and on death. Silently no-ops in browser via `.catch(() => {})`.
+- **Status bar hidden** (`js/game.js`): `StatusBar.hide()` called in `init()` — removes the Android status bar during gameplay for full-screen immersion.
+
+### Technical
+- `package.json`: Capacitor dependencies added as `dependencies` (runtime, not devDependencies — required by Vite bundling)
+- Build output grows from 66 kB to 75 kB (Capacitor web runtime shims included in bundle)
+- `npx cap sync android` confirmed: 2 plugins (`@capacitor/haptics`, `@capacitor/status-bar`) detected and synced
+
+---
+
 ## [v0.19.0] — 2026-06-17 — Phase 14
 
 ### Added
@@ -50,6 +93,74 @@
 
 ### Removed
 - **`Wave` and `WaveManager` shim classes** from `js/waves.js` (TD-002 resolved): dead backward-compat code from the circular-wave → DDA-ray migration; confirmed no imports anywhere.
+
+---
+
+## [v2.0.0] — 2026-06-22 — Phase 20
+
+### Added
+- **ScreamerEnemy** (`js/entities.js`): Stationary sound trap. Any ray passing within `HAZARD_RADIUS + 4px` triggers a 48-ray burst from the screamer's position and alerts all enemies within 300px. Kills player on direct contact. Rendered as pulsing orange-red glyph with 4 diagonal spikes; turns solid red once triggered.
+- **`spawn_enemy` trigger action** (`js/game.js`): `targetId` format `"type,col,row"`. Spawns a `chaser`, `stalker`, or `screamer` at the target cell center on player proximity. Used in L18 "The Web" to introduce a chaser mid-level.
+- **`playScreamer()`** (`js/audio.js`): Layered piercing sound — sawtooth 2400Hz + sine 3200Hz + square 1800Hz stacked over a noise burst (gain 0.4, 1.5s). Unmistakable alarm cue.
+- **Act II — 10 new levels** (`js/levels.js`):
+  - L11 "The Corridor II" — 3 step-aware patrols in parallel corridors (reverb: large)
+  - L12 "The Chamber II" — 2 screamers + chaser in large open room (reverb: large)
+  - L13 "The Factory" — 4 horizontal crushers + patrol, industrial gauntlet (reverb: medium)
+  - L14 "The Scream" — 3 screamers + collapsible wall + step-aware patrol; pulse-free challenge (reverb: medium)
+  - L15 "The Archive" — 3 keys + 3 doors + chaser + patrol + hazard; dense maze (reverb: small)
+  - L16 "The Flood II" — water zone + 2 screamers inside water + 2 hazards (reverb: large)
+  - L17 "The Awakening II" — BlindStalker only in open space; pure stealth test (reverb: large)
+  - L18 "The Web" — spawn_enemy chain + remove_wall trigger + patrol + hazard (reverb: medium)
+  - L19 "The Vault" — 2 screamers + crusher + BlindStalker + sentry + key/door (reverb: large)
+  - L20 "The Deep" — all mechanics combined; largest map; hardest level in the game (reverb: large)
+
+### Technical
+- `js/constants.js`: `SCREAMER_ALERT_RADIUS = 300`, `SCREAMER_BURST_RAYS = 48`
+- `js/game.js`: `G.screamers = []` array; screamer detection inside `processRayEntities()` (any non-step-enemy ray); screamer kill check in `checkDeath()`; `spawn_enemy` action in `fireTrigger()` parses `"type,col,row"` and pushes the new entity into the appropriate array
+- `js/renderer.js`: `drawScreamers()` — orange-red radial glow + 4 rotated spike arms drawn via `ctx.rotate`; arms collapse and color turns solid red on trigger
+
+---
+
+## [v1.3.0] — 2026-06-22 — Phase 19
+
+### Added
+- **Player velocity inertia** (`js/entities.js`): `Player` gains `vx = 0`, `vy = 0` fields. `move()` lerps toward target velocity: `this.vx += (dx * speed - this.vx) * Math.min(1, accel * dt)`. `PLAYER_ACCEL = 12` (lerp factor, not px/s²). Crouch reduces accel by 45% for more deliberate feel.
+- **Screen-shake** (`js/game.js`, `js/renderer.js`): `G.shake = { x, y, timer, intensity, duration }` state field. `triggerShake(intensity, duration)` helper decays linearly per frame. Triggers: collapse → `(4, 0.25)`, death → `(6, 0.35)`, crusher near-miss (within 12px margin, debounced by shake timer) → `(2, 0.15)`. In renderer: `ctx.save(); ctx.translate(shake.x, shake.y)` wraps all game drawing; `ctx.restore()` before vignette so overlay stays fixed.
+- **Pulse-ready audio cue** (`js/audio.js`, `js/game.js`): `SOUND_CONFIG.pulseReady` — 1800Hz sine, 0.04s, gain 0.08. `playPulseReady()` export. Fires once in `game.js` when `G.pulseCooldown` transitions from `> 0` to `<= 0`.
+- **Danger proximity audio** (`js/audio.js`, `js/game.js`): `setDangerLevel(t)` export modulates `_ambientGain` via `setTargetAtTime(0.035 + t * 0.05, now, 0.1)`. Called each frame with `t = 1 - nearestEnemyDist / DANGER_NEAR_PX` when enemy is within `DANGER_NEAR_PX = 100px`.
+- **Level entry pulse** (`js/game.js`): 300ms after `loadLevel()`, a free pulse burst fires from player start position via `setTimeout`. Does not consume cooldown. Gives player one "free look" at starting geometry.
+
+### Technical
+- `js/constants.js`: `PLAYER_ACCEL = 12`, `DANGER_NEAR_PX = 100`
+- Level entry pulse captured with closure over `entryX`, `entryY`; guarded by `G.screen === 'playing'`
+
+---
+
+## [v1.2.5] — 2026-06-22 — Phase 18
+
+### Added
+- **Reverb via ConvolverNode** (`js/audio.js`): `createImpulseResponse(ac, duration, decay)` generates a stereo noise buffer with exponential decay. `initReverb()` creates `_convolver` + `_reverbSend` gain node (gain 0.25), called once from `startAmbient()`. `addReverb(gainNode)` taps any gain node into the convolver. `setReverbSize(size)` accepts `'small'` (decay 0.18s) / `'medium'` (decay 0.4s) / `'large'` (decay 0.8s); hot-swaps convolver buffer if already live. `_pendingReverbSize` stores size from `loadLevel()` before `initReverb()` is called.
+- **Environmental ambient sounds** (`js/audio.js`): `startEnvironmental()` / `stopEnvironmental()` exports. Three procedural loops via `setTimeout` chains with `_envActive` guard: **Drip** (bandpass 300Hz, 40ms, gain 0.06, random pan, 4–12s interval), **Rumble** (lowpass 60Hz, 1.2s, gain 0.02, 18–35s), **Creak** (bandpass 800Hz Q=3, 0.3s, gain 0.04, 12–28s). Sounds are heard but not visualized as rays — ambient dread only.
+- **Per-level reverb** (`js/levels.js`): `reverb` field added to all 10 Act I levels — `'small'` (L1 Awakening, L6 Whisper), `'medium'` (L2 Patrol, L3 Chamber, L4 Hunt, L8 Collapse), `'large'` (L5 Gauntlet, L7 Flooded, L9 Corridor, L10 Gauntlet II).
+
+### Changed
+- **Reverb routing on game sounds**: `osc()` gains 7th `reverb` param; `noiseNode()` checks `cfg.reverb`; `playPulse()`, `playCollapse()`, enemy footstep sounds flagged with `reverb: true`
+- **`game.js` wiring**: `Audio.setReverbSize(def.reverb ?? 'medium')` in `loadLevel()`; `startEnvironmental()` / `stopEnvironmental()` wired alongside `startAmbient()` / `stopAmbient()` across all play/death/win/title transitions
+
+---
+
+## [v1.2.0] — 2026-06-19 — Phase 17
+
+### Added
+- **Positional audio (PannerNode HRTF)** (`js/audio.js`): `createPositionalSource(x, y)` helper creates a `PannerNode` at world coordinates (`panningModel: 'HRTF'`, `distanceModel: 'inverse'`, `refDistance: 120`, `maxDistance: 600`, `rolloffFactor: 1.2`). `updateListener(px, py)` export sets HRTF listener position each frame. `playAlert(x,y)`, `playSentryAlert(x,y)`, `playHazardPulse(x,y,volume)` updated to route through `createPositionalSource`.
+- **Enemy footstep ray bursts** (`js/entities.js`, `js/game.js`, `js/renderer.js`): `stepTimer` + `shouldEmitStep(dt)` added to `PatrolEnemy`, `ChaserEnemy`, `BlindStalker`. Intervals: 520ms idle / 340ms hunting. Each step emits an 8-ray `'step-enemy'` burst at 80px max distance. Enemy step rays render in muted red `rgba(180,60,60,α)` (active) and `rgba(165,50,50,α)` (echo trails). Enemy step rays DO NOT trigger enemy hearing and DO NOT count for exit reveal.
+- **Enemy footstep audio** (`js/audio.js`): `playEnemyFootstep(x, y)` — noise burst, gain 0.07, cutoff 240Hz, positional. `playEnemyFootstepHunting(x, y)` — louder (gain 0.13), higher cutoff (320Hz), positional. Called from `game.js` enemy step loop.
+- **BlindStalker breathing** (`js/entities.js`, `js/audio.js`, `js/game.js`): `breathTimer` + `shouldBreathe(dt)` on `BlindStalker`; fires every 2–3 seconds. `playBlindStalkerBreathing(x, y)` — 110Hz triangle, gain 0.03, 0.3s, positional. Audio cue only, no rays.
+
+### Technical
+- `js/constants.js`: `ENEMY_STEP_INTERVAL_IDLE = 520`, `ENEMY_STEP_INTERVAL_HUNT = 340`, `ENEMY_STEP_RAYS = 8`, `ENEMY_STEP_MAX = 80`, `BLIND_STALKER_BREATH_MIN = 2000`, `BLIND_STALKER_BREATH_MAX = 3000`
+- `js/renderer.js`: `drawActiveRays` and `drawEchoTrails` both extended with `'step-enemy'` color branch (4-pass draw for active rays)
+- `Audio.updateListener()` called every frame in `game.js` `update()`
 
 ---
 

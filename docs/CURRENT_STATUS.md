@@ -1,17 +1,17 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 17 complete (2026-06-19)  
+> **Last updated:** Phase 22 complete — marketing landing page + multi-page build (2026-07-03)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 18 — Reverb + Environmental Ambient Sounds**  
+**Phase 23 — Performance Hardening**  
 Status: ⬜ Pending
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phase 17 is complete.
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17, 18, 19, 20, 21, and 22 are complete.
 
 ---
 
@@ -30,8 +30,7 @@ Status: ⬜ Pending
 | ChaserEnemy | `js/entities.js` | Idle wander + hunt state |
 | Hazard | `js/entities.js` | Timed pulse emitter, proximity kill |
 | 9 levels | `js/levels.js` | Levels 1–9 complete (Level 9 = The Corridor) |
-| Touch joystick | `js/input.js` | 110px zone, 40px max drag |
-| Touch crouch button | `js/input.js`, `index.html` | #crouch-btn, bottom-center mobile |
+| **Tap-zone touch controls** | `js/input.js`, `js/game.js` | Whole canvas is the input surface — no visible buttons; see Phase 21.1 |
 | All UI screens | `js/ui.js`, `index.html` | title/pause/dead/levelup/win |
 | Web Audio sounds | `js/audio.js` | SOUND_CONFIG + all play*() |
 | Game loop & state | `js/game.js` | G state machine, 6 screens |
@@ -46,6 +45,9 @@ Status: ⬜ Pending
 | **Sentry Enemy** | `js/entities.js`, `js/game.js`, `js/renderer.js`, `js/levels.js` | Rotating ±45° scan cone, 180px LOS detection, 8s pursuit; stunned by pulse |
 | **BlindStalker Enemy** | `js/entities.js`, `js/game.js`, `js/levels.js` | Hears all sounds (step+pulse, incl. crouched); 104px/s hunt speed; 4s timer |
 | **10 levels** | `js/levels.js` | Level 10 "The Gauntlet II" — all mechanics + BlindStalker |
+| **ScreamerEnemy** | `js/entities.js`, `js/game.js`, `js/renderer.js` | Stationary trap; any ray triggers 48-ray burst + nearby enemy alert; killed on contact |
+| **`spawn_enemy` trigger** | `js/game.js` | `targetId = "type,col,row"`; spawns chaser / stalker / screamer mid-level |
+| **20 levels** | `js/levels.js` | Act II (Levels 11–20): Corridor II → The Deep; all mechanics, ScreamerEnemy, spawn_enemy |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | **Ambient drone** | `js/audio.js`, `js/game.js` | 55Hz sine, gain 0.035, 1.5s fade-in/0.5s fade-out; starts on play, stops on death/win/title |
 | **Positional audio** | `js/audio.js`, `js/game.js` | PannerNode HRTF; updateListener() per frame; alert/sentry/hazard sounds positioned |
@@ -141,29 +143,113 @@ Status: ⬜ Pending
 
 ## Production Phase Pending Systems
 
-| System | Phase | Priority | Notes |
-|---|---|---|---|
-| Build pipeline (Vite) + Cloudflare deploy | Phase 15 | **Critical** | Start here — everything else depends on this |
-| localStorage level persistence | Phase 15 | High | Players lose progress on refresh currently |
-| Delete Wave/WaveManager shims | Phase 15 | Low | TD-002, quick win |
-| Wavefront visual upgrade (arc-fill) | Phase 16 | High | Biggest visual gap vs Dark Echo |
-| Positional audio (PannerNode) | Phase 17 | High | Enemies should pan left/right |
-| Enemy footstep ray bursts | Phase 17 | **Critical** | Most important missing mechanic — enemies are silent |
-| Reverb (ConvolverNode) | Phase 18 | High | Acoustic room feel |
-| Environmental ambient sounds | Phase 18 | High | Drips, rumbles, creaks — non-gameplay dread |
-| Player velocity inertia | Phase 19 | Medium | Movement feel |
-| Screen-shake on death/collapse | Phase 19 | Low | FI-007 |
-| Pulse-ready audio cue | Phase 19 | Low | QoL |
-| Act II levels (11–20) | Phase 20 | High | Content volume gap vs Dark Echo |
-| ScreamerEnemy | Phase 20 | Medium | New enemy type for Act II |
-| Android app (Capacitor) | Phase 21 | High | Play Store prerequisite |
-| Website + landing page | Phase 22 | High | No public presence currently |
-| Performance hardening (60fps mobile) | Phase 23 | High | Must pass on mid-range Android |
-| Level select screen | Phase 24 | Medium | Quality-of-life for 20-level game |
-| Achievements (10 total) | Phase 24 | Medium | Retention and replay incentive |
-| Google Play Store submission | Phase 25 | High | Final commercial goal |
+| System | Phase | Status | Priority | Notes |
+|---|---|---|---|---|
+| Build pipeline (Vite) + Cloudflare deploy | Phase 15 | ✅ Done | — | Live and working |
+| localStorage level persistence | Phase 15 | ✅ Done | — | Survives page refresh |
+| Delete Wave/WaveManager shims | Phase 15 | ✅ Done | — | TD-002 resolved |
+| Wavefront visual upgrade (arc-fill) | Phase 16 | ❌ Skipped | — | Original spoke rendering preferred |
+| Positional audio (PannerNode) | Phase 17 | ✅ Done | — | HRTF spatial audio live |
+| Enemy footstep ray bursts | Phase 17 | ✅ Done | — | 8-ray burst per step, muted red |
+| Reverb (ConvolverNode) | Phase 18 | ✅ Done | — | Per-level impulse response; small/medium/large |
+| Environmental ambient sounds | Phase 18 | ✅ Done | — | Drip/rumble/creak loops; scheduled randomly |
+| Player velocity inertia | Phase 19 | ✅ Done | — | Lerp-based vx/vy; crouch reduces accel |
+| Screen-shake on death/collapse | Phase 19 | ✅ Done | — | triggerShake(); crusher near-miss shake |
+| Pulse-ready audio cue | Phase 19 | ✅ Done | — | 1800Hz click on cooldown expiry |
+| Act II levels (11–20) | Phase 20 | ✅ Done | — | Levels 11–20; commits `37f8ef2` + `ec08a1c` |
+| ScreamerEnemy | Phase 20 | ✅ Done | — | Stationary ray trap; 48-ray burst; alerts enemies within 300px |
+| Android app (Capacitor) | Phase 21 | ✅ Done | — | Capacitor 8 + Haptics + StatusBar; debug APK built + installed on physical device |
+| Website + landing page | Phase 22 | ✅ Done | — | Landing at `/`, game at `/play/`; multi-page Vite build; native app redirects to game |
+| Performance hardening (60fps mobile) | Phase 23 | ⬜ Pending | High | Must pass on mid-range Android |
+| Level select screen | Phase 24 | ⬜ Pending | Medium | Quality-of-life for 20-level game |
+| Achievements (10 total) | Phase 24 | ⬜ Pending | Medium | Retention and replay incentive |
+| Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
+
+## Phase 22 — Complete ✅
+
+**Phase 22 summary:**
+- **Routing (as built):** landing page at `/`, game at `/play/`.
+  - `index.html` (repo root) = landing page. Its `<head>` runs a Capacitor-only redirect (`window.Capacitor?.isNativePlatform?.()` → `location.replace('play/index.html')`) so the native Android shell opens straight into the game; web visitors stay on the landing.
+  - `play/index.html` = game (moved off root); asset/script refs use `../` so Vite still bundles shared `/assets/*`.
+  - `wrangler.jsonc`: `html_handling: "auto-trailing-slash"` (`/play` → `/play/index.html`) + `not_found_handling: "none"` (unknown paths 404, no silent fallback).
+  - An earlier iteration kept the game at root / landing at `/landing/`; that made `/`, `/landing`, and `/play` all fall back to the game (indistinguishable), so it was restructured to this layout.
+- `landing/style.css`: landing stylesheet (referenced by root `index.html`). Standalone from the game CSS but reuses the color grammar (`#000`, pale `rgba(155,195,235)`, bright `rgba(185,220,255)`). Sections: CSS-animated expanding-pulse hero, mechanic explainer with a CSS wave viz, three feature bullets (6 enemy types / 20 levels), two "Play Now" CTAs → `/play/`, "Google Play — coming soon" badge, footer. Fully self-contained: inline SVG favicon, CSS-only animations, `prefers-reduced-motion` fallback, zero external requests.
+- `public/landing/og-cover.svg`: 1200×630 social card, copied verbatim by Vite to `dist/landing/og-cover.svg`; referenced by the OG/Twitter `image` meta on both pages.
+- `vite.config.js`: multi-page build via `rollupOptions.input = { main: index.html (landing), game: play/index.html }` (ESM `__dirname` from `import.meta.url`). Shared assets emit to `dist/assets/`.
+- **Deferred:** Umami/Plausible analytics and Sentry error tracking — both need external accounts/infra the project doesn't have yet; omitted rather than shipping broken external `<script>`/deps. `og:url`/`og:image` use a `resonance.example.com` placeholder flagged for replacement with the real domain before public launch.
+- Build/route verified: `npm run build` → `dist/index.html` (landing) + `dist/play/index.html` (game) + `dist/landing/og-cover.svg`; `npm run preview` → `/` serves landing, `/play/` serves game, Play CTAs link to `/play/`, game assets resolve at `/assets/*`. Android bundle confirmed to contain both `index.html` (landing+redirect) and `play/index.html` (game).
+
+## Phase 21 — Complete ✅
+
+**Phase 21 summary:**
+- `npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/haptics @capacitor/status-bar typescript` — Capacitor 8 + haptics + status-bar (all at v8.0.2)
+- `capacitor.config.ts` created: `appId: 'com.resonance.soundgame'`, `appName: 'Resonance'`, `webDir: 'dist'`, `bundledWebRuntime: false`, StatusBar dark/black plugin config, `androidScheme: 'https'`
+- `npx cap add android` — generated `android/` project (gitignored); synced Haptics + StatusBar plugins
+- `android/app/src/main/AndroidManifest.xml`: added `android:hardwareAccelerated="true"` + `android:largeHeap="true"` to `<application>`
+- `android/app/src/main/java/com/resonance/soundgame/MainActivity.java`: extended with `onCreate()` override calling `getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false)` — required for Web Audio API to auto-play without user gesture on Android WebView
+- `js/game.js`: imports `{ Haptics, ImpactStyle }` from `@capacitor/haptics` and `{ StatusBar }` from `@capacitor/status-bar`; `Haptics.impact({ style: ImpactStyle.Medium })` fires on wall collapse (`applyWallHits`) and on death (`die()`); `StatusBar.hide()` called in `init()` — all Capacitor calls have `.catch(() => {})` so they are silently no-ops in the browser
+- Build verified: `npm run build` → `75.69 kB` bundle (75KB — includes Capacitor web runtime shims), 0 vulnerabilities; `npx cap sync android` → 2 plugins detected and synced
+- **On-device verification (2026-07-03)**: Debug APK built locally on Windows via `cd android && .\gradlew.bat assembleDebug` (required pointing Gradle at Android Studio's bundled JDK 21 via `android/gradle.properties` → `org.gradle.java.home`), then installed via `adb install` / manual sideload. Confirmed: **app installs and launches successfully on a physical Android device.** Signed release APK, multi-device testing, and latency/FPS profiling remain open — tracked in Phase 21's Production Roadmap entry.
+
+## Phase 21.1 — Complete ✅ (post-launch mobile fixes, on-device feedback)
+
+**Phase 21.1 summary:** On-device testing of the Phase 21 APK surfaced two mobile-only issues; both fixed and verified on-device.
+
+**1. Touch controls replaced (joystick + buttons → tap-zone canvas input):**
+- Removed `#touch-controls` DOM entirely (`#joystick-zone`, `#joystick-knob`, `#crouch-btn`, `#pulse-btn`) from `index.html` and all associated CSS from `css/style.css`
+- `js/input.js` rewritten so the canvas itself is the whole input surface:
+  - **Hold** anywhere on canvas → player walks toward the touch point, direction computed as the normalized vector from canvas center (400,300) to the touch — this single mechanic covers left/right/up/down/diagonal without separate zones
+  - **Quick tap** (release before `TAP_MAX_HOLD = 200ms`) → crouch-walks the player in that direction for a `CROUCH_TAP_DECAY = 350ms` window; repeated tapping chains into continuous crouch movement, matching physical Shift/C crouch behavior (45% speed, 50% rays, 45% range)
+  - **Tap-and-hold on the player** (`PULSE_TOUCH_RADIUS = 42px` canvas-space around the live player position) → fires pulse continuously whenever cooldown allows
+  - `game.js` calls `Input.setPlayerScreenPos(G.player.x, G.player.y)` every frame so the pulse hit-test always uses the player's current position
+- **Bug fixed post-implementation**: a quick tap originally moved the player at normal speed for the brief ambiguous window before resolving to a tap — fixed by gating movement contribution in `getMove()` behind `elapsed >= TAP_MAX_HOLD`, so a touch contributes nothing until it's either released (→ crouch-walk) or held past the threshold (→ normal walk). A tap now produces crouched movement only, with no normal-speed sliver first.
+
+**2. Canvas cutoff fixed (bottom/right clipped on-device):**
+- Root cause: `#wrap` sizing used a fixed `max-width: 820px` breakpoint with `height: calc(100vw * 0.75)` — broke down on landscape phone viewports wider than 820px, where actual device height was far less than `width * 0.75`, clipping the bottom/right of the canvas
+- Fixed with orientation-agnostic aspect-fit: `width: min(800px, 100vw, calc(100vh * 4/3))`, `height: min(600px, 100vh, calc(100vw * 3/4))` — always fits the native 4:3 canvas inside the viewport regardless of device size or orientation, no breakpoint needed
+- Added `viewport-fit=cover` to the meta viewport tag and `touch-action: none` on the canvas to prevent OS scroll/zoom gestures from fighting the custom touch handlers
+
+**Verified on-device**: user confirmed both fixes work correctly on a physical Android device.
+
+## Phase 20 — Complete ✅
+
+**Phase 20 summary:**
+- `js/constants.js`: `SCREAMER_ALERT_RADIUS = 300` (px, enemy alert range), `SCREAMER_BURST_RAYS = 48` (ray count on trigger)
+- `js/entities.js`: `ScreamerEnemy` class — stationary; `this.triggered` flag; `alertNearbyEnemies(enemies)` calls `hearSound/hearStep` on all entities within `SCREAMER_ALERT_RADIUS`; `killsPlayer()` proximity kill same as Hazard
+- `js/audio.js`: `SOUND_CONFIG.screamer` — sawtooth 2400Hz + sine 3200Hz + square 1800Hz layered over noise burst (gain 0.4, 1.5s); `playScreamer()` export
+- `js/game.js`: `G.screamers = []`; screamer spawn from `type:'screamer'` in level def; `processRayEntities()` — any non-step-enemy ray within `HAZARD_RADIUS + 4` triggers screamer: `playScreamer()`, 48-ray burst at screamer position, `alertNearbyEnemies()`; `checkDeath()` loop includes screamers; `spawn_enemy` trigger action implemented — parses `"type,col,row"`, pushes new chaser/stalker/screamer at cell center
+- `js/renderer.js`: `drawScreamers()` — orange-red pulsing glow + 4 diagonal spike arms; solid red when triggered
+- `js/levels.js`: 10 new Act II levels (11–20):
+  - L11 "The Corridor II" — 3 step-aware patrols in parallel corridors
+  - L12 "The Chamber II" — 2 screamers + chaser, large open room
+  - L13 "The Factory" — 4 horizontal crushers + patrol, industrial gauntlet
+  - L14 "The Scream" — 3 screamers + collapsible wall + step-aware patrol
+  - L15 "The Archive" — 3 keys + 3 doors + chaser + patrol + hazard, dense maze
+  - L16 "The Flood II" — water zone + 2 screamers in water + 2 hazards
+  - L17 "The Awakening II" — BlindStalker only, pure stealth test
+  - L18 "The Web" — spawn_enemy trigger + remove_wall trigger + patrol + hazard
+  - L19 "The Vault" — 2 screamers + crusher + BlindStalker + sentry + key/door
+  - L20 "The Deep" — all mechanics combined; largest map; hardest level
+
+## Phase 19 — Complete ✅
+
+**Phase 19 summary:**
+- `js/constants.js`: `PLAYER_ACCEL = 12` (velocity lerp factor), `DANGER_NEAR_PX = 100` (proximity threshold)
+- `js/entities.js`: Player gains `vx = 0`, `vy = 0` fields; `move()` rewrites position increments as velocity lerp — `this.vx += (targetVx - this.vx) * Math.min(1, accel * dt)` — with crouch reducing accel by 45% for more deliberate feel
+- `js/audio.js`: `SOUND_CONFIG.pulseReady` — 1800Hz sine, 0.04s, gain 0.08; `playPulseReady()` export; `setDangerLevel(t)` export — modulates `_ambientGain` via `setTargetAtTime(0.035 + t * 0.05, now, 0.1)` as enemies approach
+- `js/game.js`: `G.shake = { x, y, timer, intensity, duration }` state field; `triggerShake(intensity, duration)` helper; shake decays each frame with linear amplitude falloff; collapse → `triggerShake(4, 0.25)`, death → `triggerShake(6, 0.35)`, crusher near-miss (within 12px margin, debounced by shake timer) → `triggerShake(2, 0.15)`; pulse-ready tracking via `prevCooldown` local; danger level calculated as nearest enemy fraction of `DANGER_NEAR_PX`; level entry pulse fires 300ms after `loadLevel()` without consuming cooldown
+- `js/renderer.js`: `ctx.save(); ctx.translate(shake.x, shake.y)` wraps all game drawing; `ctx.restore()` before vignette so overlay stays fixed
+
+## Phase 18 — Complete ✅
+
+**Phase 18 summary:**
+- `js/audio.js`: `createImpulseResponse(ac, duration, decay)` — stereo noise buffer with exponential decay for ConvolverNode; `initReverb()` — creates `_convolver` + `_reverbSend` (gain 0.25) routed to destination, called from `startAmbient()`; `addReverb(gainNode)` — taps any gain node into the convolver when it exists; `setReverbSize(size)` export — accepts `'small'`/`'medium'`/`'large'`, updates `_pendingReverbSize` and hot-swaps convolver buffer if live; `startEnvironmental()` / `stopEnvironmental()` exports — schedule drip/rumble/creak via setTimeout chains with `_envActive` guard and `clearTimeout` cleanup
+- `SOUND_CONFIG.environmental`: `drip` (bandpass 300Hz, 0.04s, random stereo pan), `rumble` (lowpass 60Hz, 1.2s), `creak` (bandpass 800Hz Q=3, 0.3s); each with min/max interval ranges
+- Reverb routing: `osc()` gains 7th `reverb` param; `noiseNode()` checks `cfg.reverb`; `playPulse()`, `playCollapse()` updated to use reverb; enemy footstep sounds (`enemyFootstep`, `enemyFootstepHunting`) flagged with `reverb: true`
+- `js/game.js`: `Audio.setReverbSize(def.reverb ?? 'medium')` in `loadLevel()`; `Audio.startEnvironmental()` added to `'start'`/`'continue'`/`'restart'`/`'restart-from-1'`/`'next-level'` cases; `Audio.stopEnvironmental()` added to `die()`, `checkExit()` win branch, and `'title'` case
+- `js/levels.js`: `reverb` property added to all 10 levels — `'small'` (L1 Awakening, L6 Whisper), `'medium'` (L2 Patrol, L3 Chamber, L4 Hunt, L8 Collapse), `'large'` (L5 Gauntlet, L7 Flooded, L9 Corridor, L10 Gauntlet II)
 
 ## Phase 17 — Complete ✅
 
@@ -185,7 +271,8 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 - `vite.config.js` created — `root: '.'`, `outDir: 'dist'`, `target: 'es2020'`
 - `vite@8.0.16` installed — 0 vulnerabilities, 47KB gzip-13KB bundle in 82ms
 - `.gitignore` created — excludes `node_modules/`, `dist/`, `android/`, `ios/`
-- `.github/workflows/deploy.yml` created — CI build on PR to `main`; deploy via `wrangler deploy` on push to `main`
+- `.github/workflows/deploy.yml` created — CI build on PR to `main`; deploy via `wrangler deploy` on push to `main`; `wranglerVersion: '4'` pinned (action defaults to 3.x which does not support Workers Static Assets)
+- `wrangler.jsonc` — `assets.directory` corrected to `"dist"` (was `"."`); Cloudflare Workers Static Assets confirmed as deploy target (not Pages)
 - `js/waves.js` — Wave and WaveManager shim classes deleted (TD-002 resolved)
 - `index.html` — `#continue-btn` added to title screen above "New Game" button; hidden by default via `style="display:none"`; "Begin" renamed to "New Game" for clarity
 - `js/ui.js` — `showContinueButton(levelNum)` and `hideContinueButton()` exports added
@@ -193,15 +280,19 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 
 ## Next Recommended Task
 
-Begin **Phase 18 — Reverb + Environmental Ambient Sounds**.
+Begin **Phase 23 — Performance Hardening** (60fps on mid-range Android + low-end desktop; vignette caching, shadowBlur audit, adaptive quality tier).
 
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 18.
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 23.
 
 ---
 
-## Deployment Setup
+## Deployment Setup ✅ Live
 
-Cloudflare Workers Git integration is connected to `ChirayuC01/dark-echo`.
+Deployment is confirmed working. Two parallel pipelines exist; both target the same Cloudflare Workers project (`resonance`).
+
+### Cloudflare Git Integration (primary)
+
+Cloudflare is connected directly to `ChirayuC01/dark-echo` and triggers its own build on every push.
 
 | Setting | Value |
 |---|---|
@@ -211,7 +302,16 @@ Cloudflare Workers Git integration is connected to `ChirayuC01/dark-echo`.
 | **Non-production deploy command** | `npx wrangler versions upload` |
 | **Root directory** | `/` |
 
-**Workflow:** develop on `claude/beautiful-fermat-5102bb` → open PR to `main` → Cloudflare runs `npm run build` + `npx wrangler deploy` automatically on merge.
+### GitHub Actions (`.github/workflows/deploy.yml`)
+
+Runs on push to `main`; also runs a build-only CI check on PRs to catch broken builds before merge.
+
+- Build + deploy on push to `main` via `cloudflare/wrangler-action@v3` with `wranglerVersion: '4'`
+- `wranglerVersion: '4'` is required — the action defaults to wrangler 3.x which does not support Workers Static Assets (`assets.directory` config)
+
+### Dev workflow
+
+Develop on `claude/beautiful-fermat-5102bb` → open PR to `main` → CI build runs → merge → both pipelines deploy automatically.
 
 ---
 
@@ -235,3 +335,6 @@ npm run dev     # development server at localhost:8080 with HMR
 npm run build   # production build → dist/
 npm run preview # preview the production build locally
 ```
+
+**Android APK:** see `docs/ANDROID_BUILD_GUIDE.md` for the full build + install
+steps (including the JDK 21 fix and the everyday rebuild loop).
