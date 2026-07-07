@@ -414,20 +414,23 @@ Not part of the original Phase 15–25 sequence — an out-of-order fix driven d
 **Estimated effort:** 5–8 days  
 **Risk:** Low
 
-### Routing decision (deviation from original plan)
-The original plan called for the landing page at `/` and the game at `/play/`. This was **inverted** to keep the game at root and the landing at `/landing/`, because:
-- The Android app (Phase 21, already shipped & verified) loads `dist/index.html` as the game via Capacitor's `webDir`.
-- Vite's multi-page build emits shared, content-hashed assets to `dist/assets/`, so the game cannot be isolated into a `/play/` subfolder without breaking its asset references — and moving the landing to root would make Capacitor load the marketing page instead of the game.
-- Therefore: **game = `/` (root, Capacitor-safe), landing = `/landing/`.** Social/OG meta was added to *both* pages so the root domain still renders a proper card when shared. If a true marketing-front-door at `/` is wanted later, it needs a Cloudflare Worker route (rewrite `/` → landing) or accepting a redirect flash in the native app.
+### Routing (as built)
+Per the original plan and confirmed with the user: **landing page at `/`, game at `/play/`.**
+
+An earlier iteration briefly kept the game at root (landing at `/landing/`) to avoid touching the Android app, but that made `/`, `/landing` (no slash), and `/play` all fall back to the game — the URLs were indistinguishable. Final structure:
+- `index.html` (repo root) = **landing page**, served at `/`. Its `<head>` runs a Capacitor-only redirect: `if (window.Capacitor?.isNativePlatform?.()) location.replace('play/index.html')`. The native Android shell therefore opens straight into the game; web visitors never match the check and stay on the landing.
+- `play/index.html` = **game**, served at `/play/`. Asset/script refs use `../` so Vite still bundles shared, content-hashed files into `dist/assets/`.
+- `wrangler.jsonc`: `html_handling: "auto-trailing-slash"` (so `/play` → `/play/index.html`) and `not_found_handling: "none"` (unknown paths 404 instead of silently serving another page).
+- The Android app (Phase 21) still loads `dist/index.html`; the redirect keeps it opening the game, so no Capacitor config change was needed. The APK must be rebuilt to pick up the new bundle.
 
 ### Tasks
-- [x] Create `landing/index.html` (separate from game's `index.html`).
-- [x] ~~Set Cloudflare root to serve `landing/` at `/` and game at `/play/`~~ → inverted: game at `/`, landing at `/landing/` (see routing decision above). No Cloudflare config change needed — pure static-asset paths.
+- [x] Landing page authored as the repo-root `index.html`; game moved to `play/index.html`.
+- [x] Serve landing at `/` and game at `/play/` — achieved with pure static-asset paths (no Cloudflare Worker); `wrangler.jsonc` `html_handling`/`not_found_handling` set for deterministic behavior. Native app redirects root→`play/` so it still opens the game.
 - [x] Landing page sections (in order):
   1. **Hero**: title "RESONANCE", tagline "Sound is your only vision.", black background, pale-blue title, CSS-animated expanding pulse rings.
   2. **Mechanic preview**: CSS-only animated pulse/wave viz + explainer copy (a screen-recorded GIF/video was not available; a pure-CSS visualization stands in and keeps the page fully self-contained).
   3. **Feature bullets**: "No graphics. Only echoes." / "Six things hunt you by sound." / "20 levels of escalating dark." (updated counts — 6 enemy types, 20 levels, per current game state).
-  4. **Play Now**: two CTA buttons linking to `/` (the game).
+  4. **Play Now**: two CTA buttons linking to `/play/` (the game).
   5. **Mobile / Android**: "Google Play — coming soon" badge.
   6. **Footer**: minimal — title, year.
 - [x] Create `landing/style.css` — standalone; same color grammar (`#000`, `rgba(155,195,235)`, `rgba(185,220,255)`).
@@ -442,16 +445,19 @@ The original plan called for the landing page at `/` and the game at `/play/`. T
 - [ ] **Follow-up before public launch**: replace the `https://resonance.example.com` placeholder in `og:url`/`og:image` (both `index.html` and `landing/index.html`) with the real production domain; optionally swap the SVG OG cover for a 1200×630 PNG for widest social-scraper support.
 
 ### Files Modified / Created
-- `landing/index.html` (new)
-- `landing/style.css` (new)
+- `index.html` (repo root) — now the landing page (+ Capacitor→game redirect, favicon, OG/Twitter meta)
+- `play/index.html` (new) — the game, moved off root; served at `/play/`
+- `landing/style.css` — landing stylesheet (referenced by root `index.html`)
 - `public/landing/og-cover.svg` (new) — 1200×630 social card, copied verbatim to `dist/landing/og-cover.svg`
-- `vite.config.js` — multi-page rollup input
-- `index.html` (game) — inline SVG favicon + OG/Twitter meta
+- `vite.config.js` — multi-page rollup input (`main` = landing, `game` = play)
+- `wrangler.jsonc` — `html_handling` + `not_found_handling` for deterministic routing
 
 ### Acceptance Criteria
-- [x] Landing page loads at a stable URL (`/landing/`; root is the game by design — see routing decision)
-- [x] "Play Now" buttons link to the working game (`/`)
-- [x] Page is lightweight and fast — fully self-contained, ~5.3 kB HTML + ~4.2 kB CSS, zero external requests, CSS-only animations
+- [x] Landing page loads at the site root `/`
+- [x] Game loads at `/play/`; "Play Now" buttons link there
+- [x] `/play` (no slash) resolves to the game via `auto-trailing-slash`; unknown paths 404 (no silent fallback)
+- [x] Native Android app opens directly into the game (root landing redirects when `Capacitor.isNativePlatform()`)
+- [x] Page is lightweight and fast — fully self-contained, ~5.8 kB HTML + ~4.2 kB CSS, zero external requests, CSS-only animations
 - [~] Open Graph preview renders when shared — tags present; needs the real domain substituted for the placeholder before it resolves live (SVG cover works on Discord; a PNG is recommended for Twitter/X)
 - [x] No cookie consent banner required (no analytics/cookies shipped)
 - [x] Landing page is fully usable on a 375px mobile screen (responsive units, single-column collapse)

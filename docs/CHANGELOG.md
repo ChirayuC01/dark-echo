@@ -12,8 +12,10 @@
 - **Social cards**: Open Graph + Twitter Card meta on both the landing and the game `index.html`; 1200×630 SVG cover at `public/landing/og-cover.svg` → `dist/landing/og-cover.svg`. Inline SVG favicon on both pages.
 - **Multi-page build**: `vite.config.js` now builds two entry points — `main` (game) and `landing` — sharing hashed assets in `dist/assets/`.
 
+### Routing
+- Landing page at `/`, game at `/play/`. Root `index.html` is the landing; `play/index.html` is the game. The root landing runs a Capacitor-only redirect so the native Android app opens straight into the game. `wrangler.jsonc` sets `html_handling: auto-trailing-slash` and `not_found_handling: none` for deterministic paths.
+
 ### Notes
-- **Routing**: game remains at `/` (root) and landing is at `/landing/`, inverting the original `/` vs `/play/` plan. The game is the Capacitor/Android entry and Vite's shared hashed assets prevent moving it off root. Rationale in `PRODUCTION_ROADMAP.md` Phase 22.
 - **Deferred**: analytics (Umami/Plausible) and Sentry error tracking — both require external accounts/infra not yet set up. `og:url`/`og:image` use a placeholder domain to be replaced before public launch.
 
 ---

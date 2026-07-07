@@ -159,7 +159,7 @@ Status: ⬜ Pending
 | Act II levels (11–20) | Phase 20 | ✅ Done | — | Levels 11–20; commits `37f8ef2` + `ec08a1c` |
 | ScreamerEnemy | Phase 20 | ✅ Done | — | Stationary ray trap; 48-ray burst; alerts enemies within 300px |
 | Android app (Capacitor) | Phase 21 | ✅ Done | — | Capacitor 8 + Haptics + StatusBar; debug APK built + installed on physical device |
-| Website + landing page | Phase 22 | ✅ Done | — | `landing/` served at `/landing/`; multi-page Vite build; game stays at root |
+| Website + landing page | Phase 22 | ✅ Done | — | Landing at `/`, game at `/play/`; multi-page Vite build; native app redirects to game |
 | Performance hardening (60fps mobile) | Phase 23 | ⬜ Pending | High | Must pass on mid-range Android |
 | Level select screen | Phase 24 | ⬜ Pending | Medium | Quality-of-life for 20-level game |
 | Achievements (10 total) | Phase 24 | ⬜ Pending | Medium | Retention and replay incentive |
@@ -170,13 +170,16 @@ Status: ⬜ Pending
 ## Phase 22 — Complete ✅
 
 **Phase 22 summary:**
-- `landing/index.html` + `landing/style.css`: standalone marketing page in the game's color grammar (`#000`, pale `rgba(155,195,235)`, bright `rgba(185,220,255)`). Sections: CSS-animated expanding-pulse hero, mechanic explainer with a CSS wave visualization, three feature bullets (6 enemy types / 20 levels), two "Play Now" CTAs → `/`, "Google Play — coming soon" Android badge, minimal footer. Fully self-contained: inline SVG favicon, CSS-only animations, `prefers-reduced-motion` fallback, zero external requests.
-- `public/landing/og-cover.svg`: 1200×630 social card, copied verbatim by Vite to `dist/landing/og-cover.svg`; referenced by the OG/Twitter `image` meta.
-- `vite.config.js`: multi-page build via `rollupOptions.input = { main: index.html, landing: landing/index.html }` (ESM `__dirname` computed from `import.meta.url`). Shared assets emit to `dist/assets/`.
-- `index.html` (game): inline SVG favicon + OG/Twitter meta added so the root domain also renders a social card.
-- **Routing:** game stays at `/` (root) — it is the Capacitor/Android entry and Vite's shared hashed assets prevent isolating it into `/play/`. Landing is served at `/landing/`. This inverts the original spec's `/` vs `/play/` split; rationale documented in `PRODUCTION_ROADMAP.md` Phase 22.
+- **Routing (as built):** landing page at `/`, game at `/play/`.
+  - `index.html` (repo root) = landing page. Its `<head>` runs a Capacitor-only redirect (`window.Capacitor?.isNativePlatform?.()` → `location.replace('play/index.html')`) so the native Android shell opens straight into the game; web visitors stay on the landing.
+  - `play/index.html` = game (moved off root); asset/script refs use `../` so Vite still bundles shared `/assets/*`.
+  - `wrangler.jsonc`: `html_handling: "auto-trailing-slash"` (`/play` → `/play/index.html`) + `not_found_handling: "none"` (unknown paths 404, no silent fallback).
+  - An earlier iteration kept the game at root / landing at `/landing/`; that made `/`, `/landing`, and `/play` all fall back to the game (indistinguishable), so it was restructured to this layout.
+- `landing/style.css`: landing stylesheet (referenced by root `index.html`). Standalone from the game CSS but reuses the color grammar (`#000`, pale `rgba(155,195,235)`, bright `rgba(185,220,255)`). Sections: CSS-animated expanding-pulse hero, mechanic explainer with a CSS wave viz, three feature bullets (6 enemy types / 20 levels), two "Play Now" CTAs → `/play/`, "Google Play — coming soon" badge, footer. Fully self-contained: inline SVG favicon, CSS-only animations, `prefers-reduced-motion` fallback, zero external requests.
+- `public/landing/og-cover.svg`: 1200×630 social card, copied verbatim by Vite to `dist/landing/og-cover.svg`; referenced by the OG/Twitter `image` meta on both pages.
+- `vite.config.js`: multi-page build via `rollupOptions.input = { main: index.html (landing), game: play/index.html }` (ESM `__dirname` from `import.meta.url`). Shared assets emit to `dist/assets/`.
 - **Deferred:** Umami/Plausible analytics and Sentry error tracking — both need external accounts/infra the project doesn't have yet; omitted rather than shipping broken external `<script>`/deps. `og:url`/`og:image` use a `resonance.example.com` placeholder flagged for replacement with the real domain before public launch.
-- Build verified: `npm run build` → `dist/index.html` (game) + `dist/landing/index.html` + `dist/landing/og-cover.svg`; `npm run preview` → `/`, `/landing/`, `/landing/og-cover.svg` all return 200.
+- Build/route verified: `npm run build` → `dist/index.html` (landing) + `dist/play/index.html` (game) + `dist/landing/og-cover.svg`; `npm run preview` → `/` serves landing, `/play/` serves game, Play CTAs link to `/play/`, game assets resolve at `/assets/*`. Android bundle confirmed to contain both `index.html` (landing+redirect) and `play/index.html` (game).
 
 ## Phase 21 — Complete ✅
 

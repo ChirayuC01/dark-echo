@@ -14,25 +14,38 @@
 
 Built a standalone marketing landing page and wired the project's Vite build to emit two pages.
 
-**Landing page (`landing/index.html` + `landing/style.css`):**
+> **Note:** the routing described below was revised after first-pass on-device testing — see "Routing" further down. Final layout: root `index.html` = landing, `play/index.html` = game.
+
+**Landing page (root `index.html` + `landing/style.css`):**
 - Standalone from the game's CSS, but reuses the exact color grammar (`#000`, pale `rgba(155,195,235)`, bright `rgba(185,220,255)`) and monospace type so it reads as the same product.
-- Sections: (1) full-viewport hero with the title, tagline "Sound is your only vision.", and CSS-animated concentric pulse rings expanding from a white core; (2) mechanic explainer pairing a looping CSS wave visualization with prose about the black-screen/echo conceit; (3) three feature bullets; (4) a "put on headphones, turn off the lights" play band with a large CTA; (5) an "Also on Android — Google Play coming soon" badge; (6) a minimal footer.
+- Sections: (1) full-viewport hero with the title, tagline "Sound is your only vision.", and CSS-animated concentric pulse rings expanding from a white core; (2) mechanic explainer pairing a looping CSS wave visualization with prose about the black-screen/echo conceit; (3) three feature bullets; (4) a "put on headphones, turn off the lights" play band with a large CTA to `/play/`; (5) an "Also on Android — Google Play coming soon" badge; (6) a minimal footer.
 - Fully self-contained: inline `data:` SVG favicon, all animations in CSS, a `prefers-reduced-motion` block that freezes the pulse animations, and responsive layout via `clamp()` + auto-fit grid + flex-wrap. Zero external network requests, so it's immune to the strict-CSP concerns and loads instantly.
 
 **Social/meta:**
 - Open Graph + Twitter Card tags on the landing page, plus a 1200×630 SVG social cover (`public/landing/og-cover.svg`) showing the title over pulse rings.
-- Added an inline SVG favicon and OG/Twitter tags to the game's `index.html` too, so sharing the root domain (which is the game) also yields a proper card.
+- Added an inline SVG favicon and OG/Twitter tags to the game's `play/index.html` too, so both entry points have a favicon and the game page shares cleanly.
 
 **Multi-page build (`vite.config.js`):**
-- Added `build.rollupOptions.input = { main: index.html, landing: landing/index.html }` (with ESM `__dirname` derived from `import.meta.url`). Vite now emits `dist/index.html`, `dist/landing/index.html`, and a shared `dist/assets/` (hashed `main-*.js`, `main-*.css`, `landing-*.css`).
+- Added `build.rollupOptions.input = { main: index.html (landing), game: play/index.html }` (with ESM `__dirname` derived from `import.meta.url`). Vite emits `dist/index.html` (landing), `dist/play/index.html` (game), and a shared `dist/assets/` (hashed `game-*.js`, `game-*.css`, `main-*.css`).
 - The OG cover lives in `public/landing/` because it's referenced by an absolute URL, not a relative import — Vite copies `public/` verbatim, landing it at `dist/landing/og-cover.svg`.
 
-### Key decision: game stays at root, landing at `/landing/`
+### Routing: landing at `/`, game at `/play/`
 
-The roadmap originally specified landing at `/` and game at `/play/`. I **inverted** this:
-- The Phase 21 Android app loads `dist/index.html` as the game via Capacitor's `webDir`. If root became the landing page, the native app would open the marketing page instead of the game.
-- Vite emits shared, content-hashed assets into `dist/assets/`, and both HTML entries reference them by absolute path (`/assets/...`). The game therefore can't be isolated into a self-contained `/play/` folder for Capacitor without breaking those references.
-- Net: game = `/` (Capacitor-safe, zero risk to the shipped APK), landing = `/landing/`. Social meta was added to both pages so the root domain still shares nicely. A true landing-at-root would require a Cloudflare Worker rewrite or a redirect-flash in the native app — deliberately not done, to avoid risk and scope creep.
+Final structure (per the roadmap spec and confirmed with the user):
+- `index.html` (repo root) = **landing page**, served at `/`.
+- `play/index.html` = **game**, served at `/play/` (asset/script refs use `../` so Vite still bundles shared `/assets/*`).
+- `wrangler.jsonc`: `html_handling: auto-trailing-slash` (`/play` → `/play/index.html`) + `not_found_handling: none` (unknown → 404).
+
+**First attempt and why it changed:** the initial Phase 22 pass kept the game at root (`index.html` = game) and put the landing at `/landing/`, reasoning that the Phase 21 Android app loads `dist/index.html` and shouldn't be disturbed. On testing, the user found `/`, `/landing` (no trailing slash), and `/play` all rendered the same page — because the game was physically at root, every non-exact path fell back to it. The three URLs were indistinguishable.
+
+**Fix:** moved the game to `play/index.html` and made root `index.html` the landing. To keep the native app opening straight into the game (it still loads `dist/index.html`), the root landing runs a tiny Capacitor-only redirect in its `<head>`:
+```html
+<script>
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+    window.location.replace('play/index.html');
+</script>
+```
+Web visitors never satisfy `isNativePlatform()`, so they stay on the landing. Both pages are pure black, so the momentary landing paint before the in-app redirect is effectively invisible. If the redirect ever fails to fire, the app degrades gracefully to the landing's "Play Now" button (→ `/play/`). This avoided introducing a Cloudflare Worker (untestable here, changes the deploy) while still delivering landing-at-root. The APK must be rebuilt to pick up the new bundle.
 
 ### Deferred from spec
 
@@ -41,9 +54,9 @@ The roadmap originally specified landing at `/` and game at `/play/`. I **invert
 
 ### Verification
 
-- `npm run build` → 26 modules, emits both HTML pages + shared assets; landing HTML is 5.29 kB (1.70 kB gzip), landing CSS 4.24 kB (1.49 kB gzip).
-- `npm run preview` + curl: `/` (game), `/landing/`, and `/landing/og-cover.svg` all return 200; landing `<title>` resolves correctly. Built landing references the hashed CSS at `/assets/landing-*.css` and the Play CTA links to `/`.
-- `npx cap sync android` re-run so the Android bundle stays consistent (the landing files add a few KB to the APK; harmless — the app still loads `index.html` = game).
+- `npm run build` → 26 modules, emits `dist/index.html` (landing, 5.78 kB), `dist/play/index.html` (game, 3.19 kB), shared `dist/assets/*`, and `dist/landing/og-cover.svg`.
+- `npm run preview` + curl: `/` serves the landing (`<title>RESONANCE — Sound is your only vision</title>`), `/play/` serves the game (`<title>RESONANCE</title>`), `/landing/og-cover.svg` returns 200. Landing "Play Now" CTAs link to `/play/`; the built game references its hashed bundle at `/assets/game-*.js`. (Note: bare `/play` under `vite preview` falls back to the landing — a preview-server quirk; Cloudflare's `auto-trailing-slash` redirects `/play` → `/play/` in production.)
+- `npx cap sync android` re-run; confirmed the Android bundle contains both `assets/public/index.html` (landing + native redirect) and `assets/public/play/index.html` (game). The app loads `index.html` and the inline `isNativePlatform()` redirect sends it to `play/index.html`.
 
 ### Next phase
 
