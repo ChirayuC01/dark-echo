@@ -335,3 +335,6 @@ npm run dev     # development server at localhost:8080 with HMR
 npm run build   # production build → dist/
 npm run preview # preview the production build locally
 ```
+
+**Android APK:** see `docs/ANDROID_BUILD_GUIDE.md` for the full build + install
+steps (including the JDK 21 fix and the everyday rebuild loop).
