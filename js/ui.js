@@ -52,3 +52,8 @@ export function hideContinueButton() {
   const btn = document.getElementById('continue-btn');
   if (btn) btn.style.display = 'none';
 }
+
+export function setQualityLabel(mode) {
+  const btn = document.getElementById('quality-btn');
+  if (btn) btn.textContent = `Quality: ${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
+}

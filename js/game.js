@@ -10,7 +10,10 @@ import { TILE, COLS, ROWS, W, H,
          COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS,
          KEY_PICKUP_RADIUS, CRUSHER_REVEAL_MS,
          DANGER_NEAR_PX,
-         SCREAMER_BURST_RAYS } from './constants.js';
+         SCREAMER_BURST_RAYS,
+         ECHO_TRAIL_CAP, ECHO_TRAIL_CAP_MEDIUM, ECHO_TRAIL_CAP_LOW,
+         ENEMY_STEP_RAYS_LOW,
+         QUALITY_DOWNGRADE_FPS, QUALITY_LOW_FPS, QUALITY_SUSTAIN_MS } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -56,7 +59,52 @@ const G = {
   triggers: [],                   // [{col, row, x, y, action, targetId, fired, revealedAt}]
   shake: { x: 0, y: 0, timer: 0, intensity: 0, duration: 0.001 },
   screamers: [],
+  // ─── Adaptive quality (Phase 23) ───
+  qualityMode: 'auto',        // 'auto' | 'high' | 'medium' | 'low' (user preference)
+  qualityTier: 'high',        // 'high' | 'medium' | 'low' (effective tier in use)
+  enemyStepRays: ENEMY_STEP_RAYS,
+  _fpsLowMs: 0,               // accumulated time (ms) FPS has stayed below threshold
 };
+
+const QUALITY_KEY = 'resonance_quality';
+const QUALITY_CYCLE = ['auto', 'high', 'medium', 'low'];
+
+// Apply an effective tier to the renderer + ray system + enemy step budget.
+function applyQualityTier(tier) {
+  G.qualityTier = tier;
+  Renderer.setQualityTier(tier);
+  G.enemyStepRays = tier === 'high' ? ENEMY_STEP_RAYS : ENEMY_STEP_RAYS_LOW;
+  const cap = tier === 'high'   ? ECHO_TRAIL_CAP
+            : tier === 'medium' ? ECHO_TRAIL_CAP_MEDIUM
+            : ECHO_TRAIL_CAP_LOW;
+  if (G.raySystem) G.raySystem.trailCap = cap;
+}
+
+// Set the user preference. 'auto' hands control to the FPS-driven adaptor;
+// a forced tier pins it. Persisted across sessions.
+function setQualityMode(mode) {
+  G.qualityMode = mode;
+  G._fpsLowMs = 0;
+  try { localStorage.setItem(QUALITY_KEY, mode); } catch (e) { /* ignore */ }
+  applyQualityTier(mode === 'auto' ? 'high' : mode);
+  UI.setQualityLabel(mode);
+}
+
+// Auto adaptor: after FPS stays below a threshold for QUALITY_SUSTAIN_MS,
+// drop one tier (high→medium→low). Downgrade-only — never oscillates.
+function updateAdaptiveQuality(dtMs) {
+  if (G.qualityMode !== 'auto' || G.qualityTier === 'low') return;
+  if (G.fps < QUALITY_DOWNGRADE_FPS) {
+    G._fpsLowMs += dtMs;
+    if (G._fpsLowMs >= QUALITY_SUSTAIN_MS) {
+      const next = (G.qualityTier === 'high' && G.fps >= QUALITY_LOW_FPS) ? 'medium' : 'low';
+      applyQualityTier(next);
+      G._fpsLowMs = 0;
+    }
+  } else {
+    G._fpsLowMs = 0;
+  }
+}
 
 function triggerShake(intensity, duration) {
   G.shake.intensity = intensity;
@@ -71,6 +119,7 @@ function loadLevel(idx) {
   const def = LEVELS[idx];
   G.grid = def.grid.map(row => [...row]); // mutable copy (for future collapsibles)
   G.raySystem = new RaySystem();
+  applyQualityTier(G.qualityTier); // a fresh RaySystem defaults to full cap — reapply
   G.castFn = (ox, oy, dx, dy, maxDist) => {
     const gridHit  = castRay(G.grid, ox, oy, dx, dy, maxDist);
     const crushHit = castRayCrushers(G.crushers, ox, oy, dx, dy, maxDist);
@@ -497,7 +546,7 @@ function update(dt, now) {
       en.update(dt, G.grid);
     }
     if (en.shouldEmitStep?.(dt)) {
-      G.raySystem.burst(en.x, en.y, 'step-enemy', G.castFn, ENEMY_STEP_RAYS, ENEMY_STEP_MAX);
+      G.raySystem.burst(en.x, en.y, 'step-enemy', G.castFn, G.enemyStepRays, ENEMY_STEP_MAX);
       const hunting = en.state === 'hunting' || en.state === 'alert' || (en.alertTimer > 0);
       if (hunting) Audio.playEnemyFootstepHunting(en.x, en.y);
       else Audio.playEnemyFootstep(en.x, en.y);
@@ -571,6 +620,9 @@ function update(dt, now) {
   }
   Audio.setDangerLevel(minEnemyDist < DANGER_NEAR_PX ? 1 - minEnemyDist / DANGER_NEAR_PX : 0);
 
+  // Adaptive quality — drop a tier if FPS stays low (auto mode only)
+  updateAdaptiveQuality(dt * 1000);
+
   // HUD
   Renderer.updateHUD(G.pulseCooldown, PULSE_COOLDOWN, G.levelIndex, TOTAL, crouching);
 }
@@ -611,6 +663,8 @@ function loop(timestamp) {
       ? (G.titleRaySystem ? G.titleRaySystem.echoTrails : [])
       : (G.raySystem      ? G.raySystem.echoTrails       : []),
     fps: G.fps,
+    poolSize: G.raySystem ? G.raySystem._pool.length : 0,
+    trailCap: G.raySystem ? G.raySystem.trailCap : 0,
   }, timestamp);
   requestAnimationFrame(loop);
 }
@@ -682,6 +736,11 @@ function handleAction(action) {
       initTitleScreen();
       refreshContinueButton();
       break;
+    case 'cycle-quality': {
+      const i = QUALITY_CYCLE.indexOf(G.qualityMode);
+      setQualityMode(QUALITY_CYCLE[(i + 1) % QUALITY_CYCLE.length]);
+      break;
+    }
   }
 }
 
@@ -705,6 +764,12 @@ export function init() {
   UI.init();
 
   document.addEventListener('ui:action', e => handleAction(e.detail));
+
+  // Restore saved quality preference (default 'auto')
+  let savedQuality = 'auto';
+  try { savedQuality = localStorage.getItem(QUALITY_KEY) || 'auto'; } catch (e) { /* ignore */ }
+  if (!QUALITY_CYCLE.includes(savedQuality)) savedQuality = 'auto';
+  setQualityMode(savedQuality);
 
   initTitleScreen();
   UI.show('screen-title');

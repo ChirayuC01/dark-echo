@@ -86,6 +86,15 @@ export const DANGER_NEAR_PX  = 100; // enemy proximity threshold for danger audi
 export const SCREAMER_ALERT_RADIUS = 300; // px — enemies within this radius go alert
 export const SCREAMER_BURST_RAYS   = 48;  // rays emitted when screamer triggers
 
+// ─── Performance / adaptive quality (Phase 23) ────────────────────────────────
+export const RAY_POOL_CAP           = 200;  // max recycled Ray instances retained
+export const ECHO_TRAIL_CAP_MEDIUM  = 250;  // trail cap at 'medium' quality tier
+export const ECHO_TRAIL_CAP_LOW     = 150;  // trail cap at 'low' quality tier
+export const ENEMY_STEP_RAYS_LOW    = 5;    // enemy step rays at reduced tiers
+export const QUALITY_DOWNGRADE_FPS  = 45;   // sustained below this → drop a tier
+export const QUALITY_LOW_FPS        = 30;   // sustained below this → jump to 'low'
+export const QUALITY_SUSTAIN_MS     = 3000; // how long FPS must stay low before acting
+
 // ─── Cell types ──────────────────────────────────────────────────────────────
 export const CELL = {
   EMPTY:       0,
