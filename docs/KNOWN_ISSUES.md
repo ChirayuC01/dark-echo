@@ -147,11 +147,10 @@ Implementation: `shape` property added to each enemy constructor (`'patrol'`, `'
 ---
 
 ### TD-007 — Vignette gradient recreated every frame
-**Status:** ⬜ Open — planned for Phase 23  
+**Status:** ✅ Resolved (Phase 23)  
 **Severity:** Low-Medium (mobile performance impact)  
 **File:** `js/renderer.js` `drawVignette()`  
-**Description:** `createRadialGradient()` is called every frame to draw the vignette. On mobile, this adds GPU upload state per frame. Cache the vignette on an offscreen canvas created once at resize and use `drawImage()` each frame instead.  
-**Fix:** `let _vignetteCanvas = null` — create on first call or canvas resize, reuse every frame.
+**Resolution:** `_vignetteCanvas` is pre-rendered once (`buildVignette()`) and blitted with `drawImage()` each frame. The player glow was likewise moved to a pre-rendered sprite. (Backing store is a fixed 800×600, so no resize invalidation is needed.)
 
 ---
 

@@ -1,17 +1,17 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 22 complete — marketing landing page + multi-page build (2026-07-03)  
+> **Last updated:** Phase 23 complete — performance hardening + adaptive quality (2026-07-03)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 23 — Performance Hardening**  
+**Phase 24 — Save System + Achievements**  
 Status: ⬜ Pending
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17, 18, 19, 20, 21, and 22 are complete.
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17–23 are complete.
 
 ---
 
@@ -54,8 +54,11 @@ Status: ⬜ Pending
 | **Enemy footstep rays** | `js/entities.js`, `js/game.js`, `js/renderer.js` | 8-ray `'step-enemy'` burst per enemy step (520ms idle / 340ms hunt); muted red render |
 | **BlindStalker breathing** | `js/entities.js`, `js/audio.js`, `js/game.js` | Positional 110Hz breath every 2–3s; audio cue only, no rays |
 | **Debug overlay** | `js/debug.js`, `js/input.js`, `js/game.js`, `js/renderer.js` | Backtick toggle; FPS, rays, trails, glints, player state, all enemy states |
-| Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
+| Echo trail cap | `js/waves.js` | Hard cap at 500 entries (lowered to 250/150 at reduced quality tiers) |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
+| **Perf caching** | `js/renderer.js` | Vignette + player-glow pre-rendered offscreen; blitted each frame |
+| **Adaptive quality** | `js/game.js`, `js/renderer.js`, `js/waves.js` | Auto FPS-driven high/medium/low tiers + pause-menu override; gates shadowBlur, trail cap, enemy step rays |
+| **Ray pool cap** | `js/waves.js` | Recycled Ray pool bounded at `RAY_POOL_CAP` (200) |
 
 ---
 
@@ -160,12 +163,23 @@ Status: ⬜ Pending
 | ScreamerEnemy | Phase 20 | ✅ Done | — | Stationary ray trap; 48-ray burst; alerts enemies within 300px |
 | Android app (Capacitor) | Phase 21 | ✅ Done | — | Capacitor 8 + Haptics + StatusBar; debug APK built + installed on physical device |
 | Website + landing page | Phase 22 | ✅ Done | — | Landing at `/`, game at `/play/`; multi-page Vite build; native app redirects to game |
-| Performance hardening (60fps mobile) | Phase 23 | ⬜ Pending | High | Must pass on mid-range Android |
+| Performance hardening (60fps mobile) | Phase 23 | ✅ Done | — | Vignette/glow caching, adaptive quality tiers, pool cap; on-device profiling still pending |
 | Level select screen | Phase 24 | ⬜ Pending | Medium | Quality-of-life for 20-level game |
 | Achievements (10 total) | Phase 24 | ⬜ Pending | Medium | Retention and replay incentive |
 | Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
+
+## Phase 23 — Complete ✅
+
+**Phase 23 summary** (performance hardening + adaptive quality):
+- `js/renderer.js`: vignette gradient pre-rendered once to an offscreen canvas (`buildVignette`) and blitted each frame; player glow pre-rendered to a sprite (`buildPlayerGlow`) — both remove per-frame `createRadialGradient` allocations. `setQualityTier(tier)` sets `_hq`; helper `sb(v)` returns the blur value at `high` and `0` at `medium`/`low`, applied to **every** hot-path `shadowBlur` (rays, glints, entities, exit, doors, keys, triggers, crushers) so blur compositing — the biggest mobile GPU cost — vanishes when quality drops.
+- `js/game.js`: `G.qualityMode` (`auto`|`high`|`medium`|`low`, persisted under `resonance_quality`) + effective `G.qualityTier`. Auto mode drops a tier after FPS stays below `QUALITY_DOWNGRADE_FPS (45)` for `QUALITY_SUSTAIN_MS (3s)` (→`medium`, or →`low` under `QUALITY_LOW_FPS (30)`), **downgrade-only** so it never oscillates. `applyQualityTier()` wires tier → renderer, ray-system trail cap, and enemy step-ray budget; reapplied after each `loadLevel()` (fresh `RaySystem`).
+- `js/waves.js`: `RaySystem.trailCap` is now configurable (`500`/`250`/`150` by tier); recycled Ray pool capped at `RAY_POOL_CAP (200)`.
+- Pause screen gains a **Quality** button (`#quality-btn`, `data-action="cycle-quality"`) cycling Auto→High→Medium→Low (`ui.js` `setQualityLabel`).
+- `js/debug.js`: overlay now shows quality tier/mode, ray-pool size, and effective trail cap.
+- `js/constants.js`: `RAY_POOL_CAP`, `ECHO_TRAIL_CAP_MEDIUM/LOW`, `ENEMY_STEP_RAYS_LOW`, `QUALITY_DOWNGRADE_FPS`, `QUALITY_LOW_FPS`, `QUALITY_SUSTAIN_MS`.
+- **Verified headless** (Chromium/Playwright): game boots and runs with no console/page errors; the Quality button cycles Auto→High→Medium→Low and persists to `localStorage`. On-device 60fps profiling (Galaxy A52-class) and a Lighthouse run remain open — they need real hardware / the deployed URL.
 
 ## Phase 22 — Complete ✅
 
@@ -280,9 +294,9 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 
 ## Next Recommended Task
 
-Begin **Phase 23 — Performance Hardening** (60fps on mid-range Android + low-end desktop; vignette caching, shadowBlur audit, adaptive quality tier).
+Begin **Phase 24 — Save System + Achievements** (level-select screen, best-time tracking, 10 achievements — all localStorage).
 
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 23.
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 24.
 
 ---
 

@@ -5,6 +5,23 @@
 
 ---
 
+## [v2.3.0] — 2026-07-03 — Phase 23
+
+### Added
+- **Adaptive quality system**: automatic FPS-driven quality tiers (high/medium/low). In auto mode, sustained FPS below 45 for 3s drops a tier (below 30 → low), downgrade-only so it never oscillates. Reduced tiers disable shadowBlur glow, lower the echo-trail cap (500→250→150), and cut enemy step rays. A **Quality** button on the pause screen overrides it (Auto/High/Medium/Low), persisted to `localStorage`.
+- Debug overlay now reports quality tier/mode, ray-pool size, and effective trail cap.
+
+### Changed / Performance
+- **Vignette gradient cached**: pre-rendered once to an offscreen canvas and blitted each frame instead of recreating the radial gradient every frame.
+- **Player glow pre-rendered** to a sprite (drawImage) instead of a per-frame radial gradient + shadowBlur.
+- **Hot-path shadowBlur gated**: all per-frame `shadowBlur` runs through a helper that zeroes it at reduced quality tiers — removing the largest mobile GPU cost when needed.
+- **Ray pool bounded** at 200 recycled instances; echo-trail cap is now tier-configurable.
+
+### Notes
+- On-device 60fps profiling (mid-range Android) and a Lighthouse run remain open — they require real hardware / the deployed URL. Mechanisms verified headless (no runtime errors; quality cycling + persistence work).
+
+---
+
 ## [v2.2.0] — 2026-07-03 — Phase 22
 
 ### Added

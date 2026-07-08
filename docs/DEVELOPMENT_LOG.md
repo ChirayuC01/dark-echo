@@ -4,6 +4,55 @@
 
 ---
 
+## [Phase 23 — Complete] Performance Hardening + Adaptive Quality
+
+**Date:** 2026-07-03  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.3.0
+
+### What was done
+
+Reduced per-frame cost and added an automatic quality-scaling system so the game holds framerate on weaker hardware.
+
+**Static-layer caching (`js/renderer.js`):**
+- The **vignette** was recreating a full-screen `createRadialGradient` every frame. It's now rendered once into an offscreen canvas (`buildVignette()`) and blitted with `drawImage` each frame. Since the canvas backing store is a fixed 800×600 (CSS scales it), the cache never needs invalidating.
+- The **player glow** was also a per-frame radial gradient + `shadowBlur`. It's now a pre-rendered sprite (`buildPlayerGlow()`) blitted each frame; the crisp core dot draws on top.
+
+**ShadowBlur gating (`js/renderer.js`):**
+- `shadowBlur` (canvas soft-glow) is the single biggest GPU compositing cost on mobile. Added `setQualityTier(tier)` → module flag `_hq`, and a helper `sb(v)` that returns the blur value at `high` and `0` at `medium`/`low`. Every hot-path `shadowBlur = …` assignment now goes through `sb()` — rays (4 passes/frame), impact glints, enemies, hazards, screamers, exit, doors, keys, triggers, crushers. At reduced tiers the blur cost disappears entirely while the geometry still draws.
+
+**Adaptive quality (`js/game.js`):**
+- `G.qualityMode` — user preference: `auto` | `high` | `medium` | `low`, persisted under `localStorage['resonance_quality']`.
+- `G.qualityTier` — the effective tier actually in use.
+- In `auto`, `updateAdaptiveQuality()` accumulates time spent below `QUALITY_DOWNGRADE_FPS (45)`; after `QUALITY_SUSTAIN_MS (3s)` it drops a tier (→`medium`, or →`low` if also below `QUALITY_LOW_FPS (30)`). It is **downgrade-only** — it never auto-upgrades, which avoids the classic oscillation where dropping quality raises FPS which then re-raises quality which drops FPS again. A user can always force `high` from the pause menu.
+- `applyQualityTier()` is the single wiring point: sets the renderer flag, the `RaySystem.trailCap`, and `G.enemyStepRays`. It's reapplied after every `loadLevel()` because that constructs a fresh `RaySystem` (which defaults back to the full cap).
+
+**Ray system (`js/waves.js`):**
+- `RaySystem.trailCap` is now an instance field (default `ECHO_TRAIL_CAP = 500`; `250` medium, `150` low). The prune step honours it.
+- The recycled `Ray` pool is capped at `RAY_POOL_CAP (200)` so it can't grow without bound after a heavy pulse-spam moment.
+
+**UI + debug:**
+- Pause screen has a **Quality** button (`#quality-btn`, `data-action="cycle-quality"`) that cycles Auto→High→Medium→Low; `ui.js` `setQualityLabel()` keeps the label in sync.
+- The debug overlay (backtick) now shows quality tier/mode, ray-pool size, and the effective trail cap.
+
+### Decisions / notes
+
+- **`willReadFrequently` left false** (deliberately not "tried"): the game never calls `getImageData`, and enabling that flag forces a software 2D backend that would *hurt* our GPU-accelerated canvas. Documented so a future pass doesn't flip it expecting a win.
+- **GC**: echo-trail pruning already compacts in place with a single O(n) sweep (no per-frame `splice`), so no ring buffer was needed; the removed per-frame gradient allocations plus the pool/trail caps are the real GC wins.
+- **Downgrade-only auto** was the key stability choice — see above.
+
+### Verification
+
+- `npm run build` clean (26 modules; game bundle 77.5 kB / 21.7 kB gzip).
+- Headless Chromium (Playwright) smoke test: loads `/play/`, starts a game, runs 1.5s, pauses, cycles the Quality button — **no console or page errors**; button goes Auto→High→Medium→Low and each choice persists to `localStorage`. Forcing to a low tier exercises the same `applyQualityTier` path the auto-adaptor uses, so the full renderer/ray-system wiring is covered.
+- **Still open** (needs real hardware / deployed URL): on-device 60fps profiling on a mid-range 2021 Android, desktop CPU-throttle profiling, and a Lighthouse ≥90 run.
+
+### Next phase
+
+**Phase 24 — Save System + Achievements**: level-select screen, best-time tracking, and 10 localStorage achievements.
+
+---
+
 ## [Phase 22 — Complete] Marketing Landing Page + Multi-Page Build
 
 **Date:** 2026-07-03  
