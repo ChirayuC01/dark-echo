@@ -74,7 +74,7 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake, footprints, playerHeading, currentFootSide } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake, footprints, playerHeading, currentFootSide, lastStepTime } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
@@ -99,7 +99,7 @@ export function draw(state, now) {
   drawActiveRays(rays, px, py);
   if (playerInWater) drawWaterZone(player);
   drawFootprintTrail(footprints, now);   // faint history, under the live feet
-  drawPlayerFeet(player, playerHeading || { x: 0, y: -1 }, currentFootSide, grid);
+  drawPlayerFeet(player, playerHeading || { x: 0, y: -1 }, currentFootSide, grid, now, lastStepTime);
 
   if (shakeActive) ctx.restore();
 
@@ -608,21 +608,30 @@ function drawWaterZone(player) {
 }
 
 // ─── Footprints ───────────────────────────────────────────────────────────────
-// A small foot mark: an ellipse whose long axis points along `angle` (heading),
-// with a smaller "heel" dab behind it so the shape reads as a foot, not a blob.
-const FOOT_LEN = 4.2, FOOT_W = 1.9;
-function drawFoot(x, y, angle, alpha) {
+// A recognizable foot mark pointing along `angle` (heading): an elongated sole
+// (ball), a separate rounded heel behind it, and three small toe pads at the
+// front. `scale` drives the "stamp" animation on each footfall.
+const FOOT_POP_MS = 150;   // duration of the press-in animation
+function drawFoot(x, y, angle, alpha, scale = 1) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
-  ctx.fillStyle = `rgba(210,225,250,${alpha.toFixed(3)})`;
-  ctx.beginPath();
-  ctx.ellipse(1.3, 0, FOOT_LEN, FOOT_W, 0, 0, Math.PI * 2);   // sole/ball
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(-3.0, 0, FOOT_W * 0.8, FOOT_W * 0.7, 0, 0, Math.PI * 2); // heel
-  ctx.fill();
+  ctx.scale(scale, scale);
+  ctx.fillStyle = `rgba(216,230,252,${alpha.toFixed(3)})`;
+  ctx.beginPath(); ctx.ellipse(1.6, 0, 4.6, 2.9, 0, 0, Math.PI * 2); ctx.fill();   // sole / ball
+  ctx.beginPath(); ctx.ellipse(-4.9, 0, 2.4, 2.2, 0, 0, Math.PI * 2); ctx.fill();  // heel
+  for (const ty of [-2.0, 0, 2.0]) {                                               // toe pads
+    ctx.beginPath(); ctx.ellipse(6.0, ty, 1.05, 0.85, 0, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.restore();
+}
+
+// Stamp-in easing: returns { scale, mul } for a mark of the given age (ms).
+// Foot lands slightly enlarged and semi-transparent, then presses to full.
+function footStamp(age) {
+  const p = Math.min(1, Math.max(0, age) / FOOT_POP_MS);
+  const e = 1 - (1 - p) * (1 - p);   // ease-out (0 at footfall → 1 settled)
+  return { scale: 1.32 - 0.32 * e, mul: 0.35 + 0.65 * e, e };
 }
 
 // True when (x,y) sits in a solid cell (wall / collapsible / closed door — closed
@@ -632,12 +641,13 @@ function footInWall(grid, x, y) {
   const cell = grid && grid[r] ? grid[r][c] : undefined;
   return cell === CELL.WALL || cell === CELL.COLLAPSIBLE;
 }
-function drawFootClear(grid, x, y, angle, alpha) {
+function drawFootClear(grid, x, y, angle, alpha, scale = 1) {
   if (footInWall(grid, x, y)) return;
-  drawFoot(x, y, angle, alpha);
+  drawFoot(x, y, angle, alpha, scale);
 }
 
 // Fading trail of alternating prints left behind by walking — faint history.
+// Each print stamps in (press animation) then fades over its lifetime.
 function drawFootprintTrail(footprints, now) {
   if (!footprints || footprints.length === 0) return;
   ctx.save();
@@ -645,9 +655,10 @@ function drawFootprintTrail(footprints, now) {
     const age = now - f.createdAt;
     if (age >= FOOTPRINT_FADE_MS) continue;
     const t = 1 - age / FOOTPRINT_FADE_MS;
-    const alpha = t * t * 0.45;    // faint, smooth fade-out
+    const st = footStamp(age);
+    const alpha = t * t * 0.45 * st.mul;   // faint, stamp-in then fade-out
     if (alpha < 0.01) continue;
-    drawFoot(f.x, f.y, f.angle, alpha);
+    drawFoot(f.x, f.y, f.angle, alpha, st.scale);
   }
   ctx.restore();
 }
@@ -658,7 +669,7 @@ function drawFootprintTrail(footprints, now) {
 // foot at a time (alternates each step) — the trail behind supplies the other
 // foot, so the gait reads "one in front of the other". Standing = both feet side
 // by side. Feet that fall in a wall cell are suppressed.
-function drawPlayerFeet(player, heading, footSide, grid) {
+function drawPlayerFeet(player, heading, footSide, grid, now, lastStepTime) {
   if (!player) return;
   ctx.save();
 
@@ -677,13 +688,15 @@ function drawPlayerFeet(player, heading, footSide, grid) {
   const speed = Math.hypot(player.vx || 0, player.vy || 0);
 
   if (speed < PLAYER_IDLE_SPEED) {
-    // Standing: both feet, side by side
+    // Standing: both feet, side by side, steady
     drawFootClear(grid, player.x + perpX * LAT, player.y + perpY * LAT, a, 0.95);
     drawFootClear(grid, player.x - perpX * LAT, player.y - perpY * LAT, a, 0.95);
   } else {
-    // Walking: one foot at a time (alternates with each step)
+    // Walking: one foot at a time (alternates each step), stamping down on the step
     const side = footSide || 1;
-    drawFootClear(grid, player.x + perpX * LAT * side, player.y + perpY * LAT * side, a, 0.95);
+    const st = footStamp(now - (lastStepTime || 0));
+    drawFootClear(grid, player.x + perpX * LAT * side, player.y + perpY * LAT * side,
+                  a, 0.6 + 0.35 * st.e, st.scale);
   }
   ctx.restore();
 }
