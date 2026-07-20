@@ -14,7 +14,7 @@ import { TILE, COLS, ROWS, W, H,
          ECHO_TRAIL_CAP, ECHO_TRAIL_CAP_MEDIUM, ECHO_TRAIL_CAP_LOW,
          ENEMY_STEP_RAYS_LOW,
          QUALITY_DOWNGRADE_FPS, QUALITY_LOW_FPS, QUALITY_SUSTAIN_MS,
-         FOOTPRINT_MAX } from './constants.js';
+         FOOTPRINT_MAX, FOOTPRINT_STANCE_OFF } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -64,6 +64,7 @@ const G = {
   // ─── Footprints ───
   footprints: [],                 // trail: {x, y, angle, createdAt}
   nextFoot: 1,                    // alternates ±1 (which foot lands next)
+  currentFootSide: 1,             // side of the most recently placed foot (live marker)
   playerHeading: { x: 0, y: -1 }, // last facing direction (default: up)
   // ─── Adaptive quality (Phase 23) ───
   qualityMode: 'auto',        // 'auto' | 'high' | 'medium' | 'low' (user preference)
@@ -171,6 +172,7 @@ function loadLevel(idx) {
   // Reset footprints
   G.footprints = [];
   G.nextFoot = 1;
+  G.currentFootSide = 1;
   G.playerHeading = { x: 0, y: -1 };
 
   for (let row = 0; row < ROWS; row++) {
@@ -558,9 +560,10 @@ function update(dt, now) {
 
     // Footprint — one foot at a time, offset to the side of travel, alternating
     const perpX = -G.playerHeading.y, perpY = G.playerHeading.x; // left of heading
+    G.currentFootSide = G.nextFoot;
     G.footprints.push({
-      x: G.player.x + perpX * 4.5 * G.nextFoot,
-      y: G.player.y + perpY * 4.5 * G.nextFoot,
+      x: G.player.x + perpX * FOOTPRINT_STANCE_OFF * G.currentFootSide,
+      y: G.player.y + perpY * FOOTPRINT_STANCE_OFF * G.currentFootSide,
       angle: Math.atan2(G.playerHeading.y, G.playerHeading.x),
       createdAt: now,
     });

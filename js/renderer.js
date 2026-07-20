@@ -2,7 +2,7 @@ import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
          RAY_TRAIL_MS, IMPACT_FADE_MS,
          HEARING_NEAR, HEARING_FAR, CELL,
          CRUSHER_REVEAL_MS,
-         FOOTPRINT_FADE_MS, FOOTPRINT_SIDE_OFF, PLAYER_IDLE_SPEED } from './constants.js';
+         FOOTPRINT_FADE_MS, FOOTPRINT_STANCE_OFF, PLAYER_IDLE_SPEED } from './constants.js';
 import { segPtDist } from './utils.js';
 import * as Debug from './debug.js';
 
@@ -25,10 +25,8 @@ let _hq = true;
 export function setQualityTier(tier) { _hq = (tier === 'high'); }
 function sb(v) { return _hq ? v : 0; }
 
-// Pre-rendered offscreen layers (built once) to avoid per-frame gradient allocation.
+// Pre-rendered offscreen layer (built once) to avoid per-frame gradient allocation.
 let _vignetteCanvas = null;   // full-screen vignette
-let _playerGlow = null;       // soft radial glow sprite for the player dot
-const PLAYER_GLOW_R = 18;
 
 function buildVignette() {
   const c = document.createElement('canvas');
@@ -42,27 +40,12 @@ function buildVignette() {
   _vignetteCanvas = c;
 }
 
-function buildPlayerGlow() {
-  const size = PLAYER_GLOW_R * 2;
-  const c = document.createElement('canvas');
-  c.width = size; c.height = size;
-  const g = c.getContext('2d');
-  const grd = g.createRadialGradient(PLAYER_GLOW_R, PLAYER_GLOW_R, 0,
-                                     PLAYER_GLOW_R, PLAYER_GLOW_R, PLAYER_GLOW_R);
-  grd.addColorStop(0, 'rgba(255,255,255,0.30)');
-  grd.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = grd;
-  g.beginPath(); g.arc(PLAYER_GLOW_R, PLAYER_GLOW_R, PLAYER_GLOW_R, 0, Math.PI * 2); g.fill();
-  _playerGlow = c;
-}
-
 export function init(canvasEl) {
   canvas = canvasEl;
   ctx = canvas.getContext('2d');
   canvas.width = W; canvas.height = H;
   ctx.imageSmoothingEnabled = true;
   buildVignette();
-  buildPlayerGlow();
 }
 
 // Smoothstep fade used for entity reveals
@@ -90,7 +73,7 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake, footprints, playerHeading } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake, footprints, playerHeading, currentFootSide } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
@@ -114,9 +97,8 @@ export function draw(state, now) {
   drawEnemies(enemies, now, px, py);
   drawActiveRays(rays, px, py);
   if (playerInWater) drawWaterZone(player);
-  drawFootprintTrail(footprints, now);   // under the player dot
-  drawPlayer(player);
-  drawStandingFeet(player, playerHeading || { x: 0, y: -1 });   // over the glow
+  drawFootprintTrail(footprints, now);   // faint history, under the live feet
+  drawPlayerFeet(player, playerHeading || { x: 0, y: -1 }, currentFootSide);
 
   if (shakeActive) ctx.restore();
 
@@ -371,7 +353,7 @@ function drawEchoTrails(trails, now, px, py) {
     if (heard <= 0) continue;
     const p = 1 - age / RAY_TRAIL_MS;
     const fade = p * p * (3 - 2 * p); // smooth ease-out
-    const alpha = t.energy * fade * 0.34 * heard;
+    const alpha = t.energy * fade * 0.24 * heard;   // dimmed so the bright feet read (2026-07-20)
     if (alpha < 0.005) continue;
 
     if (t.type === 'hazard') {
@@ -423,7 +405,7 @@ function drawActiveRays(rays, px, py) {
 
       for (const seg of ray.segments) {
         const heard = hearing(segPtDist(px, py, seg.x1, seg.y1, seg.x2, seg.y2));
-        const alpha = seg.energy * 0.72 * heard;
+        const alpha = seg.energy * 0.5 * heard;   // dimmed so the bright feet read (2026-07-20)
         if (alpha < 0.01) continue;
         ctx.strokeStyle = rayColor(type, alpha);
         ctx.beginPath();
@@ -433,7 +415,7 @@ function drawActiveRays(rays, px, py) {
       }
 
       const heard = hearing(segPtDist(px, py, ray.segX, ray.segY, ray.tipX, ray.tipY));
-      const liveAlpha = ray.energy * 0.88 * heard;
+      const liveAlpha = ray.energy * 0.62 * heard;
       if (liveAlpha < 0.01) continue;
       ctx.strokeStyle = rayColor(type, liveAlpha);
       ctx.beginPath();
@@ -642,8 +624,7 @@ function drawFoot(x, y, angle, alpha) {
   ctx.restore();
 }
 
-// Fading trail of alternating prints left behind by walking. Drawn UNDER the
-// player so the current position still reads as the bright dot.
+// Fading trail of alternating prints left behind by walking — faint history.
 function drawFootprintTrail(footprints, now) {
   if (!footprints || footprints.length === 0) return;
   ctx.save();
@@ -651,39 +632,44 @@ function drawFootprintTrail(footprints, now) {
     const age = now - f.createdAt;
     if (age >= FOOTPRINT_FADE_MS) continue;
     const t = 1 - age / FOOTPRINT_FADE_MS;
-    const alpha = t * t * 0.42;    // faint, smooth fade-out
+    const alpha = t * t * 0.45;    // faint, smooth fade-out
     if (alpha < 0.01) continue;
     drawFoot(f.x, f.y, f.angle, alpha);
   }
   ctx.restore();
 }
 
-// When the player is standing still, show both feet side by side at the current
-// position, oriented to the last heading. Drawn OVER the glow so it stays legible.
-function drawStandingFeet(player, heading) {
+// ─── Player (drawn purely as footsteps — no dot) ─────────────────────────────
+// A soft dark backing knocks the dense rays back right under the feet so the
+// bright prints read clearly; then the live foot/feet are drawn on top.
+const PLAYER_STANCE_OFF = FOOTPRINT_STANCE_OFF;
+function drawPlayerFeet(player, heading, footSide) {
   if (!player) return;
-  const speed = Math.hypot(player.vx || 0, player.vy || 0);
-  if (speed >= PLAYER_IDLE_SPEED) return;
   ctx.save();
+
+  // Backing shadow — a small dark disc that dims the rays converging on the player
+  const r = 20;
+  const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, r);
+  grd.addColorStop(0, 'rgba(0,0,0,0.72)');
+  grd.addColorStop(0.6, 'rgba(0,0,0,0.5)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath(); ctx.arc(player.x, player.y, r, 0, Math.PI * 2); ctx.fill();
+
   const a = Math.atan2(heading.y, heading.x);
   const perpX = -heading.y, perpY = heading.x;
-  const off = FOOTPRINT_SIDE_OFF + 3.5;   // wider than a stride so feet clear the glow
-  drawFoot(player.x + perpX * off, player.y + perpY * off, a, 0.6);
-  drawFoot(player.x - perpX * off, player.y - perpY * off, a, 0.6);
-  ctx.restore();
-}
+  const off = PLAYER_STANCE_OFF;
+  const speed = Math.hypot(player.vx || 0, player.vy || 0);
 
-// ─── Player ───────────────────────────────────────────────────────────────────
-// The soft glow is a pre-rendered sprite (buildPlayerGlow) blitted each frame,
-// replacing a per-frame radial gradient + shadowBlur (Phase 23).
-function drawPlayer(player) {
-  if (!player) return;
-  ctx.save();
-  if (_playerGlow) {
-    ctx.drawImage(_playerGlow, player.x - PLAYER_GLOW_R, player.y - PLAYER_GLOW_R);
+  if (speed < PLAYER_IDLE_SPEED) {
+    // Standing: both feet side by side, bright
+    drawFoot(player.x + perpX * off, player.y + perpY * off, a, 0.95);
+    drawFoot(player.x - perpX * off, player.y - perpY * off, a, 0.95);
+  } else {
+    // Walking: one foot at a time (alternates with each step), bright
+    const side = footSide || 1;
+    drawFoot(player.x + perpX * off * side, player.y + perpY * off * side, a, 0.95);
   }
-  ctx.fillStyle = 'rgba(255,255,255,0.96)';
-  ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 

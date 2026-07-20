@@ -83,10 +83,10 @@ export const PLAYER_ACCEL    = 12;   // velocity lerp factor (unitless, not px/s
 export const DANGER_NEAR_PX  = 100; // enemy proximity threshold for danger audio
 
 // ─── Footprints ──────────────────────────────────────────────────────────────
-export const FOOTPRINT_FADE_MS  = 2600; // how long a trail footprint lingers (ms)
-export const FOOTPRINT_MAX       = 48;   // cap on stored trail footprints
-export const FOOTPRINT_SIDE_OFF  = 4.5;  // px lateral offset of each foot from stride centre
-export const PLAYER_IDLE_SPEED   = 6;    // px/s below which the player counts as standing still
+export const FOOTPRINT_FADE_MS   = 2600; // how long a trail footprint lingers (ms)
+export const FOOTPRINT_MAX        = 48;   // cap on stored trail footprints
+export const FOOTPRINT_STANCE_OFF = 8;    // px lateral offset of each foot from body centre
+export const PLAYER_IDLE_SPEED    = 6;    // px/s below which the player counts as standing still
 
 // ─── Screamer ────────────────────────────────────────────────────────────────
 export const SCREAMER_ALERT_RADIUS = 300; // px — enemies within this radius go alert
