@@ -11,8 +11,11 @@
 - **The player is rendered purely as footsteps — the white dot/glow is removed.** The live player marker is bright feet at the true position: a single **alternating** foot while walking, and **both feet side by side** when standing (facing the last direction of travel).
 - **Sound rays dimmed** so the bright feet stand out, and a soft dark backing is drawn under the feet where the rays converge — the prints now read clearly instead of being washed out.
 
+- **Natural walking gait**: the two feet are shown staggered one in front of the other (alternating each step) while walking, and level side by side when standing — like a walking person.
+- **Feet stay off walls**: footprints near a wall edge no longer render on the wall (trail clamps to the player's cell; live feet in a wall cell are suppressed).
+
 ### Added
-- **Footprint trail**: walking leaves a faint, fading trail of prints (one foot at a time, alternating sides, ~2.6s fade) marking where you've been.
+- **Footprint trail**: walking leaves a faint, fading trail of prints (alternating sides, ~2.6s fade) marking where you've been.
 
 ### Notes
 - Footstep **audio** already existed (plays on every step, with a water variant) and is unchanged — this release adds/reworks the **visual**.

@@ -38,6 +38,14 @@ On review the owner wanted the player shown **only** as footsteps (no white dot)
 
 Re-verified headless: standing → two bright feet, no dot; walking → single alternating bright foot; rays visibly dimmer; no errors.
 
+### Follow-up 2 — natural gait + keep feet off walls
+
+Owner: the feet should be "one in front of the other, like a real human / Dark Echo," and prints were landing on walls at wall edges.
+- **Gait**: walking now draws both feet staggered fore/aft (one leading, one trailing, alternating each step) with a narrow natural stance (lateral 8→3.5px, new `FOOTPRINT_STRIDE` 4px), instead of a single wide-offset foot. Standing stays level/side-by-side. Reads like a walking person.
+- **Walls**: `renderer.js drawFootClear` skips any foot whose center falls in a solid cell (grid passed into `drawPlayerFeet`); the trail spawn in `game.js` clamps a print to the player's cell if the lateral offset would put it in a wall. Pressing into a wall stalls velocity → the level standing pose, whose feet stay within the player's collision clearance, so nothing pokes onto the wall.
+
+Re-verified headless: walking shows two feet one-in-front-of-the-other; no errors.
+
 ### Next
 
 No active roadmap phase. Phase 25 resumes at owner's discretion; until then, owner-driven polish.

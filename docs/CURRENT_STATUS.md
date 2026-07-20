@@ -66,7 +66,7 @@
 | **Level select** | `js/ui.js`, `play/index.html` | 20-cell grid; lock state + best times; launch any unlocked level |
 | **Achievements** | `js/achievements.js`, `js/game.js`, `js/ui.js` | 10 achievements; queued toast + pause-menu gallery |
 | **Footsteps (audio)** | `js/audio.js`, `js/game.js` | `playFootstepSurface()` on each step (normal/water), reverb-tail |
-| **Player = footsteps** | `js/game.js`, `js/renderer.js` | No dot — bright live feet (alternating while walking, both when standing) + faint fading trail; rays dimmed for contrast |
+| **Player = footsteps** | `js/game.js`, `js/renderer.js` | No dot — bright feet in a natural gait (staggered one-in-front while walking, level when standing) + faint trail; wall-aware (never on walls); rays dimmed |
 
 ---
 
