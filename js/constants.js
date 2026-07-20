@@ -86,7 +86,6 @@ export const DANGER_NEAR_PX  = 100; // enemy proximity threshold for danger audi
 export const FOOTPRINT_FADE_MS   = 2600; // how long a trail footprint lingers (ms)
 export const FOOTPRINT_MAX        = 48;   // cap on stored trail footprints
 export const FOOTPRINT_STANCE_OFF = 3.5;  // px lateral offset of each foot from the walking line
-export const FOOTPRINT_STRIDE     = 4;    // px fore/aft stagger between the two feet while walking
 export const PLAYER_IDLE_SPEED    = 6;    // px/s below which the player counts as standing still
 
 // ─── Screamer ────────────────────────────────────────────────────────────────

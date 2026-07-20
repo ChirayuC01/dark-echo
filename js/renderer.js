@@ -2,7 +2,7 @@ import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
          RAY_TRAIL_MS, IMPACT_FADE_MS,
          HEARING_NEAR, HEARING_FAR, CELL,
          CRUSHER_REVEAL_MS,
-         FOOTPRINT_FADE_MS, FOOTPRINT_STANCE_OFF, FOOTPRINT_STRIDE,
+         FOOTPRINT_FADE_MS, FOOTPRINT_STANCE_OFF,
          PLAYER_IDLE_SPEED } from './constants.js';
 import { segPtDist } from './utils.js';
 import * as Debug from './debug.js';
@@ -654,9 +654,10 @@ function drawFootprintTrail(footprints, now) {
 
 // ─── Player (drawn purely as footsteps — no dot) ─────────────────────────────
 // A soft dark backing knocks the dense rays back right under the feet so the
-// bright prints read clearly; then the two feet are drawn on top. Standing =
-// feet level (side by side); walking = one foot forward of the other, alternating
-// each step — a natural gait. Feet that fall in a wall cell are suppressed.
+// bright prints read clearly; then the feet are drawn on top. Walking = a single
+// foot at a time (alternates each step) — the trail behind supplies the other
+// foot, so the gait reads "one in front of the other". Standing = both feet side
+// by side. Feet that fall in a wall cell are suppressed.
 function drawPlayerFeet(player, heading, footSide, grid) {
   if (!player) return;
   ctx.save();
@@ -671,19 +672,19 @@ function drawPlayerFeet(player, heading, footSide, grid) {
   ctx.beginPath(); ctx.arc(player.x, player.y, r, 0, Math.PI * 2); ctx.fill();
 
   const a = Math.atan2(heading.y, heading.x);
-  const hx = heading.x, hy = heading.y;      // forward unit
-  const perpX = -hy, perpY = hx;             // left of forward
+  const perpX = -heading.y, perpY = heading.x;   // left of forward
   const LAT = FOOTPRINT_STANCE_OFF;
   const speed = Math.hypot(player.vx || 0, player.vy || 0);
-  // Walking → stagger the feet fore/aft; standing → level. `rf` = which foot leads.
-  const fore = speed < PLAYER_IDLE_SPEED ? 0 : FOOTPRINT_STRIDE;
-  const rf = footSide || 1;
 
-  // Right foot (leads when rf = +1), left foot (leads when rf = -1)
-  drawFootClear(grid, player.x + perpX * LAT + hx * fore * rf,
-                      player.y + perpY * LAT + hy * fore * rf, a, 0.95);
-  drawFootClear(grid, player.x - perpX * LAT - hx * fore * rf,
-                      player.y - perpY * LAT - hy * fore * rf, a, 0.95);
+  if (speed < PLAYER_IDLE_SPEED) {
+    // Standing: both feet, side by side
+    drawFootClear(grid, player.x + perpX * LAT, player.y + perpY * LAT, a, 0.95);
+    drawFootClear(grid, player.x - perpX * LAT, player.y - perpY * LAT, a, 0.95);
+  } else {
+    // Walking: one foot at a time (alternates with each step)
+    const side = footSide || 1;
+    drawFootClear(grid, player.x + perpX * LAT * side, player.y + perpY * LAT * side, a, 0.95);
+  }
   ctx.restore();
 }
 
