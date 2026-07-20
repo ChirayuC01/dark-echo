@@ -2,7 +2,8 @@ import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
          RAY_TRAIL_MS, IMPACT_FADE_MS,
          HEARING_NEAR, HEARING_FAR, CELL,
          CRUSHER_REVEAL_MS,
-         FOOTPRINT_FADE_MS, FOOTPRINT_STANCE_OFF, PLAYER_IDLE_SPEED } from './constants.js';
+         FOOTPRINT_FADE_MS, FOOTPRINT_STANCE_OFF, FOOTPRINT_STRIDE,
+         PLAYER_IDLE_SPEED } from './constants.js';
 import { segPtDist } from './utils.js';
 import * as Debug from './debug.js';
 
@@ -98,7 +99,7 @@ export function draw(state, now) {
   drawActiveRays(rays, px, py);
   if (playerInWater) drawWaterZone(player);
   drawFootprintTrail(footprints, now);   // faint history, under the live feet
-  drawPlayerFeet(player, playerHeading || { x: 0, y: -1 }, currentFootSide);
+  drawPlayerFeet(player, playerHeading || { x: 0, y: -1 }, currentFootSide, grid);
 
   if (shakeActive) ctx.restore();
 
@@ -609,19 +610,31 @@ function drawWaterZone(player) {
 // ─── Footprints ───────────────────────────────────────────────────────────────
 // A small foot mark: an ellipse whose long axis points along `angle` (heading),
 // with a smaller "heel" dab behind it so the shape reads as a foot, not a blob.
-const FOOT_LEN = 4.6, FOOT_W = 2.2;
+const FOOT_LEN = 4.2, FOOT_W = 1.9;
 function drawFoot(x, y, angle, alpha) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
   ctx.fillStyle = `rgba(210,225,250,${alpha.toFixed(3)})`;
   ctx.beginPath();
-  ctx.ellipse(1.4, 0, FOOT_LEN, FOOT_W, 0, 0, Math.PI * 2);   // sole/ball
+  ctx.ellipse(1.3, 0, FOOT_LEN, FOOT_W, 0, 0, Math.PI * 2);   // sole/ball
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(-3.4, 0, FOOT_W * 0.8, FOOT_W * 0.7, 0, 0, Math.PI * 2); // heel
+  ctx.ellipse(-3.0, 0, FOOT_W * 0.8, FOOT_W * 0.7, 0, 0, Math.PI * 2); // heel
   ctx.fill();
   ctx.restore();
+}
+
+// True when (x,y) sits in a solid cell (wall / collapsible / closed door — closed
+// doors are written into the grid as WALL). Used so feet never land on a wall.
+function footInWall(grid, x, y) {
+  const c = Math.floor(x / TILE), r = Math.floor(y / TILE);
+  const cell = grid && grid[r] ? grid[r][c] : undefined;
+  return cell === CELL.WALL || cell === CELL.COLLAPSIBLE;
+}
+function drawFootClear(grid, x, y, angle, alpha) {
+  if (footInWall(grid, x, y)) return;
+  drawFoot(x, y, angle, alpha);
 }
 
 // Fading trail of alternating prints left behind by walking — faint history.
@@ -641,35 +654,36 @@ function drawFootprintTrail(footprints, now) {
 
 // ─── Player (drawn purely as footsteps — no dot) ─────────────────────────────
 // A soft dark backing knocks the dense rays back right under the feet so the
-// bright prints read clearly; then the live foot/feet are drawn on top.
-const PLAYER_STANCE_OFF = FOOTPRINT_STANCE_OFF;
-function drawPlayerFeet(player, heading, footSide) {
+// bright prints read clearly; then the two feet are drawn on top. Standing =
+// feet level (side by side); walking = one foot forward of the other, alternating
+// each step — a natural gait. Feet that fall in a wall cell are suppressed.
+function drawPlayerFeet(player, heading, footSide, grid) {
   if (!player) return;
   ctx.save();
 
   // Backing shadow — a small dark disc that dims the rays converging on the player
-  const r = 20;
+  const r = 18;
   const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, r);
-  grd.addColorStop(0, 'rgba(0,0,0,0.72)');
-  grd.addColorStop(0.6, 'rgba(0,0,0,0.5)');
+  grd.addColorStop(0, 'rgba(0,0,0,0.7)');
+  grd.addColorStop(0.6, 'rgba(0,0,0,0.48)');
   grd.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = grd;
   ctx.beginPath(); ctx.arc(player.x, player.y, r, 0, Math.PI * 2); ctx.fill();
 
   const a = Math.atan2(heading.y, heading.x);
-  const perpX = -heading.y, perpY = heading.x;
-  const off = PLAYER_STANCE_OFF;
+  const hx = heading.x, hy = heading.y;      // forward unit
+  const perpX = -hy, perpY = hx;             // left of forward
+  const LAT = FOOTPRINT_STANCE_OFF;
   const speed = Math.hypot(player.vx || 0, player.vy || 0);
+  // Walking → stagger the feet fore/aft; standing → level. `rf` = which foot leads.
+  const fore = speed < PLAYER_IDLE_SPEED ? 0 : FOOTPRINT_STRIDE;
+  const rf = footSide || 1;
 
-  if (speed < PLAYER_IDLE_SPEED) {
-    // Standing: both feet side by side, bright
-    drawFoot(player.x + perpX * off, player.y + perpY * off, a, 0.95);
-    drawFoot(player.x - perpX * off, player.y - perpY * off, a, 0.95);
-  } else {
-    // Walking: one foot at a time (alternates with each step), bright
-    const side = footSide || 1;
-    drawFoot(player.x + perpX * off * side, player.y + perpY * off * side, a, 0.95);
-  }
+  // Right foot (leads when rf = +1), left foot (leads when rf = -1)
+  drawFootClear(grid, player.x + perpX * LAT + hx * fore * rf,
+                      player.y + perpY * LAT + hy * fore * rf, a, 0.95);
+  drawFootClear(grid, player.x - perpX * LAT - hx * fore * rf,
+                      player.y - perpY * LAT - hy * fore * rf, a, 0.95);
   ctx.restore();
 }
 

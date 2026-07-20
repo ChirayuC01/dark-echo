@@ -558,12 +558,17 @@ function update(dt, now) {
     G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn, count, maxDist, crouching);
     Audio.playFootstepSurface(G.playerInWater ? 'water' : 'normal');
 
-    // Footprint — one foot at a time, offset to the side of travel, alternating
+    // Footprint — one foot at a time, offset to the side of travel, alternating.
+    // Clamp to the player's cell if the offset would land the print in a wall.
     const perpX = -G.playerHeading.y, perpY = G.playerHeading.x; // left of heading
     G.currentFootSide = G.nextFoot;
+    let fx = G.player.x + perpX * FOOTPRINT_STANCE_OFF * G.currentFootSide;
+    let fy = G.player.y + perpY * FOOTPRINT_STANCE_OFF * G.currentFootSide;
+    const fc = Math.floor(fx / TILE), fr = Math.floor(fy / TILE);
+    const fcell = G.grid[fr]?.[fc];
+    if (fcell === CELL.WALL || fcell === CELL.COLLAPSIBLE) { fx = G.player.x; fy = G.player.y; }
     G.footprints.push({
-      x: G.player.x + perpX * FOOTPRINT_STANCE_OFF * G.currentFootSide,
-      y: G.player.y + perpY * FOOTPRINT_STANCE_OFF * G.currentFootSide,
+      x: fx, y: fy,
       angle: Math.atan2(G.playerHeading.y, G.playerHeading.x),
       createdAt: now,
     });
