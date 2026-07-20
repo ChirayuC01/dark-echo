@@ -11,7 +11,7 @@
 - **The player is rendered purely as footsteps — the white dot/glow is removed.** The live player marker is bright feet at the true position: a single **alternating** foot while walking, and **both feet side by side** when standing (facing the last direction of travel).
 - **Sound rays dimmed** so the bright feet stand out, and a soft dark backing is drawn under the feet where the rays converge — the prints now read clearly instead of being washed out.
 
-- **Natural walking gait**: the two feet are shown staggered one in front of the other (alternating each step) while walking, and level side by side when standing — like a walking person.
+- **Natural walking gait**: while walking, a single foot is shown at a time (alternating each step) with the fading trail supplying the previous foot — so the prints read one in front of the other; both feet are shown only when standing still.
 - **Feet stay off walls**: footprints near a wall edge no longer render on the wall (trail clamps to the player's cell; live feet in a wall cell are suppressed).
 
 ### Added

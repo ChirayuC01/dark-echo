@@ -46,6 +46,10 @@ Owner: the feet should be "one in front of the other, like a real human / Dark E
 
 Re-verified headless: walking shows two feet one-in-front-of-the-other; no errors.
 
+### Follow-up 3 — one foot at a time while walking
+
+Owner: while walking, show only one foot at a time (the trail supplies the other); both feet only when standing. Reverted the walking branch to a single alternating foot at the live position (kept the narrow natural stance); the fading one-per-step trail behind it gives the "one in front of the other" read. Removed the now-unused `FOOTPRINT_STRIDE` (no more fore/aft pair stagger). Standing still shows both feet side by side. Verified headless: no errors.
+
 ### Next
 
 No active roadmap phase. Phase 25 resumes at owner's discretion; until then, owner-driven polish.
