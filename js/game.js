@@ -13,7 +13,8 @@ import { TILE, COLS, ROWS, W, H,
          SCREAMER_BURST_RAYS,
          ECHO_TRAIL_CAP, ECHO_TRAIL_CAP_MEDIUM, ECHO_TRAIL_CAP_LOW,
          ENEMY_STEP_RAYS_LOW,
-         QUALITY_DOWNGRADE_FPS, QUALITY_LOW_FPS, QUALITY_SUSTAIN_MS } from './constants.js';
+         QUALITY_DOWNGRADE_FPS, QUALITY_LOW_FPS, QUALITY_SUSTAIN_MS,
+         FOOTPRINT_MAX } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -60,6 +61,10 @@ const G = {
   triggers: [],                   // [{col, row, x, y, action, targetId, fired, revealedAt}]
   shake: { x: 0, y: 0, timer: 0, intensity: 0, duration: 0.001 },
   screamers: [],
+  // ─── Footprints ───
+  footprints: [],                 // trail: {x, y, angle, createdAt}
+  nextFoot: 1,                    // alternates ±1 (which foot lands next)
+  playerHeading: { x: 0, y: -1 }, // last facing direction (default: up)
   // ─── Adaptive quality (Phase 23) ───
   qualityMode: 'auto',        // 'auto' | 'high' | 'medium' | 'low' (user preference)
   qualityTier: 'high',        // 'high' | 'medium' | 'low' (effective tier in use)
@@ -163,6 +168,10 @@ function loadLevel(idx) {
   // Reset per-run tracking (achievements + best-time timer)
   G.levelStartTime = performance.now();
   G.runStats = { usedPulse: false, patrolAlerted: false, screamerTriggered: false, stalkerHunted: false };
+  // Reset footprints
+  G.footprints = [];
+  G.nextFoot = 1;
+  G.playerHeading = { x: 0, y: -1 };
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -520,6 +529,12 @@ function update(dt, now) {
   const moving = move.dx !== 0 || move.dy !== 0;
   const crouching = Input.isCrouching();
 
+  // Track facing direction (kept when standing so idle footprints stay oriented)
+  if (moving) {
+    const hlen = Math.hypot(move.dx, move.dy) || 1;
+    G.playerHeading = { x: move.dx / hlen, y: move.dy / hlen };
+  }
+
   // Water tile detection — check BEFORE moving so the tile under feet is current
   const tileCol = Math.floor(G.player.x / TILE);
   const tileRow = Math.floor(G.player.y / TILE);
@@ -540,6 +555,19 @@ function update(dt, now) {
     // quiet=true when crouching: rays still reveal geometry but won't re-alert chasers
     G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn, count, maxDist, crouching);
     Audio.playFootstepSurface(G.playerInWater ? 'water' : 'normal');
+
+    // Footprint — one foot at a time, offset to the side of travel, alternating
+    const perpX = -G.playerHeading.y, perpY = G.playerHeading.x; // left of heading
+    G.footprints.push({
+      x: G.player.x + perpX * 4.5 * G.nextFoot,
+      y: G.player.y + perpY * 4.5 * G.nextFoot,
+      angle: Math.atan2(G.playerHeading.y, G.playerHeading.x),
+      createdAt: now,
+    });
+    G.nextFoot = -G.nextFoot;
+    if (G.footprints.length > FOOTPRINT_MAX) {
+      G.footprints.splice(0, G.footprints.length - FOOTPRINT_MAX);
+    }
   }
 
   // Pulse rays — track ready transition for audio cue

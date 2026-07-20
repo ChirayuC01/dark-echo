@@ -1,7 +1,8 @@
 import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
          RAY_TRAIL_MS, IMPACT_FADE_MS,
          HEARING_NEAR, HEARING_FAR, CELL,
-         CRUSHER_REVEAL_MS } from './constants.js';
+         CRUSHER_REVEAL_MS,
+         FOOTPRINT_FADE_MS, FOOTPRINT_SIDE_OFF, PLAYER_IDLE_SPEED } from './constants.js';
 import { segPtDist } from './utils.js';
 import * as Debug from './debug.js';
 
@@ -89,7 +90,7 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake, footprints, playerHeading } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
@@ -113,7 +114,9 @@ export function draw(state, now) {
   drawEnemies(enemies, now, px, py);
   drawActiveRays(rays, px, py);
   if (playerInWater) drawWaterZone(player);
+  drawFootprintTrail(footprints, now);   // under the player dot
   drawPlayer(player);
+  drawStandingFeet(player, playerHeading || { x: 0, y: -1 });   // over the glow
 
   if (shakeActive) ctx.restore();
 
@@ -618,6 +621,55 @@ function drawWaterZone(player) {
   ctx.beginPath();
   ctx.arc(player.x, player.y, 28, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+}
+
+// ─── Footprints ───────────────────────────────────────────────────────────────
+// A small foot mark: an ellipse whose long axis points along `angle` (heading),
+// with a smaller "heel" dab behind it so the shape reads as a foot, not a blob.
+const FOOT_LEN = 4.6, FOOT_W = 2.2;
+function drawFoot(x, y, angle, alpha) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.fillStyle = `rgba(210,225,250,${alpha.toFixed(3)})`;
+  ctx.beginPath();
+  ctx.ellipse(1.4, 0, FOOT_LEN, FOOT_W, 0, 0, Math.PI * 2);   // sole/ball
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(-3.4, 0, FOOT_W * 0.8, FOOT_W * 0.7, 0, 0, Math.PI * 2); // heel
+  ctx.fill();
+  ctx.restore();
+}
+
+// Fading trail of alternating prints left behind by walking. Drawn UNDER the
+// player so the current position still reads as the bright dot.
+function drawFootprintTrail(footprints, now) {
+  if (!footprints || footprints.length === 0) return;
+  ctx.save();
+  for (const f of footprints) {
+    const age = now - f.createdAt;
+    if (age >= FOOTPRINT_FADE_MS) continue;
+    const t = 1 - age / FOOTPRINT_FADE_MS;
+    const alpha = t * t * 0.42;    // faint, smooth fade-out
+    if (alpha < 0.01) continue;
+    drawFoot(f.x, f.y, f.angle, alpha);
+  }
+  ctx.restore();
+}
+
+// When the player is standing still, show both feet side by side at the current
+// position, oriented to the last heading. Drawn OVER the glow so it stays legible.
+function drawStandingFeet(player, heading) {
+  if (!player) return;
+  const speed = Math.hypot(player.vx || 0, player.vy || 0);
+  if (speed >= PLAYER_IDLE_SPEED) return;
+  ctx.save();
+  const a = Math.atan2(heading.y, heading.x);
+  const perpX = -heading.y, perpY = heading.x;
+  const off = FOOTPRINT_SIDE_OFF + 3.5;   // wider than a stride so feet clear the glow
+  drawFoot(player.x + perpX * off, player.y + perpY * off, a, 0.6);
+  drawFoot(player.x - perpX * off, player.y - perpY * off, a, 0.6);
   ctx.restore();
 }
 
