@@ -29,9 +29,14 @@ Owner decided to **defer Google Play submission (Phase 25)** for now — the gam
 - **Kept the player dot.** The footprints are additive flavor; the glowing dot is still the canonical player marker. The standing feet are offset wider than a stride and drawn over the glow specifically so they don't disappear into it (found during visual verification — at the first-pass offset/alpha they were invisible under the glow).
 - **Trail faint, standing pair clearer.** Matches the request ("trails should have faint and smaller foot print") while making the standing pose actually visible.
 
-### Verification
+### Follow-up (same day) — remove the dot, dim the rays
 
-Headless Chromium: game runs with no console/page errors while walking and standing; a zoomed capture of the standing player shows two distinct feet flanking the dot (oriented across the facing direction); trail prints spawn on each step and fade within ~2.6s.
+On review the owner wanted the player shown **only** as footsteps (no white dot) and noted the prints were washed out by the sound rays. Changes:
+- **Removed the player dot + glow sprite entirely.** `drawPlayerFeet` now *is* the player: the live marker is bright feet at the true position — a single foot that alternates side each step while walking (`G.currentFootSide`), both feet side by side when standing. The faint trail remains as history underneath.
+- **Legibility fix**: the rays all converge on the player, so a soft **dark backing disc** is drawn under the feet, and the ray alphas were **dimmed** (active 0.72→0.5, live tip 0.88→0.62, echo 0.34→0.24). The feet now read clearly. Foot offset unified via `FOOTPRINT_STANCE_OFF (8px)` so the live feet and trail line up.
+- Kept the marker at the *true* player position (not lagging behind on the last footprint) so gameplay hit-detection still matches what's shown.
+
+Re-verified headless: standing → two bright feet, no dot; walking → single alternating bright foot; rays visibly dimmer; no errors.
 
 ### Next
 

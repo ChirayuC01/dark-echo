@@ -5,14 +5,17 @@
 
 ---
 
-## [v2.5.0] — 2026-07-20 — Footstep visuals
+## [v2.5.0] — 2026-07-20 — Footsteps: player is now footprints
+
+### Changed
+- **The player is rendered purely as footsteps — the white dot/glow is removed.** The live player marker is bright feet at the true position: a single **alternating** foot while walking, and **both feet side by side** when standing (facing the last direction of travel).
+- **Sound rays dimmed** so the bright feet stand out, and a soft dark backing is drawn under the feet where the rays converge — the prints now read clearly instead of being washed out.
 
 ### Added
-- **Footprint trail**: while walking, the player leaves a fading trail of footprints — one foot at a time, alternating to each side of the direction of travel and oriented along the heading. Prints are faint and fade over ~2.6s.
-- **Standing pose**: when the player stops, both feet are shown side by side at the current position, facing the last direction of travel.
+- **Footprint trail**: walking leaves a faint, fading trail of prints (one foot at a time, alternating sides, ~2.6s fade) marking where you've been.
 
 ### Notes
-- Footstep **audio** already existed (plays on every step, with a water variant) and is unchanged — this release adds the matching **visual**.
+- Footstep **audio** already existed (plays on every step, with a water variant) and is unchanged — this release adds/reworks the **visual**.
 - **Google Play submission (Phase 25) is deferred** by owner decision; the game remains feature-complete for the gameplay roadmap but is not being pushed to a public store yet.
 
 ---

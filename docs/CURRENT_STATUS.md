@@ -66,7 +66,7 @@
 | **Level select** | `js/ui.js`, `play/index.html` | 20-cell grid; lock state + best times; launch any unlocked level |
 | **Achievements** | `js/achievements.js`, `js/game.js`, `js/ui.js` | 10 achievements; queued toast + pause-menu gallery |
 | **Footsteps (audio)** | `js/audio.js`, `js/game.js` | `playFootstepSurface()` on each step (normal/water), reverb-tail |
-| **Footprints (visual)** | `js/game.js`, `js/renderer.js` | Alternating fading trail while walking; both feet side-by-side when standing |
+| **Player = footsteps** | `js/game.js`, `js/renderer.js` | No dot — bright live feet (alternating while walking, both when standing) + faint fading trail; rays dimmed for contrast |
 
 ---
 
@@ -181,7 +181,8 @@
 ## Post-roadmap — Footstep visuals (2026-07-20)
 
 - **Footstep audio** already existed (`Audio.playFootstepSurface` fires on every step, normal vs water) — confirmed working, left as-is.
-- **Footprint visuals** (new): while walking, the player leaves a fading trail of prints — one foot at a time, offset to alternating sides of the travel direction, each oriented along the heading (`js/game.js` spawns one per footstep; `FOOTPRINT_FADE_MS` 2.6s fade, capped at `FOOTPRINT_MAX` 48). When standing still (`speed < PLAYER_IDLE_SPEED`), both feet are drawn side by side at the player, facing the last heading. `renderer.js`: `drawFootprintTrail` (faint, under the dot) + `drawStandingFeet` (over the glow so it stays legible); each foot is a sole ellipse + smaller heel dab. `G.playerHeading` tracks facing; state reset in `loadLevel`. Verified headless (no errors; standing pair renders as two distinct feet flanking the dot).
+- **Player is rendered purely as footsteps — no white dot** (revised after feedback): the glowing dot/glow sprite was removed. The live player marker is now bright feet at the true position — a single **alternating** foot while walking (`G.currentFootSide` flips each step) and **both feet side by side** when standing (`speed < PLAYER_IDLE_SPEED`), oriented to `G.playerHeading`. A faint fading **trail** of prints (one per footstep, `FOOTPRINT_FADE_MS` 2.6s, capped at `FOOTPRINT_MAX` 48) marks history.
+- To keep the feet legible where the sound rays all converge on the player, `drawPlayerFeet` lays a soft **dark backing disc** under the feet, and the **rays were dimmed** (active 0.72→0.5, live tip 0.88→0.62, echo trails 0.34→0.24). Foot offset unified via `FOOTPRINT_STANCE_OFF` (8px). `renderer.js`: `drawFootprintTrail` + `drawPlayerFeet`. Verified headless (no errors; standing = two bright feet, walking = single alternating foot, no dot).
 
 ## Phase 24 — Complete ✅
 

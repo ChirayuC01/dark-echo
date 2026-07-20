@@ -43,7 +43,7 @@
 | Pulse ray / echo | `rgba(185,220,255,α)` | Bright blue |
 | Hazard scan ray | `rgba(230,105,55,α)` | Orange |
 | Enemy reveal | `rgba(200,70,70,α)` | Muted red, fades |
-| Player dot | `rgba(255,255,255,α)` | Small white dot |
+| Player | `rgba(210,225,250,α)` footprints | **No dot** — bright feet at the live position (alternating while walking, both when standing) + faint fading trail (2026-07-20) |
 | Exit | `rgba(80,210,120,α)` | Pulsing green, hidden until sound finds it |
 | Collapsible wall (revealed) | `rgba(200,175,120,α)` | Warm tan — differs from blue/red/green vocab |
 | Door (locked, revealed) | `rgba(210,160,50,α)` | Amber |
@@ -74,7 +74,7 @@ See KNOWN_ISSUES.md DC-004 for implementation notes.
 - Wall geometry is **never** drawn directly. Only ray impact glints reveal it.
 - All glints are short perpendicular lines (3–9px) at hit points, not tiles.
 - Echo trails have `lineWidth: 0.7`. Active ray segments have `lineWidth: 1.2`.
-- Player dot: `shadowBlur: 10`, radius: 4px, always drawn last (before vignette).
+- Player: rendered as footsteps (no dot) drawn last before the vignette — bright live feet + faint trail; a soft dark backing disc under the feet suppresses the converging rays. Active/echo ray alphas were dimmed (2026-07-20) so the feet read clearly.
 - Vignette: radial gradient, `rgba(0,0,0,0)` center → `rgba(0,0,0,0.85)` edge.
 
 ---
@@ -487,6 +487,6 @@ Offscreen-cached vignette + player glow; `high`/`medium`/`low` quality tiers (au
 `js/save.js` centralizes localStorage (progress, act flags, best times, achievements). Level-select screen (best times + lock state), 10 achievements (`js/achievements.js`) with toast + pause-menu gallery.
 
 ### 15.12 Footstep Visuals ✅ (post-roadmap, 2026-07-20)
-Player leaves a fading footprint trail while walking (alternating feet, offset to the side of travel, oriented to heading) and shows both feet side by side when standing. Footstep audio (`playFootstepSurface`) already existed. See `js/renderer.js` `drawFootprintTrail`/`drawStandingFeet`.
+**The player is rendered purely as footsteps — the white dot/glow was removed.** Bright live feet mark the true position (a single alternating foot while walking, both feet side by side when standing), plus a faint fading trail. A dark backing disc under the feet + dimmed sound rays keep the prints legible. Footstep audio (`playFootstepSurface`) already existed. See `js/renderer.js` `drawFootprintTrail`/`drawPlayerFeet`.
 
 > **Phase 25 (Google Play submission) deferred** by owner decision (2026-07-20) — feature-complete for gameplay, not yet pushed to a public store.
