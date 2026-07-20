@@ -485,3 +485,8 @@ Offscreen-cached vignette + player glow; `high`/`medium`/`low` quality tiers (au
 
 ### 15.11 Save System + Achievements ✅ (Phase 24)
 `js/save.js` centralizes localStorage (progress, act flags, best times, achievements). Level-select screen (best times + lock state), 10 achievements (`js/achievements.js`) with toast + pause-menu gallery.
+
+### 15.12 Footstep Visuals ✅ (post-roadmap, 2026-07-20)
+Player leaves a fading footprint trail while walking (alternating feet, offset to the side of travel, oriented to heading) and shows both feet side by side when standing. Footstep audio (`playFootstepSurface`) already existed. See `js/renderer.js` `drawFootprintTrail`/`drawStandingFeet`.
+
+> **Phase 25 (Google Play submission) deferred** by owner decision (2026-07-20) — feature-complete for gameplay, not yet pushed to a public store.

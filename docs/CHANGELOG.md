@@ -5,6 +5,18 @@
 
 ---
 
+## [v2.5.0] — 2026-07-20 — Footstep visuals
+
+### Added
+- **Footprint trail**: while walking, the player leaves a fading trail of footprints — one foot at a time, alternating to each side of the direction of travel and oriented along the heading. Prints are faint and fade over ~2.6s.
+- **Standing pose**: when the player stops, both feet are shown side by side at the current position, facing the last direction of travel.
+
+### Notes
+- Footstep **audio** already existed (plays on every step, with a water variant) and is unchanged — this release adds the matching **visual**.
+- **Google Play submission (Phase 25) is deferred** by owner decision; the game remains feature-complete for the gameplay roadmap but is not being pushed to a public store yet.
+
+---
+
 ## [v2.4.0] — 2026-07-03 — Phase 24
 
 ### Added

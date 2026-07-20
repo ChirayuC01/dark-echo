@@ -551,11 +551,18 @@ Use Chrome DevTools Performance tab. Record a 10-second segment with full pulse 
 ---
 
 ## Phase 25 — Google Play Store Submission
-**Status:** ⬜ Pending  
+**Status:** ⏸️ Deferred (by owner decision, 2026-07-20)  
 **Goal:** Submit the Android app to Google Play and reach public availability.  
 **Depends on:** Phases 21 and 24 complete  
 **Estimated effort:** 3–5 days + 3–7 days Play review time  
 **Risk:** Medium-High (Play review can reject for unexpected reasons)
+
+> **Deferred:** the owner has chosen to hold off on Play Store submission for now —
+> the game is feature-complete for the roadmap's gameplay scope but not yet
+> considered fully production-ready for a public store launch (no signed release
+> build, no on-device 60fps/latency profiling, no store assets/privacy page).
+> Everything below remains the plan for when submission is picked back up; nothing
+> here is started. The tasks are unchecked intentionally.
 
 ### Tasks
 - [ ] Open Google Play Console at `play.google.com/console` ($25 one-time developer fee).

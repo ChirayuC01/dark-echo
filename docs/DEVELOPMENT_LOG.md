@@ -4,6 +4,41 @@
 
 ---
 
+## [Post-roadmap] Footstep Visuals + Phase 25 Deferred
+
+**Date:** 2026-07-20  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.5.0
+
+### Context
+
+Owner decided to **defer Google Play submission (Phase 25)** for now — the game is feature-complete for the roadmap's gameplay scope but not considered fully production-ready for a public store launch (no signed release build, no on-device 60fps/latency profiling, no store assets/privacy page). Phase 25 is marked ⏸️ Deferred in the roadmap; its tasks remain unchecked for when it's resumed. In the same pass, added a requested visual: player footprints.
+
+### What was done
+
+**Footstep audio — already present.** `Audio.playFootstepSurface()` already fires on every footstep (normal vs water variant, with a reverb tail). Confirmed the wiring in `update()` is intact; no change needed. The request was really about the *visual* to accompany it.
+
+**Footprint visuals (new).**
+- **Walking trail**: on each footstep, `game.js` pushes a print at the player's position, offset perpendicular to the heading by `FOOTPRINT_SIDE_OFF` to the current foot's side, and flips `G.nextFoot` so feet alternate — giving the "one foot at a time, one in front of the other" gait. Prints store their heading angle and creation time; the list is capped at `FOOTPRINT_MAX (48)` and each fades over `FOOTPRINT_FADE_MS (2.6s)`.
+- **Standing pose**: when `speed < PLAYER_IDLE_SPEED (6 px/s)`, both feet are drawn side by side at the player, oriented to `G.playerHeading` (the last non-zero travel direction, so they don't snap to a default when you stop).
+- **Rendering** (`renderer.js`): split into `drawFootprintTrail` (faint, drawn *under* the player dot so the current position still reads as the bright dot) and `drawStandingFeet` (drawn *over* the glow, at a slightly wider offset and higher alpha, so the pair stays legible instead of being washed out by the player's glow sprite). Each foot is a sole ellipse plus a smaller heel dab so it reads as a foot rather than a blob. No shadowBlur — cheap at every quality tier.
+- `G.playerHeading` and the footprint arrays reset in `loadLevel`.
+
+### Decisions
+
+- **Kept the player dot.** The footprints are additive flavor; the glowing dot is still the canonical player marker. The standing feet are offset wider than a stride and drawn over the glow specifically so they don't disappear into it (found during visual verification — at the first-pass offset/alpha they were invisible under the glow).
+- **Trail faint, standing pair clearer.** Matches the request ("trails should have faint and smaller foot print") while making the standing pose actually visible.
+
+### Verification
+
+Headless Chromium: game runs with no console/page errors while walking and standing; a zoomed capture of the standing player shows two distinct feet flanking the dot (oriented across the facing direction); trail prints spawn on each step and fade within ~2.6s.
+
+### Next
+
+No active roadmap phase. Phase 25 resumes at owner's discretion; until then, owner-driven polish.
+
+---
+
 ## [Phase 24 — Complete] Save System + Level Select + Achievements
 
 **Date:** 2026-07-03  

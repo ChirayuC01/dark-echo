@@ -1,17 +1,20 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 24 complete — save system, level select, achievements (2026-07-03)  
+> **Last updated:** Footprint visuals added; Phase 25 deferred (2026-07-20)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 25 — Google Play Store Submission**  
-Status: ⬜ Pending
+**None active — Phase 25 (Play Store) deferred by owner.**
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17–24 are complete. Phase 25 is the only remaining phase.
+> Phase 16 was skipped (wavefront visual not preferred). Phases 17–24 are complete.
+> **Phase 25 (Google Play submission) is deferred by owner decision** — the game is
+> feature-complete for the roadmap's gameplay scope but not yet considered fully
+> production-ready for a public store launch. Post-roadmap polish continues on
+> request (e.g. the footprint visuals below).
 
 ---
 
@@ -62,6 +65,8 @@ Status: ⬜ Pending
 | **Save system** | `js/save.js` | Progress, act flags, best times, achievements — guarded localStorage |
 | **Level select** | `js/ui.js`, `play/index.html` | 20-cell grid; lock state + best times; launch any unlocked level |
 | **Achievements** | `js/achievements.js`, `js/game.js`, `js/ui.js` | 10 achievements; queued toast + pause-menu gallery |
+| **Footsteps (audio)** | `js/audio.js`, `js/game.js` | `playFootstepSurface()` on each step (normal/water), reverb-tail |
+| **Footprints (visual)** | `js/game.js`, `js/renderer.js` | Alternating fading trail while walking; both feet side-by-side when standing |
 
 ---
 
@@ -172,6 +177,11 @@ Status: ⬜ Pending
 | Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
+
+## Post-roadmap — Footstep visuals (2026-07-20)
+
+- **Footstep audio** already existed (`Audio.playFootstepSurface` fires on every step, normal vs water) — confirmed working, left as-is.
+- **Footprint visuals** (new): while walking, the player leaves a fading trail of prints — one foot at a time, offset to alternating sides of the travel direction, each oriented along the heading (`js/game.js` spawns one per footstep; `FOOTPRINT_FADE_MS` 2.6s fade, capped at `FOOTPRINT_MAX` 48). When standing still (`speed < PLAYER_IDLE_SPEED`), both feet are drawn side by side at the player, facing the last heading. `renderer.js`: `drawFootprintTrail` (faint, under the dot) + `drawStandingFeet` (over the glow so it stays legible); each foot is a sole ellipse + smaller heel dab. `G.playerHeading` tracks facing; state reset in `loadLevel`. Verified headless (no errors; standing pair renders as two distinct feet flanking the dot).
 
 ## Phase 24 — Complete ✅
 
@@ -308,9 +318,11 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 
 ## Next Recommended Task
 
-Begin **Phase 25 — Google Play Store Submission** (signed AAB, Play Console listing, content rating, privacy policy). This is the final roadmap phase and is largely an external/manual process (developer account, store assets, review) rather than code.
-
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 25.
+**Phase 25 (Google Play submission) is deferred by owner decision.** No roadmap phase is
+currently active. When submission is resumed, its (unchecked) task list is in
+`docs/PRODUCTION_ROADMAP.md` Phase 25 — the key prerequisites still outstanding are a
+signed release AAB, on-device 60fps/latency profiling (Phase 23 acceptance), and store
+assets + a privacy-policy page. Until then, work is owner-driven polish/enhancements.
 
 ---
 
