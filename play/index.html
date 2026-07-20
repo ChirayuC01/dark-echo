@@ -26,7 +26,15 @@
          Every step echoes. Every echo betrays you.</p>
       <button class="btn" id="continue-btn" data-action="continue" style="display:none">Continue</button>
       <button class="btn" data-action="start">New Game</button>
+      <button class="btn" data-action="level-select">Level Select</button>
       <span class="hint">WASD / arrows · SPACE = pulse · P / ESC = pause</span>
+    </div>
+
+    <!-- Level select -->
+    <div id="screen-levelselect" class="screen screen-wide">
+      <h2>Level Select</h2>
+      <div id="levelselect-grid"></div>
+      <button class="btn btn-danger" data-action="title">Back</button>
     </div>
 
     <!-- Pause -->
@@ -36,6 +44,7 @@
       <button class="btn" data-action="restart">Restart Level</button>
       <button class="btn" id="quality-btn" data-action="cycle-quality">Quality: Auto</button>
       <button class="btn btn-danger" data-action="title">Main Menu</button>
+      <div id="achievement-gallery"></div>
     </div>
 
     <!-- Death -->
@@ -73,6 +82,9 @@
     <span id="level-label">LEVEL 1 / 5</span>
     <span id="crouch-indicator">CROUCH</span>
   </div>
+
+  <!-- Achievement toast (non-interactive; shown during play) -->
+  <div id="achievement-toast"></div>
 </div>
 
 <script type="module">

@@ -19,10 +19,11 @@ import * as Audio from './audio.js';
 import * as Input from './input.js';
 import * as Renderer from './renderer.js';
 import * as UI from './ui.js';
+import * as Save from './save.js';
+import { ACHIEVEMENTS, getById, evaluate as evalAchievements } from './achievements.js';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { StatusBar } from '@capacitor/status-bar';
 
-const SAVE_KEY = 'resonance_progress';
 import { LEVELS } from './levels.js';
 import { RaySystem } from './waves.js';
 import { castRay, circlesOverlap, castRayCrushers, circleOverlapsAABB } from './collision.js';
@@ -64,7 +65,22 @@ const G = {
   qualityTier: 'high',        // 'high' | 'medium' | 'low' (effective tier in use)
   enemyStepRays: ENEMY_STEP_RAYS,
   _fpsLowMs: 0,               // accumulated time (ms) FPS has stayed below threshold
+  // ─── Per-run tracking for achievements + best times (Phase 24) ───
+  levelStartTime: 0,
+  runStats: { usedPulse: false, patrolAlerted: false, screamerTriggered: false, stalkerHunted: false },
 };
+
+// Unlock the given achievement ids, toasting any that are genuinely new.
+function awardAchievements(ids) {
+  const fresh = [];
+  for (const id of ids) {
+    if (Save.unlockAchievement(id)) {
+      const def = getById(id);
+      if (def) fresh.push(def.name);
+    }
+  }
+  if (fresh.length) UI.showAchievementToast(fresh);
+}
 
 const QUALITY_KEY = 'resonance_quality';
 const QUALITY_CYCLE = ['auto', 'high', 'medium', 'low'];
@@ -144,6 +160,9 @@ function loadLevel(idx) {
   G.waterReveals = new Map();
   G.collapsibleReveals = new Map();
   G.triggers = [];
+  // Reset per-run tracking (achievements + best-time timer)
+  G.levelStartTime = performance.now();
+  G.runStats = { usedPulse: false, patrolAlerted: false, screamerTriggered: false, stalkerHunted: false };
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -308,6 +327,7 @@ function processRayEntities(now) {
       if (d < sc.radius + REVEAL_D) sc.revealedAt = now;
       if (!sc.triggered && d < sc.radius + 4) {
         sc.triggered = true;
+        G.runStats.screamerTriggered = true;
         G.raySystem.burst(sc.x, sc.y, 'pulse', G.castFn, SCREAMER_BURST_RAYS, 320);
         sc.alertNearbyEnemies(G.enemies);
         Audio.playScreamer();
@@ -356,6 +376,7 @@ function processRayEntities(now) {
           ray.heardEntities.add(en);
           if (en instanceof BlindStalker) {
             en.hearSound(ray.burstX, ray.burstY);
+            G.runStats.stalkerHunted = true;
             Audio.playAlert(en.x, en.y);
           } else if (en instanceof ChaserEnemy) {
             if (!ray.quiet) {
@@ -365,8 +386,10 @@ function processRayEntities(now) {
           } else if (en instanceof PatrolEnemy) {
             if (ray.type === 'pulse') {
               en.onPulseHit();
+              G.runStats.patrolAlerted = true;
             } else if (ray.type === 'step' && en.stepAware) {
               en.hearStep(ray.burstX, ray.burstY);
+              G.runStats.patrolAlerted = true;
             }
           } else if (en instanceof Sentry) {
             if (ray.type === 'pulse') en.onPulseHit();
@@ -421,6 +444,7 @@ function checkDeath() {
 function die(reason) {
   G.deathReason = reason;
   G.screen = 'dead';
+  awardAchievements(evalAchievements({ event: 'death' }));
   triggerShake(6, 0.35);
   Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
   Audio.stopAmbient();
@@ -458,9 +482,19 @@ function fireTrigger(tr) {
 function checkExit() {
   if (!G.exit) return;
   if (dist(G.player.x, G.player.y, G.exit.x, G.exit.y) < TILE * 0.6) {
-    if (G.levelIndex + 1 >= TOTAL) {
+    const completedIdx = G.levelIndex;
+    const elapsed = performance.now() - G.levelStartTime;
+    Save.recordTime(completedIdx, elapsed);
+    awardAchievements(evalAchievements({
+      event: 'complete', levelIndex: completedIdx, elapsedMs: elapsed, stats: G.runStats,
+    }));
+    if (completedIdx === 9) Save.markAct(1);   // Act I = Levels 1–10
+
+    if (completedIdx + 1 >= TOTAL) {
       G.screen = 'win';
-      localStorage.removeItem(SAVE_KEY);
+      Save.markAct(2);                          // Act II complete
+      Save.setProgress(TOTAL);                  // every level unlocked in level-select
+      awardAchievements(evalAchievements({ event: 'win' }));
       Audio.stopAmbient();
       Audio.stopEnvironmental();
       Audio.playLevelComplete();
@@ -469,7 +503,7 @@ function checkExit() {
     } else {
       Audio.playLevelComplete();
       G.levelIndex++;
-      localStorage.setItem(SAVE_KEY, G.levelIndex);
+      Save.setProgress(G.levelIndex);
       loadLevel(G.levelIndex);
       UI.setHint(LEVELS[G.levelIndex].hint);
       UI.show('screen-levelup');
@@ -514,6 +548,7 @@ function update(dt, now) {
   if (prevCooldown > 0 && G.pulseCooldown === 0) Audio.playPulseReady();
   if (Input.consumePulse() && G.pulseCooldown === 0) {
     G.pulseCooldown = PULSE_COOLDOWN;
+    G.runStats.usedPulse = true;
     G.raySystem.burst(G.player.x, G.player.y, 'pulse', G.castFn);
     Audio.playPulse();
   }
@@ -551,8 +586,9 @@ function update(dt, now) {
       if (hunting) Audio.playEnemyFootstepHunting(en.x, en.y);
       else Audio.playEnemyFootstep(en.x, en.y);
     }
-    if (en instanceof BlindStalker && en.shouldBreathe(dt)) {
-      Audio.playBlindStalkerBreathing(en.x, en.y);
+    if (en instanceof BlindStalker) {
+      if (en.state === 'hunting') G.runStats.stalkerHunted = true;
+      if (en.shouldBreathe(dt)) Audio.playBlindStalkerBreathing(en.x, en.y);
     }
   }
   for (const cr of G.crushers) cr.update(dt);
@@ -637,6 +673,7 @@ function loop(timestamp) {
 
   if (Input.consumePause() && G.screen === 'playing') {
     G.screen = 'paused';
+    UI.buildAchievementGallery(ACHIEVEMENTS, Save.getAchievements());
     UI.show('screen-pause');
   }
 
@@ -670,8 +707,27 @@ function loop(timestamp) {
 }
 
 // ─── UI action handlers ───────────────────────────────────────────────────────
+function launchLevel(idx) {
+  G.levelIndex = idx;
+  loadLevel(idx);
+  G.screen = 'playing';
+  UI.hide();
+  Renderer.setHUDVisible(true);
+  Audio.stopEnvironmental();
+  Audio.startAmbient();
+  Audio.startEnvironmental();
+}
+
 function handleAction(action) {
   Audio.resume();
+
+  // Dynamic level-select buttons dispatch "play-level:<idx>"
+  if (action.startsWith('play-level:')) {
+    const idx = parseInt(action.slice('play-level:'.length), 10);
+    if (!isNaN(idx) && idx >= 0 && idx < TOTAL && Save.isLevelUnlocked(idx)) launchLevel(idx);
+    return;
+  }
+
   switch (action) {
     case 'start':
       G.levelIndex = 0;
@@ -682,9 +738,13 @@ function handleAction(action) {
       Audio.startAmbient();
       Audio.startEnvironmental();
       break;
+    case 'level-select':
+      UI.buildLevelSelect(LEVELS, Save.getProgress(), Save.getBestTimes(), Save.formatTime);
+      UI.show('screen-levelselect');
+      break;
     case 'continue': {
-      const saved = parseInt(localStorage.getItem(SAVE_KEY), 10);
-      const idx = (!isNaN(saved) && saved > 0 && saved < TOTAL) ? saved : 0;
+      const saved = Save.getProgress();
+      const idx = (saved > 0 && saved < TOTAL) ? saved : 0;
       G.levelIndex = idx;
       loadLevel(idx);
       G.screen = 'playing';
@@ -710,7 +770,7 @@ function handleAction(action) {
       break;
     case 'restart-from-1':
       G.levelIndex = 0;
-      localStorage.removeItem(SAVE_KEY);
+      Save.clearProgress();
       loadLevel(0);
       G.screen = 'playing';
       UI.hide();
@@ -746,8 +806,8 @@ function handleAction(action) {
 
 // ─── Continue button ──────────────────────────────────────────────────────────
 function refreshContinueButton() {
-  const saved = parseInt(localStorage.getItem(SAVE_KEY), 10);
-  if (!isNaN(saved) && saved > 0 && saved < TOTAL) {
+  const saved = Save.getProgress();
+  if (saved > 0 && saved < TOTAL) {
     UI.showContinueButton(saved + 1); // 1-based display: index 1 → "Level 2"
   } else {
     UI.hideContinueButton();
