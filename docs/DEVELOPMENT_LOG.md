@@ -50,6 +50,14 @@ Re-verified headless: walking shows two feet one-in-front-of-the-other; no error
 
 Owner: while walking, show only one foot at a time (the trail supplies the other); both feet only when standing. Reverted the walking branch to a single alternating foot at the live position (kept the narrow natural stance); the fading one-per-step trail behind it gives the "one in front of the other" read. Removed the now-unused `FOOTPRINT_STRIDE` (no more fore/aft pair stagger). Standing still shows both feet side by side. Verified headless: no errors.
 
+### Follow-up 4 — recognizable feet + footfall animation
+
+Owner: the marks weren't recognizable as feet and popped in with no animation.
+- **Shape**: `drawFoot` now draws an actual foot — rounded sole/ball, a separate heel behind it, and three toe pads at the front, oriented along the heading. Enlarged ~1.5× (small blobs weren't readable at the old size) and widened the standing stance (`FOOTPRINT_STANCE_OFF` 3.5→5) so the two standing feet read as distinct.
+- **Animation**: `footStamp(age)` eases scale 1.32→1.0 and alpha in over `FOOT_POP_MS` (150ms). The live walking foot stamps on each step (age = `now − lastStepTime`); each trail print stamps in then fades over its lifetime. Footfalls now press down naturally instead of appearing instantly.
+
+Verified headless: standing shows two recognizable feet (sole + heel + toes); no errors.
+
 ### Next
 
 No active roadmap phase. Phase 25 resumes at owner's discretion; until then, owner-driven polish.

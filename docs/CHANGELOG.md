@@ -13,6 +13,7 @@
 
 - **Natural walking gait**: while walking, a single foot is shown at a time (alternating each step) with the fading trail supplying the previous foot — so the prints read one in front of the other; both feet are shown only when standing still.
 - **Feet stay off walls**: footprints near a wall edge no longer render on the wall (trail clamps to the player's cell; live feet in a wall cell are suppressed).
+- **Recognizable foot shape + footfall animation**: each mark is now clearly a foot (rounded sole, separate heel, toe pads) pointing along the heading, and every step "stamps" in (a quick press/scale + fade) instead of popping — walking feels natural.
 
 ### Added
 - **Footprint trail**: walking leaves a faint, fading trail of prints (alternating sides, ~2.6s fade) marking where you've been.
