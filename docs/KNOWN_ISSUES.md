@@ -222,7 +222,7 @@ Implementation: `shape` property added to each enemy constructor (`'patrol'`, `'
 | FI-006 | Enemy patrol path visualization in debug | Draw waypoints when debug overlay is active | Post-20 |
 | FI-007 | Screen-shake on collapse / death | ✅ Done (Phase 19) — `triggerShake()` canvas translate | Phase 19 |
 | FI-008 | Sound bleeding through thin walls | Attenuated ray energy passing through 1-cell-wide walls | Post-25 |
-| FI-009 | Chapter select screen | Navigate between Act I and Act II independently | Phase 24 |
+| FI-009 | Chapter select screen | ✅ Done (Phase 24) — level-select grid covers direct navigation to any unlocked level across both Acts | Phase 24 |
 | FI-010 | iOS / App Store release | Capacitor supports iOS; requires Mac + Apple developer account ($99/yr) | Post-25 |
 | FI-011 | Colorblind accessibility mode | Alternative color palette for echo/enemy colors | Post-25 |
 | FI-012 | Narrative / environmental storytelling | Text fragments revealed by sound; environmental geometry that implies a location | Phase 20 |

@@ -4,6 +4,44 @@
 
 ---
 
+## [Phase 24 — Complete] Save System + Level Select + Achievements
+
+**Date:** 2026-07-03  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.4.0
+
+### What was done
+
+Turned the game's single localStorage progress key into a proper persistence layer, and added the two retention features the roadmap called for: a level-select screen with best times, and a 10-achievement system.
+
+**`js/save.js` (new) — one place for all persistence.** Guarded read/write helpers (never throw in private mode) over five keys: `resonance_progress` (furthest 0-based index reached — the unlock cursor), `resonance_act1_complete` / `resonance_act2_complete`, `resonance_best_times` (`{idx: ms}`), `resonance_achievements` (`string[]`). Plus `isLevelUnlocked(idx)`, `recordTime(idx, ms)` (keeps the min), `unlockAchievement(id)` (returns true only on a new unlock, so callers toast once), and `formatTime(ms)`. The progress/continue logic that used to live inline in `game.js` was refactored onto this module.
+
+**`js/achievements.js` (new) — definitions + a pure evaluator.** Ten `{id, glyph, name, desc}` entries (geometric glyphs, not emoji, to match the visual grammar) and `evaluate(ctx)` that maps a `complete`/`death`/`win` event + run context to the ids that qualify. Keeping it pure made it unit-testable in isolation (12 cases, all green) without a browser or localStorage.
+
+**Per-run tracking (`js/game.js`).** `G.runStats` (`usedPulse`, `patrolAlerted`, `screamerTriggered`, `stalkerHunted`) and `G.levelStartTime` reset in `loadLevel`. Flags are set at their natural sites: pulse fire, screamer trigger, patrol `hearStep`/`onPulseHit`, and BlindStalker entering `hunting` (checked both on the hearing event and per-frame on state, so a screamer-induced hunt also counts). On exit, `checkExit` records the best time, evaluates + awards achievements, sets the Act I/II flags, and persists progress.
+
+**Level select.** `launchLevel(idx)` plus a dynamic `play-level:<idx>` action back the grid cells (they're built in JS, so their click handlers are attached on build rather than via the init-time `[data-action]` delegation). The title screen gained a "Level Select" button; the grid shows best times on unlocked cells and a disabled lock on the rest.
+
+**Achievement toast + gallery.** Both are DOM (the game's HUD and screens are all DOM, so this is consistent and crisper than a canvas draw — a deliberate deviation from the spec's "draw after HUD" wording, same user-facing result). The toast queues so multiple simultaneous unlocks (e.g. win → Act II + all-levels) show in sequence. The gallery is rebuilt each time the pause screen opens.
+
+### Decisions / notes
+
+- **Win now sets `progress = TOTAL`** instead of clearing it, so after finishing the game every level shows unlocked in level-select. The Continue button still hides correctly (its check is `0 < progress < TOTAL`).
+- **`water_survivor` = complete Level 7.** "Without dying" is implicit: death restarts the level, so any completion is by definition the attempt where you didn't die. Encoding a stricter "never died on L7 all session" wasn't worth the cross-run bookkeeping.
+- **Best times keyed by 0-based index** to match how the code already addresses levels, rather than the 1-based keys sketched in the roadmap.
+
+### Verification
+
+- `node` unit test of `achievements.evaluate`: 12/12 (death, L1 speed+no-pulse combos, L6 alert/no-alert, L7, L10, L14, L17, win).
+- Headless Chromium (Playwright): seeded `progress=5` + best times + two achievements, booted `/play/` → level-select shows 20 cells with exactly 6 unlocked, cell 1 reads "1 The Awakening 15.23s", cell 7 locked; launching level 3 shows the HUD; pausing shows the gallery with 2/10 earned; **no console or page errors**.
+- The live award-on-completion path (reaching a level's hidden exit) is the same `evaluate → Save.unlockAchievement → showAchievementToast` chain exercised above; it isn't driven end-to-end headlessly because that needs in-game navigation.
+
+### Next phase
+
+**Phase 25 — Google Play Store Submission**: signed AAB, Play Console listing, IARC content rating, privacy-policy page. Largely an external/manual process rather than code — the last roadmap phase.
+
+---
+
 ## [Phase 23 — Complete] Performance Hardening + Adaptive Quality
 
 **Date:** 2026-07-03  

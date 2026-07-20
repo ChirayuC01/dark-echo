@@ -5,6 +5,19 @@
 
 ---
 
+## [v2.4.0] — 2026-07-03 — Phase 24
+
+### Added
+- **Save system** (`js/save.js`): all progress now persists via a centralized, guarded localStorage layer — furthest level reached, Act I/II completion flags, per-level best times, and earned achievements.
+- **Level select screen**: reachable from the title. A 20-cell grid; unlocked levels show their best time, locked levels show a lock and are disabled. Click an unlocked level to jump straight to it.
+- **Best-time tracking**: each level is timed from load to exit; the fastest run per level is kept and shown in level-select.
+- **10 achievements** (`js/achievements.js`): first death, Level-1 speedrun (<20s), Level-1 no-pulse, Level-6 no-alert, Level-7 clear, Act I complete, Level-14 no-screamer, Level-17 no-stalker-hunt, Act II complete, all-20 complete. Unlocks show a queued toast (~2.5s) and appear in a new **achievement gallery** on the pause menu (earned bright, unearned dim).
+
+### Changed
+- Winning the game now marks every level unlocked in level-select (previously cleared progress).
+
+---
+
 ## [v2.3.0] — 2026-07-03 — Phase 23
 
 ### Added

@@ -1,17 +1,17 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 23 complete — performance hardening + adaptive quality (2026-07-03)  
+> **Last updated:** Phase 24 complete — save system, level select, achievements (2026-07-03)  
 > Update this file after every completed task or phase.
 
 ---
 
 ## Active Phase
 
-**Phase 24 — Save System + Achievements**  
+**Phase 25 — Google Play Store Submission**  
 Status: ⬜ Pending
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17–23 are complete.
+> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17–24 are complete. Phase 25 is the only remaining phase.
 
 ---
 
@@ -59,6 +59,9 @@ Status: ⬜ Pending
 | **Perf caching** | `js/renderer.js` | Vignette + player-glow pre-rendered offscreen; blitted each frame |
 | **Adaptive quality** | `js/game.js`, `js/renderer.js`, `js/waves.js` | Auto FPS-driven high/medium/low tiers + pause-menu override; gates shadowBlur, trail cap, enemy step rays |
 | **Ray pool cap** | `js/waves.js` | Recycled Ray pool bounded at `RAY_POOL_CAP` (200) |
+| **Save system** | `js/save.js` | Progress, act flags, best times, achievements — guarded localStorage |
+| **Level select** | `js/ui.js`, `play/index.html` | 20-cell grid; lock state + best times; launch any unlocked level |
+| **Achievements** | `js/achievements.js`, `js/game.js`, `js/ui.js` | 10 achievements; queued toast + pause-menu gallery |
 
 ---
 
@@ -164,11 +167,22 @@ Status: ⬜ Pending
 | Android app (Capacitor) | Phase 21 | ✅ Done | — | Capacitor 8 + Haptics + StatusBar; debug APK built + installed on physical device |
 | Website + landing page | Phase 22 | ✅ Done | — | Landing at `/`, game at `/play/`; multi-page Vite build; native app redirects to game |
 | Performance hardening (60fps mobile) | Phase 23 | ✅ Done | — | Vignette/glow caching, adaptive quality tiers, pool cap; on-device profiling still pending |
-| Level select screen | Phase 24 | ⬜ Pending | Medium | Quality-of-life for 20-level game |
-| Achievements (10 total) | Phase 24 | ⬜ Pending | Medium | Retention and replay incentive |
+| Level select screen | Phase 24 | ✅ Done | — | 20-cell grid, lock state + best times; `js/save.js` |
+| Achievements (10 total) | Phase 24 | ✅ Done | — | `js/achievements.js`; toast + pause-menu gallery |
 | Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
+
+## Phase 24 — Complete ✅
+
+**Phase 24 summary** (save system + level select + achievements):
+- `js/save.js` (new): centralizes the localStorage schema behind guarded helpers — `resonance_progress` (furthest 0-based index reached / unlock cursor), `resonance_act1_complete` / `resonance_act2_complete`, `resonance_best_times` (`{idx: ms}`), `resonance_achievements` (string[]). Also `formatTime(ms)` and `isLevelUnlocked(idx)`. All existing progress/continue logic in `game.js` was refactored onto it.
+- `js/achievements.js` (new): 10 achievement definitions (id/glyph/name/desc) + a pure `evaluate(ctx)` mapping a `complete`/`death`/`win` event to qualifying ids. Unit-tested (12/12 cases).
+- `js/game.js`: `G.runStats` (`usedPulse`/`patrolAlerted`/`screamerTriggered`/`stalkerHunted`) + `G.levelStartTime`, reset each `loadLevel`. `checkExit` records best time, evaluates + awards achievements, sets Act I/II flags, and persists progress (win sets `progress = TOTAL` so every level shows unlocked in level-select instead of clearing progress). `die()` awards `first_death`. `launchLevel(idx)` + a `play-level:<idx>` action back the level-select cells; `level-select` builds+shows the grid; pausing rebuilds the achievement gallery.
+- `js/ui.js`: `buildLevelSelect()` (20-cell grid, lock state + best times, click → `play-level`), `buildAchievementGallery()` (earned/dim glyphs), `showAchievementToast()` (queued ~2.5s each).
+- `play/index.html`: title "Level Select" button, `#screen-levelselect`, pause `#achievement-gallery`, `#achievement-toast`. `css/style.css`: grid/gallery/toast styles (responsive 4→3 columns).
+- **Verified**: `achievements.evaluate` unit test 12/12; headless browser — level-select lock states from seeded progress (6 unlocked at progress=5, cell 7 locked), best-time formatting ("15.23s"), launching a level, pause gallery earned count (2/10), zero console/page errors.
+- Achievement→toast on live level completion (reaching an exit) is wired through the same verified `evaluate` → `Save.unlockAchievement` → `showAchievementToast` path; not driven end-to-end headlessly because it needs in-game navigation to the hidden exit.
 
 ## Phase 23 — Complete ✅
 
@@ -294,9 +308,9 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 
 ## Next Recommended Task
 
-Begin **Phase 24 — Save System + Achievements** (level-select screen, best-time tracking, 10 achievements — all localStorage).
+Begin **Phase 25 — Google Play Store Submission** (signed AAB, Play Console listing, content rating, privacy policy). This is the final roadmap phase and is largely an external/manual process (developer account, store assets, review) rather than code.
 
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 24.
+Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 25.
 
 ---
 

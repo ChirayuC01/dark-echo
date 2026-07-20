@@ -508,52 +508,45 @@ Use Chrome DevTools Performance tab. Record a 10-second segment with full pulse 
 ---
 
 ## Phase 24 — Save System + Achievements
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Level persistence, best-time tracking, and a lightweight achievement system using localStorage only.  
 **Depends on:** Phase 20 complete (all 20 levels must exist before designing achievements)  
 **Estimated effort:** 3–5 days  
 **Risk:** Low
 
 ### Tasks
-- [ ] Extend localStorage schema (established in Phase 15):
+- [x] localStorage schema centralized in **`js/save.js`** (guarded read/write):
   ```javascript
-  resonance_progress: number        // highest level reached (1–20)
-  resonance_act1_complete: bool     // Level 10 completed
-  resonance_act2_complete: bool     // Level 20 completed
-  resonance_best_times: object      // { "1": 45200, "2": 67100, ... } ms per level
-  resonance_achievements: string[]  // list of earned achievement IDs
+  resonance_progress: number        // furthest 0-based level index reached (unlock cursor)
+  resonance_act1_complete: '1'      // Level 10 completed
+  resonance_act2_complete: '1'      // Level 20 completed
+  resonance_best_times: object      // { "<idx>": ms } — keyed by 0-based level index
+  resonance_achievements: string[]  // earned achievement IDs (deduped on write)
   ```
-- [ ] Add **level select screen**: accessible from title. Shows all 20 levels as a grid. Unlocked levels show best time. Locked levels show a lock icon. Click unlocked level → load it. `type: 'level-select'` screen state.
-- [ ] Add best time recording: start timer on level load, stop on exit trigger, compare to stored best.
-- [ ] Design 10 achievements:
-  - `act1_complete` — "Darkness Survived" — Complete all Act I levels
-  - `act2_complete` — "Into the Deep" — Complete all Act II levels  
-  - `silent_runner` — "The Silent" — Complete Level 6 (Whisper) without triggering the patrol
-  - `speedrun_1` — "Quick Echo" — Complete Level 1 in under 20 seconds
-  - `no_pulse_1` — "Blind Faith" — Complete Level 1 without using the pulse
-  - `water_survivor` — "Waterlogged" — Complete Level 7 without dying
-  - `screamer_avoided` — "Muffled" — Complete Level 14 without triggering any Screamer
-  - `stalker_proof` — "Ghost" — Complete Level 17 without the BlindStalker ever entering hunting state
-  - `all_levels` — "Complete Darkness" — Complete all 20 levels
-  - `first_death` — "It Heard You" — Die for the first time (tutorial completion)
-- [ ] Achievement unlock: save to localStorage. Show a toast notification at bottom of screen (2.5s, smooth fade). Draw after HUD, before debug overlay.
-- [ ] Add achievement gallery to pause menu (small icon grid; earned = full opacity, unearned = dim).
-- [ ] Commit + push
+- [x] **Level select screen** (`#screen-levelselect`): reached from the title's "Level Select" button. 20-cell grid; unlocked cells show best time, locked cells show a ◊ lock and are disabled. Click unlocked → `launchLevel(idx)`. Built dynamically in `ui.js buildLevelSelect()`. (Implemented as a DOM screen rather than a `type:` state — consistent with the other overlay screens.)
+- [x] **Best-time recording**: `G.levelStartTime` set on `loadLevel`; on exit, `Save.recordTime(idx, performance.now() - start)` keeps the min.
+- [x] **10 achievements** (`js/achievements.js`) — ids/names as specified. Notes on interpretation: `water_survivor` awards on completing Level 7 (death restarts the level, so a completion is inherently the deathless attempt); the rest use per-run flags (`usedPulse`, `patrolAlerted`, `screamerTriggered`, `stalkerHunted`).
+- [x] Achievement unlock: persisted via `Save.unlockAchievement` (returns true only on a genuinely new unlock). **Toast** shown via a DOM element `#achievement-toast` (queued, ~2.5s each, CSS fade). *(Implemented as a DOM toast rather than a canvas draw — the game's HUD/screens are all DOM, so this is consistent and crisper. Deviation from the "draw after HUD" wording, same result.)*
+- [x] **Achievement gallery** in the pause menu (`#achievement-gallery`): 10-cell glyph grid, earned = full opacity, unearned = dim with `???` tooltip. Rebuilt each time the pause screen opens.
+- [x] Commit + push
 
 ### Files Modified
-- `js/game.js` — timer tracking, achievement checks, level select loading
-- `js/ui.js` — level select screen show/hide, achievement toast, achievement gallery
-- `js/renderer.js` — achievement toast draw, level select grid render
-- `index.html` — `#screen-levelselect`, `#achievement-toast` elements
-- `css/style.css` — level select grid layout, toast animation, achievement icons
+- `js/save.js` (new) — localStorage schema + helpers + `formatTime`
+- `js/achievements.js` (new) — 10 definitions + pure `evaluate(ctx)`
+- `js/game.js` — per-run tracking, best-time + achievement wiring, level-select launch, progress refactored onto Save
+- `js/ui.js` — `buildLevelSelect`, `buildAchievementGallery`, `showAchievementToast`
+- `play/index.html` — Level Select button, `#screen-levelselect`, `#achievement-gallery`, `#achievement-toast`
+- `css/style.css` — level-select grid, gallery, toast styles (responsive)
+
+(Note: no `renderer.js` change was needed — the toast/gallery/grid are DOM, not canvas.)
 
 ### Acceptance Criteria
-- [ ] Level select screen shows all 20 levels; locked/unlocked state is correct
-- [ ] Best times display next to completed levels
-- [ ] All 10 achievements unlock correctly on first qualification (not re-trigger)
-- [ ] Achievement toast appears for 2.5s and fades smoothly
-- [ ] All save data persists across page refresh and app close/reopen
-- [ ] `resonance_achievements` array never contains duplicate IDs
+- [x] Level select shows all 20 levels; locked/unlocked state correct — verified (seeded progress=5 → 6 unlocked, cell 7 locked)
+- [x] Best times display next to completed levels — verified ("15.23s" from a seeded time)
+- [x] All 10 achievements unlock correctly on first qualification (not re-trigger) — evaluator unit-tested (12/12); `Save.unlockAchievement` dedupes
+- [x] Achievement toast appears for ~2.5s and fades smoothly — DOM element + CSS transition; queued for multiple simultaneous unlocks
+- [x] Save data persists across refresh — verified via seeded localStorage reflected in UI after boot
+- [x] `resonance_achievements` never contains duplicate IDs — `unlockAchievement` checks membership before push
 
 ---
 

@@ -445,7 +445,7 @@ These were out of scope for the prototype. Status as of v2.2.0:
 - ⬜ **Analytics**: Cookieless (Umami or Plausible). **Deferred** — needs a hosted instance; not shipped.
 - ⬜ **Error tracking**: Sentry JS. **Deferred** — needs a DSN/account; not shipped.
 - ✅ **Content**: 20 levels across 2 acts (Phase 20).
-- ⬜ **Save/checkpoint**: best times per level + Act completion flags (Phase 24 — pending).
+- ✅ **Save/checkpoint**: level progress, best times per level, Act completion flags, and achievements (Phase 24 — `js/save.js`).
 
 ---
 
@@ -479,3 +479,9 @@ Capacitor 8 wrapper with `@capacitor/haptics` (buzz on death + collapse) and `@c
 
 ### 15.9 Landing Page + Multi-Page Build ✅ (Phase 22)
 Marketing landing page at `/`, game at `/play/`, via a Vite multi-page build. See `docs/PRODUCTION_ROADMAP.md` Phase 22 for routing details.
+
+### 15.10 Performance / Adaptive Quality ✅ (Phase 23)
+Offscreen-cached vignette + player glow; `high`/`medium`/`low` quality tiers (auto FPS-driven + pause-menu override) that gate shadowBlur, echo-trail cap, and enemy step rays. Ray pool capped. See `js/renderer.js`, `js/waves.js`.
+
+### 15.11 Save System + Achievements ✅ (Phase 24)
+`js/save.js` centralizes localStorage (progress, act flags, best times, achievements). Level-select screen (best times + lock state), 10 achievements (`js/achievements.js`) with toast + pause-menu gallery.
