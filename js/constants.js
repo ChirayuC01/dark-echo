@@ -4,6 +4,11 @@ export const ROWS = 15;
 export const W = TILE * COLS;   // 800
 export const H = TILE * ROWS;   // 600
 
+// ─── Camera ──────────────────────────────────────────────────────────────────
+// Player-centered zoom (Dark Echo style): the view is scaled up and follows the
+// player so only a local portion of the level is visible at a time.
+export const CAMERA_ZOOM = 2.0; // 1 = whole level on screen; 2 = a quarter, centred on the player
+
 export const PLAYER_SPEED = 70;
 export const PLAYER_RADIUS = 7;
 

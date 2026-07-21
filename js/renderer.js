@@ -3,7 +3,7 @@ import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
          HEARING_NEAR, HEARING_FAR, CELL,
          CRUSHER_REVEAL_MS,
          FOOTPRINT_FADE_MS, FOOTPRINT_STANCE_OFF,
-         PLAYER_IDLE_SPEED } from './constants.js';
+         PLAYER_IDLE_SPEED, CAMERA_ZOOM } from './constants.js';
 import { segPtDist } from './utils.js';
 import * as Debug from './debug.js';
 
@@ -78,9 +78,17 @@ export function draw(state, now) {
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
-  // Screen shake — translate game content; vignette and debug stay fixed
+  // Player-centered camera: zoom in and follow the player so only a local portion
+  // of the level is visible. Shake is applied in screen space, then the world is
+  // scaled and translated so the player sits at the centre of the screen.
+  const viewW = W / CAMERA_ZOOM, viewH = H / CAMERA_ZOOM;
+  const camX = px - viewW / 2;
+  const camY = py - viewH / 2;
   const shakeActive = shake && shake.timer > 0;
-  if (shakeActive) { ctx.save(); ctx.translate(shake.x, shake.y); }
+  ctx.save();
+  if (shakeActive) ctx.translate(shake.x, shake.y);
+  ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
+  ctx.translate(-camX, -camY);
 
   // Walls are intentionally never drawn — the world exists only as sound,
   // and all sound is rendered relative to how close the player is to it.
@@ -101,7 +109,7 @@ export function draw(state, now) {
   drawFootprintTrail(footprints, now);   // the walking marker (prints that stay put)
   drawPlayerFeet(player, playerHeading || { x: 0, y: -1 }, grid);   // planted feet when standing
 
-  if (shakeActive) ctx.restore();
+  ctx.restore();
 
   drawVignette();
   if (Debug.isEnabled()) Debug.draw(ctx, state, state.fps || 60);
