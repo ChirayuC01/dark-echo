@@ -4,7 +4,7 @@ export const ROWS = 15;
 export const W = TILE * COLS;   // 800
 export const H = TILE * ROWS;   // 600
 
-export const PLAYER_SPEED = 150;
+export const PLAYER_SPEED = 70;
 export const PLAYER_RADIUS = 7;
 
 export const STEP_INTERVAL = 240;
@@ -82,9 +82,25 @@ export const CRUSHER_REVEAL_MS    = 5500;  // crushers stay visible longer than 
 export const PLAYER_ACCEL    = 12;   // velocity lerp factor (unitless, not px/s²)
 export const DANGER_NEAR_PX  = 100; // enemy proximity threshold for danger audio
 
+// ─── Footprints ──────────────────────────────────────────────────────────────
+export const FOOTPRINT_FADE_MS   = 1500; // how long a footprint lingers before it's gone (ms)
+export const FOOTPRINT_STRIDE_PX  = 22;   // distance travelled between successive footprints (px)
+export const FOOTPRINT_MAX        = 48;   // cap on stored footprints
+export const FOOTPRINT_STANCE_OFF = 5;    // px lateral offset of each foot from the walking line
+export const PLAYER_IDLE_SPEED    = 6;    // px/s below which the player counts as standing still
+
 // ─── Screamer ────────────────────────────────────────────────────────────────
 export const SCREAMER_ALERT_RADIUS = 300; // px — enemies within this radius go alert
 export const SCREAMER_BURST_RAYS   = 48;  // rays emitted when screamer triggers
+
+// ─── Performance / adaptive quality (Phase 23) ────────────────────────────────
+export const RAY_POOL_CAP           = 200;  // max recycled Ray instances retained
+export const ECHO_TRAIL_CAP_MEDIUM  = 250;  // trail cap at 'medium' quality tier
+export const ECHO_TRAIL_CAP_LOW     = 150;  // trail cap at 'low' quality tier
+export const ENEMY_STEP_RAYS_LOW    = 5;    // enemy step rays at reduced tiers
+export const QUALITY_DOWNGRADE_FPS  = 45;   // sustained below this → drop a tier
+export const QUALITY_LOW_FPS        = 30;   // sustained below this → jump to 'low'
+export const QUALITY_SUSTAIN_MS     = 3000; // how long FPS must stay low before acting
 
 // ─── Cell types ──────────────────────────────────────────────────────────────
 export const CELL = {

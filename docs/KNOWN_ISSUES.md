@@ -81,9 +81,9 @@ _None currently confirmed._
 ## Performance Concerns
 
 ### PC-001 — shadowBlur on large numbers of elements is expensive
-**Status:** ✅ Mitigated  
-**Description:** Canvas `shadowBlur` triggers GPU compositing. Currently only applied to: player dot (radius 10px glow), exit glow.  
-**Decision:** Echo trails and impact glints use NO shadowBlur. Acceptable trade-off.
+**Status:** ✅ Mitigated (further hardened in Phase 23)  
+**Description:** Canvas `shadowBlur` triggers GPU compositing. Applied to reveal glows (exit, entities, doors, keys, triggers, crushers) and the active-ray passes.  
+**Decision:** Echo trails, footprints, and impact glint bodies use NO shadowBlur. Phase 23 routes every remaining `shadowBlur` through `sb()`, which forces it to 0 at medium/low quality tiers. The player is drawn as footsteps (no glow) as of 2026-07-20.
 
 ---
 
@@ -147,11 +147,10 @@ Implementation: `shape` property added to each enemy constructor (`'patrol'`, `'
 ---
 
 ### TD-007 — Vignette gradient recreated every frame
-**Status:** ⬜ Open — planned for Phase 23  
+**Status:** ✅ Resolved (Phase 23)  
 **Severity:** Low-Medium (mobile performance impact)  
 **File:** `js/renderer.js` `drawVignette()`  
-**Description:** `createRadialGradient()` is called every frame to draw the vignette. On mobile, this adds GPU upload state per frame. Cache the vignette on an offscreen canvas created once at resize and use `drawImage()` each frame instead.  
-**Fix:** `let _vignetteCanvas = null` — create on first call or canvas resize, reuse every frame.
+**Resolution:** `_vignetteCanvas` is pre-rendered once (`buildVignette()`) and blitted with `drawImage()` each frame. The player glow was likewise moved to a pre-rendered sprite. (Backing store is a fixed 800×600, so no resize invalidation is needed.)
 
 ---
 
@@ -223,7 +222,7 @@ Implementation: `shape` property added to each enemy constructor (`'patrol'`, `'
 | FI-006 | Enemy patrol path visualization in debug | Draw waypoints when debug overlay is active | Post-20 |
 | FI-007 | Screen-shake on collapse / death | ✅ Done (Phase 19) — `triggerShake()` canvas translate | Phase 19 |
 | FI-008 | Sound bleeding through thin walls | Attenuated ray energy passing through 1-cell-wide walls | Post-25 |
-| FI-009 | Chapter select screen | Navigate between Act I and Act II independently | Phase 24 |
+| FI-009 | Chapter select screen | ✅ Done (Phase 24) — level-select grid covers direct navigation to any unlocked level across both Acts | Phase 24 |
 | FI-010 | iOS / App Store release | Capacitor supports iOS; requires Mac + Apple developer account ($99/yr) | Post-25 |
 | FI-011 | Colorblind accessibility mode | Alternative color palette for echo/enemy colors | Post-25 |
 | FI-012 | Narrative / environmental storytelling | Text fragments revealed by sound; environmental geometry that implies a location | Phase 20 |

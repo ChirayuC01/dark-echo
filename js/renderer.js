@@ -1,7 +1,9 @@
 import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
          RAY_TRAIL_MS, IMPACT_FADE_MS,
          HEARING_NEAR, HEARING_FAR, CELL,
-         CRUSHER_REVEAL_MS } from './constants.js';
+         CRUSHER_REVEAL_MS,
+         FOOTPRINT_FADE_MS, FOOTPRINT_STANCE_OFF,
+         PLAYER_IDLE_SPEED } from './constants.js';
 import { segPtDist } from './utils.js';
 import * as Debug from './debug.js';
 
@@ -16,11 +18,35 @@ function hearing(d) {
 
 let canvas, ctx;
 
+// ─── Adaptive quality (Phase 23) ──────────────────────────────────────────────
+// _hq true = full effects (shadowBlur glows). medium/low tiers set it false so
+// the per-frame shadowBlur compositing cost — the biggest GPU hit on mobile — is
+// skipped entirely. `sb(v)` returns the blur value at high quality, 0 otherwise.
+let _hq = true;
+export function setQualityTier(tier) { _hq = (tier === 'high'); }
+function sb(v) { return _hq ? v : 0; }
+
+// Pre-rendered offscreen layer (built once) to avoid per-frame gradient allocation.
+let _vignetteCanvas = null;   // full-screen vignette
+
+function buildVignette() {
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(W/2, H/2, H * 0.28, W/2, H/2, H * 0.82);
+  grd.addColorStop(0, 'rgba(0,0,0,0)');
+  grd.addColorStop(1, 'rgba(0,0,0,0.6)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, W, H);
+  _vignetteCanvas = c;
+}
+
 export function init(canvasEl) {
   canvas = canvasEl;
   ctx = canvas.getContext('2d');
   canvas.width = W; canvas.height = H;
   ctx.imageSmoothingEnabled = true;
+  buildVignette();
 }
 
 // Smoothstep fade used for entity reveals
@@ -48,7 +74,7 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake, footprints, playerHeading } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
@@ -72,7 +98,8 @@ export function draw(state, now) {
   drawEnemies(enemies, now, px, py);
   drawActiveRays(rays, px, py);
   if (playerInWater) drawWaterZone(player);
-  drawPlayer(player);
+  drawFootprintTrail(footprints, now);   // the walking marker (prints that stay put)
+  drawPlayerFeet(player, playerHeading || { x: 0, y: -1 }, grid);   // planted feet when standing
 
   if (shakeActive) ctx.restore();
 
@@ -118,7 +145,7 @@ function drawImpacts(impacts, now, px, py) {
       ctx.strokeStyle = `rgba(225,238,255,${(alpha * 0.95).toFixed(3)})`;
       ctx.shadowColor = 'rgba(170,205,255,0.55)';
     }
-    ctx.shadowBlur = 6 * fade;
+    ctx.shadowBlur = sb(6 * fade);
     ctx.lineWidth = 1.4;
     ctx.beginPath();
     ctx.moveTo(im.x - txv * len, im.y - tyv * len);
@@ -135,7 +162,7 @@ function drawExit(exit, now) {
   if (alpha < 0.004) return;
   const pulse = (0.5 + 0.25 * Math.sin(now / 500)) * alpha;
   ctx.save();
-  ctx.shadowBlur = 14 * alpha;
+  ctx.shadowBlur = sb(14 * alpha);
   ctx.shadowColor = 'rgba(60,220,110,0.5)';
   const grd = ctx.createRadialGradient(exit.x, exit.y, 2, exit.x, exit.y, 20);
   grd.addColorStop(0, `rgba(80,220,120,${pulse.toFixed(3)})`);
@@ -155,7 +182,7 @@ function drawHazards(hazards, now, px, py) {
     if (heard <= 0) continue;
     const alpha = revealAlpha(h.revealedAt, now) * heard;
     if (alpha < 0.004) continue;
-    ctx.shadowBlur = 10 * alpha;
+    ctx.shadowBlur = sb(10 * alpha);
     ctx.shadowColor = `rgba(220,80,40,${alpha * 0.5})`;
     const grd = ctx.createRadialGradient(h.x, h.y, 2, h.x, h.y, h.radius + 8);
     grd.addColorStop(0, `rgba(200,60,30,${alpha * 0.45})`);
@@ -179,7 +206,7 @@ function drawScreamers(screamers, now, px, py) {
     if (alpha < 0.004) continue;
     const pulse = 0.5 + 0.5 * Math.sin(now / 200);
     const r = s.triggered ? 'rgba(255,40,40' : 'rgba(255,130,30';
-    ctx.shadowBlur = 14 * alpha * (s.triggered ? 1 : pulse);
+    ctx.shadowBlur = sb(14 * alpha * (s.triggered ? 1 : pulse));
     ctx.shadowColor = `${r},${(alpha * 0.6).toFixed(3)})`;
     // Outer glow ring
     const grd = ctx.createRadialGradient(s.x, s.y, 3, s.x, s.y, s.radius + 10);
@@ -244,7 +271,7 @@ function drawEnemies(enemies, now, px, py) {
     const base = hunting ? '230,45,45' : '185,55,55';
 
     // Outer glow (shared by all types)
-    ctx.shadowBlur = hunting ? 14 * alpha : 8 * alpha;
+    ctx.shadowBlur = sb(hunting ? 14 * alpha : 8 * alpha);
     ctx.shadowColor = `rgba(${base},${alpha * 0.7})`;
     const grd = ctx.createRadialGradient(e.x, e.y, 2, e.x, e.y, e.radius + 9);
     grd.addColorStop(0, `rgba(${base},${alpha * 0.55})`);
@@ -327,7 +354,7 @@ function drawEchoTrails(trails, now, px, py) {
     if (heard <= 0) continue;
     const p = 1 - age / RAY_TRAIL_MS;
     const fade = p * p * (3 - 2 * p); // smooth ease-out
-    const alpha = t.energy * fade * 0.34 * heard;
+    const alpha = t.energy * fade * 0.24 * heard;   // dimmed so the bright feet read (2026-07-20)
     if (alpha < 0.005) continue;
 
     if (t.type === 'hazard') {
@@ -358,19 +385,19 @@ function drawActiveRays(rays, px, py) {
 
     if (type === 'step') {
       ctx.lineWidth = 1.0;
-      ctx.shadowBlur = 4;
+      ctx.shadowBlur = sb(4);
       ctx.shadowColor = 'rgba(140,185,245,0.5)';
     } else if (type === 'pulse') {
       ctx.lineWidth = 1.4;
-      ctx.shadowBlur = 9;
+      ctx.shadowBlur = sb(9);
       ctx.shadowColor = 'rgba(160,210,255,0.75)';
     } else if (type === 'hazard') {
       ctx.lineWidth = 1.1;
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = sb(6);
       ctx.shadowColor = 'rgba(230,100,55,0.6)';
     } else {
       ctx.lineWidth = 0.9;
-      ctx.shadowBlur = 4;
+      ctx.shadowBlur = sb(4);
       ctx.shadowColor = 'rgba(180,60,60,0.5)';
     }
 
@@ -379,7 +406,7 @@ function drawActiveRays(rays, px, py) {
 
       for (const seg of ray.segments) {
         const heard = hearing(segPtDist(px, py, seg.x1, seg.y1, seg.x2, seg.y2));
-        const alpha = seg.energy * 0.72 * heard;
+        const alpha = seg.energy * 0.5 * heard;   // dimmed so the bright feet read (2026-07-20)
         if (alpha < 0.01) continue;
         ctx.strokeStyle = rayColor(type, alpha);
         ctx.beginPath();
@@ -389,7 +416,7 @@ function drawActiveRays(rays, px, py) {
       }
 
       const heard = hearing(segPtDist(px, py, ray.segX, ray.segY, ray.tipX, ray.tipY));
-      const liveAlpha = ray.energy * 0.88 * heard;
+      const liveAlpha = ray.energy * 0.62 * heard;
       if (liveAlpha < 0.01) continue;
       ctx.strokeStyle = rayColor(type, liveAlpha);
       ctx.beginPath();
@@ -429,7 +456,7 @@ function drawDoors(doors, now, px, py) {
       ctx.fillRect(x, y, TILE, TILE);
       ctx.strokeStyle = `rgba(230,175,60,${(alpha * 0.85).toFixed(3)})`;
       ctx.lineWidth = 1.5;
-      ctx.shadowBlur = 8 * alpha;
+      ctx.shadowBlur = sb(8 * alpha);
       ctx.shadowColor = 'rgba(220,160,50,0.55)';
       ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
     }
@@ -446,7 +473,7 @@ function drawKeys(keys, now, px, py) {
     const alpha = revealAlpha(key.revealedAt, now) * hearing(Math.hypot(key.x - px, key.y - py));
     if (alpha < 0.004) continue;
     const pulse = (0.5 + 0.25 * Math.sin(now / 400)) * alpha;
-    ctx.shadowBlur = 12 * alpha;
+    ctx.shadowBlur = sb(12 * alpha);
     ctx.shadowColor = 'rgba(255,210,80,0.65)';
     const grd = ctx.createRadialGradient(key.x, key.y, 1, key.x, key.y, 14);
     grd.addColorStop(0, `rgba(255,225,100,${pulse.toFixed(3)})`);
@@ -471,7 +498,7 @@ function drawTriggers(triggers, now, px, py) {
     const beat = (0.35 + 0.45 * Math.sin(now / 350)) * alpha;  // wider swing than keys
 
     // Outer glow
-    ctx.shadowBlur = 22 * alpha;
+    ctx.shadowBlur = sb(22 * alpha);
     ctx.shadowColor = 'rgba(100,160,255,0.75)';
     const grd = ctx.createRadialGradient(tr.x, tr.y, 2, tr.x, tr.y, 28);
     grd.addColorStop(0, `rgba(140,200,255,${beat.toFixed(3)})`);
@@ -488,7 +515,7 @@ function drawTriggers(triggers, now, px, py) {
     // 4-point cross indicator
     ctx.strokeStyle = `rgba(170,220,255,${(alpha * 0.8).toFixed(3)})`;
     ctx.lineWidth = 1.5;
-    ctx.shadowBlur = 8 * alpha;
+    ctx.shadowBlur = sb(8 * alpha);
     ctx.shadowColor = 'rgba(140,200,255,0.9)';
     for (let i = 0; i < 4; i++) {
       const a = (i * Math.PI / 2) + (now / 4000);
@@ -500,7 +527,7 @@ function drawTriggers(triggers, now, px, py) {
     }
 
     // Bright center dot
-    ctx.shadowBlur = 12 * alpha;
+    ctx.shadowBlur = sb(12 * alpha);
     ctx.fillStyle = `rgba(200,230,255,${Math.min(1, beat * 1.2).toFixed(3)})`;
     ctx.beginPath(); ctx.arc(tr.x, tr.y, 4.5, 0, Math.PI * 2); ctx.fill();
   }
@@ -526,7 +553,7 @@ function drawCrushers(crushers, now, px, py) {
     ctx.fillRect(b.x1, b.y1, TILE, TILE);
     ctx.strokeStyle = `rgba(240,120,65,${(alpha * 0.85).toFixed(3)})`;
     ctx.lineWidth = 1.5;
-    ctx.shadowBlur = 8 * alpha;
+    ctx.shadowBlur = sb(8 * alpha);
     ctx.shadowColor = 'rgba(230,105,55,0.6)';
     ctx.strokeRect(b.x1 + 0.5, b.y1 + 0.5, TILE - 1, TILE - 1);
   }
@@ -580,29 +607,98 @@ function drawWaterZone(player) {
   ctx.restore();
 }
 
-// ─── Player ───────────────────────────────────────────────────────────────────
-function drawPlayer(player) {
-  if (!player) return;
+// ─── Footprints ───────────────────────────────────────────────────────────────
+// A recognizable foot mark pointing along `angle` (heading): an elongated sole
+// (ball), a separate rounded heel behind it, and three small toe pads at the
+// front. `scale` drives the "stamp" animation on each footfall.
+const FOOT_POP_MS = 150;   // duration of the press-in animation
+function drawFoot(x, y, angle, alpha, scale = 1) {
   ctx.save();
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = 'rgba(255,255,255,0.3)';
-  const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 18);
-  grd.addColorStop(0, 'rgba(255,255,255,0.1)');
-  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = `rgba(216,230,252,${alpha.toFixed(3)})`;
+  ctx.beginPath(); ctx.ellipse(1.6, 0, 4.6, 2.9, 0, 0, Math.PI * 2); ctx.fill();   // sole / ball
+  ctx.beginPath(); ctx.ellipse(-4.9, 0, 2.4, 2.2, 0, 0, Math.PI * 2); ctx.fill();  // heel
+  for (const ty of [-2.0, 0, 2.0]) {                                               // toe pads
+    ctx.beginPath(); ctx.ellipse(6.0, ty, 1.05, 0.85, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Stamp-in easing: returns { scale, mul } for a mark of the given age (ms).
+// Foot lands slightly enlarged and semi-transparent, then presses to full.
+function footStamp(age) {
+  const p = Math.min(1, Math.max(0, age) / FOOT_POP_MS);
+  const e = 1 - (1 - p) * (1 - p);   // ease-out (0 at footfall → 1 settled)
+  return { scale: 1.32 - 0.32 * e, mul: 0.35 + 0.65 * e, e };
+}
+
+// True when (x,y) sits in a solid cell (wall / collapsible / closed door — closed
+// doors are written into the grid as WALL). Used so feet never land on a wall.
+function footInWall(grid, x, y) {
+  const c = Math.floor(x / TILE), r = Math.floor(y / TILE);
+  const cell = grid && grid[r] ? grid[r][c] : undefined;
+  return cell === CELL.WALL || cell === CELL.COLLAPSIBLE;
+}
+function drawFootClear(grid, x, y, angle, alpha, scale = 1) {
+  if (footInWall(grid, x, y)) return;
+  drawFoot(x, y, angle, alpha, scale);
+}
+
+// The walking representation: a line of discrete footprints that stay where they
+// landed and progress one in front of the other. Each stamps in (press) then
+// fades out over its lifetime; the freshest is brightest, so the "current" foot
+// stands out and the older ones recede — a natural gait rhythm.
+function drawFootprintTrail(footprints, now) {
+  if (!footprints || footprints.length === 0) return;
+  ctx.save();
+  for (const f of footprints) {
+    const age = now - f.createdAt;
+    if (age >= FOOTPRINT_FADE_MS) continue;
+    const t = 1 - age / FOOTPRINT_FADE_MS;
+    const st = footStamp(age);
+    const alpha = (0.15 + 0.80 * t) * st.mul;   // bright & fresh → fading; stamps in
+    if (alpha < 0.01) continue;
+    drawFoot(f.x, f.y, f.angle, alpha, st.scale);
+  }
+  ctx.restore();
+}
+
+// ─── Player (drawn purely as footsteps — no dot) ─────────────────────────────
+// While WALKING the player is shown by the moving footprint trail (above), which
+// stays where each foot landed. While STANDING we plant both feet at the current
+// position. A soft dark backing under the standing feet keeps them legible.
+function drawPlayerFeet(player, heading, grid) {
+  if (!player) return;
+  const speed = Math.hypot(player.vx || 0, player.vy || 0);
+  if (speed >= PLAYER_IDLE_SPEED) return;   // walking → the trail is the marker
+
+  ctx.save();
+  // Backing shadow — a small dark disc that dims the rays converging on the player
+  const r = 18;
+  const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, r);
+  grd.addColorStop(0, 'rgba(0,0,0,0.7)');
+  grd.addColorStop(0.6, 'rgba(0,0,0,0.48)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = grd;
-  ctx.beginPath(); ctx.arc(player.x, player.y, 18, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.96)';
-  ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(player.x, player.y, r, 0, Math.PI * 2); ctx.fill();
+
+  const a = Math.atan2(heading.y, heading.x);
+  const perpX = -heading.y, perpY = heading.x;   // left of forward
+  const LAT = FOOTPRINT_STANCE_OFF;
+  // Standing: both feet, side by side, steady
+  drawFootClear(grid, player.x + perpX * LAT, player.y + perpY * LAT, a, 0.95);
+  drawFootClear(grid, player.x - perpX * LAT, player.y - perpY * LAT, a, 0.95);
   ctx.restore();
 }
 
 // ─── Vignette ─────────────────────────────────────────────────────────────────
+// Pre-rendered once (buildVignette) and blitted each frame — avoids recreating
+// the radial gradient every frame (Phase 23).
 function drawVignette() {
-  const grd = ctx.createRadialGradient(W/2, H/2, H * 0.28, W/2, H/2, H * 0.82);
-  grd.addColorStop(0, 'rgba(0,0,0,0)');
-  grd.addColorStop(1, 'rgba(0,0,0,0.6)');
-  ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, W, H);
+  if (!_vignetteCanvas) buildVignette();
+  ctx.drawImage(_vignetteCanvas, 0, 0);
 }
 
 // ─── HUD ──────────────────────────────────────────────────────────────────────

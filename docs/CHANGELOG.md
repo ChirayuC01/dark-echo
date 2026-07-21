@@ -5,6 +5,52 @@
 
 ---
 
+## [v2.5.0] — 2026-07-20 — Player rendered as animated footsteps
+
+### Changed
+- **The player is now rendered purely as footsteps — the white dot/glow is removed.**
+- **Natural walking gait**: walking lays discrete footprints that **stay where they land** and progress one in front of the other — spaced by an even stride (a print every ~22px travelled), alternating sides, the freshest brightest with older prints fading (a clear step rhythm). No gliding marker.
+- **Recognizable feet + footfall animation**: each mark is clearly a foot (rounded sole, separate heel, toe pads) pointing along the heading, and every footfall "stamps" in (a quick press/scale + fade) instead of popping.
+- **Standing still** plants both feet side by side, facing the last direction of travel.
+- **Legibility**: the sound rays were dimmed and a soft dark backing is drawn under the standing feet where the rays converge, so the bright prints read clearly.
+- **Feet stay off walls**: footprints never render on wall cells (trail clamps to the player's cell; feet in a solid cell are suppressed).
+
+### Notes
+- Footstep **audio** already existed (plays on every step, with a water variant) and is unchanged — this release is the **visual** representation.
+- **Google Play submission (Phase 25) is deferred** by owner decision; the game remains feature-complete for the gameplay roadmap but is not being pushed to a public store yet.
+
+---
+
+## [v2.4.0] — 2026-07-03 — Phase 24
+
+### Added
+- **Save system** (`js/save.js`): all progress now persists via a centralized, guarded localStorage layer — furthest level reached, Act I/II completion flags, per-level best times, and earned achievements.
+- **Level select screen**: reachable from the title. A 20-cell grid; unlocked levels show their best time, locked levels show a lock and are disabled. Click an unlocked level to jump straight to it.
+- **Best-time tracking**: each level is timed from load to exit; the fastest run per level is kept and shown in level-select.
+- **10 achievements** (`js/achievements.js`): first death, Level-1 speedrun (<20s), Level-1 no-pulse, Level-6 no-alert, Level-7 clear, Act I complete, Level-14 no-screamer, Level-17 no-stalker-hunt, Act II complete, all-20 complete. Unlocks show a queued toast (~2.5s) and appear in a new **achievement gallery** on the pause menu (earned bright, unearned dim).
+
+### Changed
+- Winning the game now marks every level unlocked in level-select (previously cleared progress).
+
+---
+
+## [v2.3.0] — 2026-07-03 — Phase 23
+
+### Added
+- **Adaptive quality system**: automatic FPS-driven quality tiers (high/medium/low). In auto mode, sustained FPS below 45 for 3s drops a tier (below 30 → low), downgrade-only so it never oscillates. Reduced tiers disable shadowBlur glow, lower the echo-trail cap (500→250→150), and cut enemy step rays. A **Quality** button on the pause screen overrides it (Auto/High/Medium/Low), persisted to `localStorage`.
+- Debug overlay now reports quality tier/mode, ray-pool size, and effective trail cap.
+
+### Changed / Performance
+- **Vignette gradient cached**: pre-rendered once to an offscreen canvas and blitted each frame instead of recreating the radial gradient every frame.
+- **Player glow pre-rendered** to a sprite (drawImage) instead of a per-frame radial gradient + shadowBlur.
+- **Hot-path shadowBlur gated**: all per-frame `shadowBlur` runs through a helper that zeroes it at reduced quality tiers — removing the largest mobile GPU cost when needed.
+- **Ray pool bounded** at 200 recycled instances; echo-trail cap is now tier-configurable.
+
+### Notes
+- On-device 60fps profiling (mid-range Android) and a Lighthouse run remain open — they require real hardware / the deployed URL. Mechanisms verified headless (no runtime errors; quality cycling + persistence work).
+
+---
+
 ## [v2.2.0] — 2026-07-03 — Phase 22
 
 ### Added

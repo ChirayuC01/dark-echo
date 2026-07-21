@@ -1,7 +1,7 @@
 import { RAY_SPEED, MAX_BOUNCES, ENERGY_DECAY, MIN_ENERGY,
          STEP_RAY_MAX, PULSE_RAY_MAX, HAZARD_RAY_MAX,
          RAY_COUNT_STEP, RAY_COUNT_PULSE, RAY_COUNT_HAZARD,
-         RAY_TRAIL_MS, ECHO_TRAIL_CAP } from './constants.js';
+         RAY_TRAIL_MS, ECHO_TRAIL_CAP, RAY_POOL_CAP } from './constants.js';
 
 const NUDGE = 0.8; // px to offset after bounce to avoid re-collision
 
@@ -121,6 +121,8 @@ export class RaySystem {
     this.active     = [];
     this._pool      = [];
     this.echoTrails = []; // {x1,y1,x2,y2,energy,type,createdAt}
+    // Adaptive quality lowers this at runtime (Phase 23) to bound draw + GC cost.
+    this.trailCap   = ECHO_TRAIL_CAP;
   }
 
   // Emit a burst of rays from (x,y).
@@ -174,7 +176,8 @@ export class RaySystem {
         for (const seg of ray.segments) {
           this.echoTrails.push({ ...seg, type: ray.type, createdAt: now });
         }
-        this._pool.push(ray);
+        // Recycle, but bound the pool so it can't grow unbounded (Phase 23)
+        if (this._pool.length < RAY_POOL_CAP) this._pool.push(ray);
       }
     }
     this.active.length = wi;
@@ -188,9 +191,9 @@ export class RaySystem {
         }
       }
       this.echoTrails.length = ri;
-      // If still over cap after time prune, drop oldest (front of array)
-      if (this.echoTrails.length > ECHO_TRAIL_CAP) {
-        this.echoTrails.splice(0, this.echoTrails.length - ECHO_TRAIL_CAP);
+      // If still over the (possibly quality-reduced) cap, drop oldest (front of array)
+      if (this.echoTrails.length > this.trailCap) {
+        this.echoTrails.splice(0, this.echoTrails.length - this.trailCap);
       }
     }
 

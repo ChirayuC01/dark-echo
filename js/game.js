@@ -10,16 +10,21 @@ import { TILE, COLS, ROWS, W, H,
          COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS,
          KEY_PICKUP_RADIUS, CRUSHER_REVEAL_MS,
          DANGER_NEAR_PX,
-         SCREAMER_BURST_RAYS } from './constants.js';
+         SCREAMER_BURST_RAYS,
+         ECHO_TRAIL_CAP, ECHO_TRAIL_CAP_MEDIUM, ECHO_TRAIL_CAP_LOW,
+         ENEMY_STEP_RAYS_LOW,
+         QUALITY_DOWNGRADE_FPS, QUALITY_LOW_FPS, QUALITY_SUSTAIN_MS,
+         FOOTPRINT_MAX, FOOTPRINT_STANCE_OFF, FOOTPRINT_STRIDE_PX } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
 import * as Renderer from './renderer.js';
 import * as UI from './ui.js';
+import * as Save from './save.js';
+import { ACHIEVEMENTS, getById, evaluate as evalAchievements } from './achievements.js';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { StatusBar } from '@capacitor/status-bar';
 
-const SAVE_KEY = 'resonance_progress';
 import { LEVELS } from './levels.js';
 import { RaySystem } from './waves.js';
 import { castRay, circlesOverlap, castRayCrushers, circleOverlapsAABB } from './collision.js';
@@ -56,7 +61,74 @@ const G = {
   triggers: [],                   // [{col, row, x, y, action, targetId, fired, revealedAt}]
   shake: { x: 0, y: 0, timer: 0, intensity: 0, duration: 0.001 },
   screamers: [],
+  // ─── Footprints ───
+  footprints: [],                 // trail: {x, y, angle, createdAt}
+  nextFoot: 1,                    // alternates ±1 (which foot lands next)
+  currentFootSide: 1,             // side of the most recently placed foot
+  playerHeading: { x: 0, y: -1 }, // last facing direction (default: up)
+  prevFootX: 0, prevFootY: 0,     // previous player pos (for distance-based stride)
+  strideAccum: 0,                 // distance travelled since the last footprint
+  // ─── Adaptive quality (Phase 23) ───
+  qualityMode: 'auto',        // 'auto' | 'high' | 'medium' | 'low' (user preference)
+  qualityTier: 'high',        // 'high' | 'medium' | 'low' (effective tier in use)
+  enemyStepRays: ENEMY_STEP_RAYS,
+  _fpsLowMs: 0,               // accumulated time (ms) FPS has stayed below threshold
+  // ─── Per-run tracking for achievements + best times (Phase 24) ───
+  levelStartTime: 0,
+  runStats: { usedPulse: false, patrolAlerted: false, screamerTriggered: false, stalkerHunted: false },
 };
+
+// Unlock the given achievement ids, toasting any that are genuinely new.
+function awardAchievements(ids) {
+  const fresh = [];
+  for (const id of ids) {
+    if (Save.unlockAchievement(id)) {
+      const def = getById(id);
+      if (def) fresh.push(def.name);
+    }
+  }
+  if (fresh.length) UI.showAchievementToast(fresh);
+}
+
+const QUALITY_KEY = 'resonance_quality';
+const QUALITY_CYCLE = ['auto', 'high', 'medium', 'low'];
+
+// Apply an effective tier to the renderer + ray system + enemy step budget.
+function applyQualityTier(tier) {
+  G.qualityTier = tier;
+  Renderer.setQualityTier(tier);
+  G.enemyStepRays = tier === 'high' ? ENEMY_STEP_RAYS : ENEMY_STEP_RAYS_LOW;
+  const cap = tier === 'high'   ? ECHO_TRAIL_CAP
+            : tier === 'medium' ? ECHO_TRAIL_CAP_MEDIUM
+            : ECHO_TRAIL_CAP_LOW;
+  if (G.raySystem) G.raySystem.trailCap = cap;
+}
+
+// Set the user preference. 'auto' hands control to the FPS-driven adaptor;
+// a forced tier pins it. Persisted across sessions.
+function setQualityMode(mode) {
+  G.qualityMode = mode;
+  G._fpsLowMs = 0;
+  try { localStorage.setItem(QUALITY_KEY, mode); } catch (e) { /* ignore */ }
+  applyQualityTier(mode === 'auto' ? 'high' : mode);
+  UI.setQualityLabel(mode);
+}
+
+// Auto adaptor: after FPS stays below a threshold for QUALITY_SUSTAIN_MS,
+// drop one tier (high→medium→low). Downgrade-only — never oscillates.
+function updateAdaptiveQuality(dtMs) {
+  if (G.qualityMode !== 'auto' || G.qualityTier === 'low') return;
+  if (G.fps < QUALITY_DOWNGRADE_FPS) {
+    G._fpsLowMs += dtMs;
+    if (G._fpsLowMs >= QUALITY_SUSTAIN_MS) {
+      const next = (G.qualityTier === 'high' && G.fps >= QUALITY_LOW_FPS) ? 'medium' : 'low';
+      applyQualityTier(next);
+      G._fpsLowMs = 0;
+    }
+  } else {
+    G._fpsLowMs = 0;
+  }
+}
 
 function triggerShake(intensity, duration) {
   G.shake.intensity = intensity;
@@ -71,6 +143,7 @@ function loadLevel(idx) {
   const def = LEVELS[idx];
   G.grid = def.grid.map(row => [...row]); // mutable copy (for future collapsibles)
   G.raySystem = new RaySystem();
+  applyQualityTier(G.qualityTier); // a fresh RaySystem defaults to full cap — reapply
   G.castFn = (ox, oy, dx, dy, maxDist) => {
     const gridHit  = castRay(G.grid, ox, oy, dx, dy, maxDist);
     const crushHit = castRayCrushers(G.crushers, ox, oy, dx, dy, maxDist);
@@ -95,6 +168,15 @@ function loadLevel(idx) {
   G.waterReveals = new Map();
   G.collapsibleReveals = new Map();
   G.triggers = [];
+  // Reset per-run tracking (achievements + best-time timer)
+  G.levelStartTime = performance.now();
+  G.runStats = { usedPulse: false, patrolAlerted: false, screamerTriggered: false, stalkerHunted: false };
+  // Reset footprints (prevFoot position is seeded after the player is spawned below)
+  G.footprints = [];
+  G.nextFoot = 1;
+  G.currentFootSide = 1;
+  G.playerHeading = { x: 0, y: -1 };
+  G.strideAccum = 0;
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -105,6 +187,9 @@ function loadLevel(idx) {
       if (cell === CELL.EXIT)  G.exit = { x: cx, y: cy, revealedAt: -Infinity };
     }
   }
+
+  // Seed the footprint stride tracker at the player's start position
+  if (G.player) { G.prevFootX = G.player.x; G.prevFootY = G.player.y; }
 
   // Spawn enemies from def.enemies[]
   for (const e of def.enemies) {
@@ -259,6 +344,7 @@ function processRayEntities(now) {
       if (d < sc.radius + REVEAL_D) sc.revealedAt = now;
       if (!sc.triggered && d < sc.radius + 4) {
         sc.triggered = true;
+        G.runStats.screamerTriggered = true;
         G.raySystem.burst(sc.x, sc.y, 'pulse', G.castFn, SCREAMER_BURST_RAYS, 320);
         sc.alertNearbyEnemies(G.enemies);
         Audio.playScreamer();
@@ -307,6 +393,7 @@ function processRayEntities(now) {
           ray.heardEntities.add(en);
           if (en instanceof BlindStalker) {
             en.hearSound(ray.burstX, ray.burstY);
+            G.runStats.stalkerHunted = true;
             Audio.playAlert(en.x, en.y);
           } else if (en instanceof ChaserEnemy) {
             if (!ray.quiet) {
@@ -316,8 +403,10 @@ function processRayEntities(now) {
           } else if (en instanceof PatrolEnemy) {
             if (ray.type === 'pulse') {
               en.onPulseHit();
+              G.runStats.patrolAlerted = true;
             } else if (ray.type === 'step' && en.stepAware) {
               en.hearStep(ray.burstX, ray.burstY);
+              G.runStats.patrolAlerted = true;
             }
           } else if (en instanceof Sentry) {
             if (ray.type === 'pulse') en.onPulseHit();
@@ -372,6 +461,7 @@ function checkDeath() {
 function die(reason) {
   G.deathReason = reason;
   G.screen = 'dead';
+  awardAchievements(evalAchievements({ event: 'death' }));
   triggerShake(6, 0.35);
   Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
   Audio.stopAmbient();
@@ -409,9 +499,19 @@ function fireTrigger(tr) {
 function checkExit() {
   if (!G.exit) return;
   if (dist(G.player.x, G.player.y, G.exit.x, G.exit.y) < TILE * 0.6) {
-    if (G.levelIndex + 1 >= TOTAL) {
+    const completedIdx = G.levelIndex;
+    const elapsed = performance.now() - G.levelStartTime;
+    Save.recordTime(completedIdx, elapsed);
+    awardAchievements(evalAchievements({
+      event: 'complete', levelIndex: completedIdx, elapsedMs: elapsed, stats: G.runStats,
+    }));
+    if (completedIdx === 9) Save.markAct(1);   // Act I = Levels 1–10
+
+    if (completedIdx + 1 >= TOTAL) {
       G.screen = 'win';
-      localStorage.removeItem(SAVE_KEY);
+      Save.markAct(2);                          // Act II complete
+      Save.setProgress(TOTAL);                  // every level unlocked in level-select
+      awardAchievements(evalAchievements({ event: 'win' }));
       Audio.stopAmbient();
       Audio.stopEnvironmental();
       Audio.playLevelComplete();
@@ -420,7 +520,7 @@ function checkExit() {
     } else {
       Audio.playLevelComplete();
       G.levelIndex++;
-      localStorage.setItem(SAVE_KEY, G.levelIndex);
+      Save.setProgress(G.levelIndex);
       loadLevel(G.levelIndex);
       UI.setHint(LEVELS[G.levelIndex].hint);
       UI.show('screen-levelup');
@@ -436,6 +536,12 @@ function update(dt, now) {
   const move = Input.getMove();
   const moving = move.dx !== 0 || move.dy !== 0;
   const crouching = Input.isCrouching();
+
+  // Track facing direction (kept when standing so idle footprints stay oriented)
+  if (moving) {
+    const hlen = Math.hypot(move.dx, move.dy) || 1;
+    G.playerHeading = { x: move.dx / hlen, y: move.dy / hlen };
+  }
 
   // Water tile detection — check BEFORE moving so the tile under feet is current
   const tileCol = Math.floor(G.player.x / TILE);
@@ -459,12 +565,43 @@ function update(dt, now) {
     Audio.playFootstepSurface(G.playerInWater ? 'water' : 'normal');
   }
 
+  // Footprints — distance-based so they land at an even stride and STAY where
+  // placed (like a real walking trail), independent of the audio/ray cadence.
+  const dxp = G.player.x - G.prevFootX, dyp = G.player.y - G.prevFootY;
+  G.prevFootX = G.player.x; G.prevFootY = G.player.y;
+  if (moving) {
+    G.strideAccum += Math.hypot(dxp, dyp);
+    if (G.strideAccum >= FOOTPRINT_STRIDE_PX) {
+      G.strideAccum -= FOOTPRINT_STRIDE_PX;
+      // One foot at a time, offset to the side of travel, alternating.
+      const perpX = -G.playerHeading.y, perpY = G.playerHeading.x; // left of heading
+      G.currentFootSide = G.nextFoot;
+      let fx = G.player.x + perpX * FOOTPRINT_STANCE_OFF * G.currentFootSide;
+      let fy = G.player.y + perpY * FOOTPRINT_STANCE_OFF * G.currentFootSide;
+      const fc = Math.floor(fx / TILE), fr = Math.floor(fy / TILE);
+      const fcell = G.grid[fr]?.[fc];
+      if (fcell === CELL.WALL || fcell === CELL.COLLAPSIBLE) { fx = G.player.x; fy = G.player.y; }
+      G.footprints.push({
+        x: fx, y: fy,
+        angle: Math.atan2(G.playerHeading.y, G.playerHeading.x),
+        createdAt: now,
+      });
+      G.nextFoot = -G.nextFoot;
+      if (G.footprints.length > FOOTPRINT_MAX) {
+        G.footprints.splice(0, G.footprints.length - FOOTPRINT_MAX);
+      }
+    }
+  } else {
+    G.strideAccum = FOOTPRINT_STRIDE_PX;   // so the first step after standing lands promptly
+  }
+
   // Pulse rays — track ready transition for audio cue
   const prevCooldown = G.pulseCooldown;
   G.pulseCooldown = Math.max(0, G.pulseCooldown - dt * 1000);
   if (prevCooldown > 0 && G.pulseCooldown === 0) Audio.playPulseReady();
   if (Input.consumePulse() && G.pulseCooldown === 0) {
     G.pulseCooldown = PULSE_COOLDOWN;
+    G.runStats.usedPulse = true;
     G.raySystem.burst(G.player.x, G.player.y, 'pulse', G.castFn);
     Audio.playPulse();
   }
@@ -497,13 +634,14 @@ function update(dt, now) {
       en.update(dt, G.grid);
     }
     if (en.shouldEmitStep?.(dt)) {
-      G.raySystem.burst(en.x, en.y, 'step-enemy', G.castFn, ENEMY_STEP_RAYS, ENEMY_STEP_MAX);
+      G.raySystem.burst(en.x, en.y, 'step-enemy', G.castFn, G.enemyStepRays, ENEMY_STEP_MAX);
       const hunting = en.state === 'hunting' || en.state === 'alert' || (en.alertTimer > 0);
       if (hunting) Audio.playEnemyFootstepHunting(en.x, en.y);
       else Audio.playEnemyFootstep(en.x, en.y);
     }
-    if (en instanceof BlindStalker && en.shouldBreathe(dt)) {
-      Audio.playBlindStalkerBreathing(en.x, en.y);
+    if (en instanceof BlindStalker) {
+      if (en.state === 'hunting') G.runStats.stalkerHunted = true;
+      if (en.shouldBreathe(dt)) Audio.playBlindStalkerBreathing(en.x, en.y);
     }
   }
   for (const cr of G.crushers) cr.update(dt);
@@ -571,6 +709,9 @@ function update(dt, now) {
   }
   Audio.setDangerLevel(minEnemyDist < DANGER_NEAR_PX ? 1 - minEnemyDist / DANGER_NEAR_PX : 0);
 
+  // Adaptive quality — drop a tier if FPS stays low (auto mode only)
+  updateAdaptiveQuality(dt * 1000);
+
   // HUD
   Renderer.updateHUD(G.pulseCooldown, PULSE_COOLDOWN, G.levelIndex, TOTAL, crouching);
 }
@@ -585,6 +726,7 @@ function loop(timestamp) {
 
   if (Input.consumePause() && G.screen === 'playing') {
     G.screen = 'paused';
+    UI.buildAchievementGallery(ACHIEVEMENTS, Save.getAchievements());
     UI.show('screen-pause');
   }
 
@@ -611,13 +753,34 @@ function loop(timestamp) {
       ? (G.titleRaySystem ? G.titleRaySystem.echoTrails : [])
       : (G.raySystem      ? G.raySystem.echoTrails       : []),
     fps: G.fps,
+    poolSize: G.raySystem ? G.raySystem._pool.length : 0,
+    trailCap: G.raySystem ? G.raySystem.trailCap : 0,
   }, timestamp);
   requestAnimationFrame(loop);
 }
 
 // ─── UI action handlers ───────────────────────────────────────────────────────
+function launchLevel(idx) {
+  G.levelIndex = idx;
+  loadLevel(idx);
+  G.screen = 'playing';
+  UI.hide();
+  Renderer.setHUDVisible(true);
+  Audio.stopEnvironmental();
+  Audio.startAmbient();
+  Audio.startEnvironmental();
+}
+
 function handleAction(action) {
   Audio.resume();
+
+  // Dynamic level-select buttons dispatch "play-level:<idx>"
+  if (action.startsWith('play-level:')) {
+    const idx = parseInt(action.slice('play-level:'.length), 10);
+    if (!isNaN(idx) && idx >= 0 && idx < TOTAL && Save.isLevelUnlocked(idx)) launchLevel(idx);
+    return;
+  }
+
   switch (action) {
     case 'start':
       G.levelIndex = 0;
@@ -628,9 +791,13 @@ function handleAction(action) {
       Audio.startAmbient();
       Audio.startEnvironmental();
       break;
+    case 'level-select':
+      UI.buildLevelSelect(LEVELS, Save.getProgress(), Save.getBestTimes(), Save.formatTime);
+      UI.show('screen-levelselect');
+      break;
     case 'continue': {
-      const saved = parseInt(localStorage.getItem(SAVE_KEY), 10);
-      const idx = (!isNaN(saved) && saved > 0 && saved < TOTAL) ? saved : 0;
+      const saved = Save.getProgress();
+      const idx = (saved > 0 && saved < TOTAL) ? saved : 0;
       G.levelIndex = idx;
       loadLevel(idx);
       G.screen = 'playing';
@@ -656,7 +823,7 @@ function handleAction(action) {
       break;
     case 'restart-from-1':
       G.levelIndex = 0;
-      localStorage.removeItem(SAVE_KEY);
+      Save.clearProgress();
       loadLevel(0);
       G.screen = 'playing';
       UI.hide();
@@ -682,13 +849,18 @@ function handleAction(action) {
       initTitleScreen();
       refreshContinueButton();
       break;
+    case 'cycle-quality': {
+      const i = QUALITY_CYCLE.indexOf(G.qualityMode);
+      setQualityMode(QUALITY_CYCLE[(i + 1) % QUALITY_CYCLE.length]);
+      break;
+    }
   }
 }
 
 // ─── Continue button ──────────────────────────────────────────────────────────
 function refreshContinueButton() {
-  const saved = parseInt(localStorage.getItem(SAVE_KEY), 10);
-  if (!isNaN(saved) && saved > 0 && saved < TOTAL) {
+  const saved = Save.getProgress();
+  if (saved > 0 && saved < TOTAL) {
     UI.showContinueButton(saved + 1); // 1-based display: index 1 → "Level 2"
   } else {
     UI.hideContinueButton();
@@ -705,6 +877,12 @@ export function init() {
   UI.init();
 
   document.addEventListener('ui:action', e => handleAction(e.detail));
+
+  // Restore saved quality preference (default 'auto')
+  let savedQuality = 'auto';
+  try { savedQuality = localStorage.getItem(QUALITY_KEY) || 'auto'; } catch (e) { /* ignore */ }
+  if (!QUALITY_CYCLE.includes(savedQuality)) savedQuality = 'auto';
+  setQualityMode(savedQuality);
 
   initTitleScreen();
   UI.show('screen-title');

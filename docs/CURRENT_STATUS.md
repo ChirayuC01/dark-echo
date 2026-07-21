@@ -1,17 +1,31 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Phase 22 complete — marketing landing page + multi-page build (2026-07-03)  
+> **Last updated:** 2026-07-20 — full 20-level game; Phases 15–24 done (16 skipped); Phase 25 deferred; player rendered as animated footsteps.  
 > Update this file after every completed task or phase.
+
+## Project at a glance
+
+RESONANCE is a complete, playable 20-level top-down stealth/horror game where **sound is the only vision** — the screen is black and geometry is revealed by visualized sound echoes. Vanilla ES-module JavaScript on Canvas 2D + Web Audio, built with Vite, deployed on Cloudflare Workers Static Assets, and packaged for Android via Capacitor.
+
+- **Web**: landing page at `/`, game at `/play/`.
+- **Gameplay**: 2 Acts / 20 levels; 6 enemy archetypes (Patrol, Chaser, Sentry, BlindStalker, Hazard, Screamer) + Crushers; crouch stealth, water, collapsible walls, doors/keys, switch/spawn triggers.
+- **Audio**: procedural Web Audio — positional (HRTF), reverb (ConvolverNode), ambient drone + environmental sounds, enemy footsteps/breathing.
+- **Feel**: velocity inertia, screen-shake, adaptive quality tiers, animated footprint player representation.
+- **Meta**: localStorage save (progress, best times, achievements), level-select, 10 achievements.
+- **Remaining**: Phase 25 (Google Play submission) — deferred by owner; needs signed AAB + on-device profiling + store assets.
 
 ---
 
 ## Active Phase
 
-**Phase 23 — Performance Hardening**  
-Status: ⬜ Pending
+**None active — Phase 25 (Play Store) deferred by owner.**
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
-> Phase 16 was skipped (wavefront visual not preferred — original spoke rendering kept). Phases 17, 18, 19, 20, 21, and 22 are complete.
+> Phase 16 was skipped (wavefront visual not preferred). Phases 17–24 are complete.
+> **Phase 25 (Google Play submission) is deferred by owner decision** — the game is
+> feature-complete for the roadmap's gameplay scope but not yet considered fully
+> production-ready for a public store launch. Post-roadmap polish continues on
+> request (e.g. the footprint visuals below).
 
 ---
 
@@ -29,7 +43,6 @@ Status: ⬜ Pending
 | PatrolEnemy | `js/entities.js` | Waypoint cycle, pulse-stun, step-aware hearing |
 | ChaserEnemy | `js/entities.js` | Idle wander + hunt state |
 | Hazard | `js/entities.js` | Timed pulse emitter, proximity kill |
-| 9 levels | `js/levels.js` | Levels 1–9 complete (Level 9 = The Corridor) |
 | **Tap-zone touch controls** | `js/input.js`, `js/game.js` | Whole canvas is the input surface — no visible buttons; see Phase 21.1 |
 | All UI screens | `js/ui.js`, `index.html` | title/pause/dead/levelup/win |
 | Web Audio sounds | `js/audio.js` | SOUND_CONFIG + all play*() |
@@ -44,18 +57,27 @@ Status: ⬜ Pending
 | **Switches / Triggers** | `js/game.js`, `js/renderer.js`, `js/levels.js` | Blue-white pulsing dot; player proximity fires `open_door` or `remove_wall` once |
 | **Sentry Enemy** | `js/entities.js`, `js/game.js`, `js/renderer.js`, `js/levels.js` | Rotating ±45° scan cone, 180px LOS detection, 8s pursuit; stunned by pulse |
 | **BlindStalker Enemy** | `js/entities.js`, `js/game.js`, `js/levels.js` | Hears all sounds (step+pulse, incl. crouched); 104px/s hunt speed; 4s timer |
-| **10 levels** | `js/levels.js` | Level 10 "The Gauntlet II" — all mechanics + BlindStalker |
 | **ScreamerEnemy** | `js/entities.js`, `js/game.js`, `js/renderer.js` | Stationary trap; any ray triggers 48-ray burst + nearby enemy alert; killed on contact |
 | **`spawn_enemy` trigger** | `js/game.js` | `targetId = "type,col,row"`; spawns chaser / stalker / screamer mid-level |
-| **20 levels** | `js/levels.js` | Act II (Levels 11–20): Corridor II → The Deep; all mechanics, ScreamerEnemy, spawn_enemy |
+| **20 levels (Acts I + II)** | `js/levels.js` | L1–10 (The Awakening → The Gauntlet II) + L11–20 (Corridor II → The Deep) |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | **Ambient drone** | `js/audio.js`, `js/game.js` | 55Hz sine, gain 0.035, 1.5s fade-in/0.5s fade-out; starts on play, stops on death/win/title |
 | **Positional audio** | `js/audio.js`, `js/game.js` | PannerNode HRTF; updateListener() per frame; alert/sentry/hazard sounds positioned |
 | **Enemy footstep rays** | `js/entities.js`, `js/game.js`, `js/renderer.js` | 8-ray `'step-enemy'` burst per enemy step (520ms idle / 340ms hunt); muted red render |
 | **BlindStalker breathing** | `js/entities.js`, `js/audio.js`, `js/game.js` | Positional 110Hz breath every 2–3s; audio cue only, no rays |
 | **Debug overlay** | `js/debug.js`, `js/input.js`, `js/game.js`, `js/renderer.js` | Backtick toggle; FPS, rays, trails, glints, player state, all enemy states |
-| Echo trail cap | `js/waves.js` | Hard cap at 500 entries |
+| Echo trail cap | `js/waves.js` | Hard cap at 500 entries (lowered to 250/150 at reduced quality tiers) |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
+| **Perf caching** | `js/renderer.js` | Vignette pre-rendered offscreen and blitted each frame |
+| **Adaptive quality** | `js/game.js`, `js/renderer.js`, `js/waves.js` | Auto FPS-driven high/medium/low tiers + pause-menu override; gates shadowBlur, trail cap, enemy step rays |
+| **Ray pool cap** | `js/waves.js` | Recycled Ray pool bounded at `RAY_POOL_CAP` (200) |
+| **Save system** | `js/save.js` | Progress, act flags, best times, achievements — guarded localStorage |
+| **Level select** | `js/ui.js`, `play/index.html` | 20-cell grid; lock state + best times; launch any unlocked level |
+| **Achievements** | `js/achievements.js`, `js/game.js`, `js/ui.js` | 10 achievements; queued toast + pause-menu gallery |
+| **Footsteps (audio)** | `js/audio.js`, `js/game.js` | `playFootstepSurface()` on each step (normal/water), reverb-tail |
+| **Player = animated footsteps** | `js/game.js`, `js/renderer.js` | No dot — distance-based footprint trail while walking (recognizable feet, stamp-in animation, one in front of the other), both feet planted when standing; wall-aware; rays dimmed for contrast |
+| **Android packaging** | `capacitor.config.ts`, `android/` (gitignored) | Capacitor 8 + Haptics + StatusBar; build steps in `docs/ANDROID_BUILD_GUIDE.md` |
+| **Landing page + multi-page build** | `index.html`, `landing/`, `vite.config.js` | Marketing page at `/`, game at `/play/`; shared Vite build |
 
 ---
 
@@ -160,12 +182,47 @@ Status: ⬜ Pending
 | ScreamerEnemy | Phase 20 | ✅ Done | — | Stationary ray trap; 48-ray burst; alerts enemies within 300px |
 | Android app (Capacitor) | Phase 21 | ✅ Done | — | Capacitor 8 + Haptics + StatusBar; debug APK built + installed on physical device |
 | Website + landing page | Phase 22 | ✅ Done | — | Landing at `/`, game at `/play/`; multi-page Vite build; native app redirects to game |
-| Performance hardening (60fps mobile) | Phase 23 | ⬜ Pending | High | Must pass on mid-range Android |
-| Level select screen | Phase 24 | ⬜ Pending | Medium | Quality-of-life for 20-level game |
-| Achievements (10 total) | Phase 24 | ⬜ Pending | Medium | Retention and replay incentive |
+| Performance hardening (60fps mobile) | Phase 23 | ✅ Done | — | Vignette/glow caching, adaptive quality tiers, pool cap; on-device profiling still pending |
+| Level select screen | Phase 24 | ✅ Done | — | 20-cell grid, lock state + best times; `js/save.js` |
+| Achievements (10 total) | Phase 24 | ✅ Done | — | `js/achievements.js`; toast + pause-menu gallery |
 | Google Play Store submission | Phase 25 | ⬜ Pending | High | Final commercial goal |
 
 ---
+
+## Post-roadmap — Player rendered as animated footsteps (2026-07-20)
+
+The player is drawn **purely as footsteps — there is no dot/glow**. Final implementation after several rounds of feedback:
+
+- **Footstep audio** already existed (`Audio.playFootstepSurface` fires on every step, normal vs water) — confirmed working, unchanged.
+- **Recognizable feet**: `drawFoot` renders an actual foot — a rounded sole/ball, a separate heel, and three toe pads — pointing along the heading (`js/renderer.js`).
+- **Natural gait (distance-based)**: while walking, discrete footprints are laid every `FOOTPRINT_STRIDE_PX` (22px) of travel, alternating sides, and **stay where they land** — progressing one in front of the other like a real walking trail. The freshest is brightest; each fades over `FOOTPRINT_FADE_MS` (1.5s), giving a clear step rhythm. There is **no gliding foot** — the trail itself is the walking marker. (`js/game.js` accumulates player displacement in `strideAccum`; `prevFoot`/`strideAccum` seeded after the player spawns in `loadLevel`.)
+- **Footfall animation**: `footStamp()` eases each print's scale 1.32→1.0 and alpha in over `FOOT_POP_MS` (150ms) so prints press down rather than pop.
+- **Standing still**: both feet are planted side by side at the player, oriented to `G.playerHeading` (`drawPlayerFeet`, only when `speed < PLAYER_IDLE_SPEED`).
+- **Legibility**: a soft **dark backing disc** under the standing feet + globally **dimmed rays** (active 0.72→0.5, live tip 0.88→0.62, echo trails 0.34→0.24) keep the bright prints readable where the sound rays converge.
+- **Wall-aware**: footprints never render on wall/collapsible cells — the trail clamps to the player's cell and live feet in a solid cell are suppressed (`footInWall`/`drawFootClear`).
+- Constants: `FOOTPRINT_STRIDE_PX`, `FOOTPRINT_FADE_MS`, `FOOTPRINT_MAX`, `FOOTPRINT_STANCE_OFF`, `PLAYER_IDLE_SPEED`. Verified headless (no errors; walking lays an alternating one-in-front trail ending in two side-by-side feet when stopped).
+
+## Phase 24 — Complete ✅
+
+**Phase 24 summary** (save system + level select + achievements):
+- `js/save.js` (new): centralizes the localStorage schema behind guarded helpers — `resonance_progress` (furthest 0-based index reached / unlock cursor), `resonance_act1_complete` / `resonance_act2_complete`, `resonance_best_times` (`{idx: ms}`), `resonance_achievements` (string[]). Also `formatTime(ms)` and `isLevelUnlocked(idx)`. All existing progress/continue logic in `game.js` was refactored onto it.
+- `js/achievements.js` (new): 10 achievement definitions (id/glyph/name/desc) + a pure `evaluate(ctx)` mapping a `complete`/`death`/`win` event to qualifying ids. Unit-tested (12/12 cases).
+- `js/game.js`: `G.runStats` (`usedPulse`/`patrolAlerted`/`screamerTriggered`/`stalkerHunted`) + `G.levelStartTime`, reset each `loadLevel`. `checkExit` records best time, evaluates + awards achievements, sets Act I/II flags, and persists progress (win sets `progress = TOTAL` so every level shows unlocked in level-select instead of clearing progress). `die()` awards `first_death`. `launchLevel(idx)` + a `play-level:<idx>` action back the level-select cells; `level-select` builds+shows the grid; pausing rebuilds the achievement gallery.
+- `js/ui.js`: `buildLevelSelect()` (20-cell grid, lock state + best times, click → `play-level`), `buildAchievementGallery()` (earned/dim glyphs), `showAchievementToast()` (queued ~2.5s each).
+- `play/index.html`: title "Level Select" button, `#screen-levelselect`, pause `#achievement-gallery`, `#achievement-toast`. `css/style.css`: grid/gallery/toast styles (responsive 4→3 columns).
+- **Verified**: `achievements.evaluate` unit test 12/12; headless browser — level-select lock states from seeded progress (6 unlocked at progress=5, cell 7 locked), best-time formatting ("15.23s"), launching a level, pause gallery earned count (2/10), zero console/page errors.
+- Achievement→toast on live level completion (reaching an exit) is wired through the same verified `evaluate` → `Save.unlockAchievement` → `showAchievementToast` path; not driven end-to-end headlessly because it needs in-game navigation to the hidden exit.
+
+## Phase 23 — Complete ✅
+
+**Phase 23 summary** (performance hardening + adaptive quality):
+- `js/renderer.js`: vignette gradient pre-rendered once to an offscreen canvas (`buildVignette`) and blitted each frame; player glow pre-rendered to a sprite (`buildPlayerGlow`) — both remove per-frame `createRadialGradient` allocations. `setQualityTier(tier)` sets `_hq`; helper `sb(v)` returns the blur value at `high` and `0` at `medium`/`low`, applied to **every** hot-path `shadowBlur` (rays, glints, entities, exit, doors, keys, triggers, crushers) so blur compositing — the biggest mobile GPU cost — vanishes when quality drops.
+- `js/game.js`: `G.qualityMode` (`auto`|`high`|`medium`|`low`, persisted under `resonance_quality`) + effective `G.qualityTier`. Auto mode drops a tier after FPS stays below `QUALITY_DOWNGRADE_FPS (45)` for `QUALITY_SUSTAIN_MS (3s)` (→`medium`, or →`low` under `QUALITY_LOW_FPS (30)`), **downgrade-only** so it never oscillates. `applyQualityTier()` wires tier → renderer, ray-system trail cap, and enemy step-ray budget; reapplied after each `loadLevel()` (fresh `RaySystem`).
+- `js/waves.js`: `RaySystem.trailCap` is now configurable (`500`/`250`/`150` by tier); recycled Ray pool capped at `RAY_POOL_CAP (200)`.
+- Pause screen gains a **Quality** button (`#quality-btn`, `data-action="cycle-quality"`) cycling Auto→High→Medium→Low (`ui.js` `setQualityLabel`).
+- `js/debug.js`: overlay now shows quality tier/mode, ray-pool size, and effective trail cap.
+- `js/constants.js`: `RAY_POOL_CAP`, `ECHO_TRAIL_CAP_MEDIUM/LOW`, `ENEMY_STEP_RAYS_LOW`, `QUALITY_DOWNGRADE_FPS`, `QUALITY_LOW_FPS`, `QUALITY_SUSTAIN_MS`.
+- **Verified headless** (Chromium/Playwright): game boots and runs with no console/page errors; the Quality button cycles Auto→High→Medium→Low and persists to `localStorage`. On-device 60fps profiling (Galaxy A52-class) and a Lighthouse run remain open — they need real hardware / the deployed URL.
 
 ## Phase 22 — Complete ✅
 
@@ -280,9 +337,11 @@ Phase 16 (wavefront visual upgrade) was implemented via `drawWavefront()` and im
 
 ## Next Recommended Task
 
-Begin **Phase 23 — Performance Hardening** (60fps on mid-range Android + low-end desktop; vignette caching, shadowBlur audit, adaptive quality tier).
-
-Full task list with acceptance criteria is in `docs/PRODUCTION_ROADMAP.md` Phase 23.
+**Phase 25 (Google Play submission) is deferred by owner decision.** No roadmap phase is
+currently active. When submission is resumed, its (unchecked) task list is in
+`docs/PRODUCTION_ROADMAP.md` Phase 25 — the key prerequisites still outstanding are a
+signed release AAB, on-device 60fps/latency profiling (Phase 23 acceptance), and store
+assets + a privacy-policy page. Until then, work is owner-driven polish/enhancements.
 
 ---
 

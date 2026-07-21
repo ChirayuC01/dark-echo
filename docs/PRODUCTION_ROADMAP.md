@@ -465,7 +465,7 @@ An earlier iteration briefly kept the game at root (landing at `/landing/`) to a
 ---
 
 ## Phase 23 — Performance Hardening
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (mechanisms implemented + verified headless; on-device 60fps profiling still to be done on real hardware)  
 **Goal:** Stable 60fps on a mid-range 2021 Android phone and low-end desktop browsers.  
 **Depends on:** Phase 21 complete (need device testing data)  
 **Estimated effort:** 4–6 days  
@@ -478,89 +478,91 @@ Use Chrome DevTools Performance tab. Record a 10-second segment with full pulse 
 - GPU compositing cost (shadowBlur, canvas state changes)
 
 ### Tasks
-- [ ] **Cache vignette gradient**: Create `_vignetteCanvas = null` offscreen canvas in `renderer.js`. On first call or canvas resize, draw the radial gradient to `_vignetteCanvas`. Each frame: `ctx.drawImage(_vignetteCanvas, 0, 0)` instead of re-creating the gradient. Expected saving: ~0.5ms/frame on mobile.
-- [ ] **ShadowBlur audit**: Profile `shadowBlur` cost. If contributing > 1ms, replace player dot and exit glow with pre-rendered radial gradient instead of `ctx.shadowBlur`. A 32×32 offscreen canvas with a pre-drawn radial gradient is `drawImage()`-based and avoids compositing cost.
-- [ ] **Adaptive quality**: Add `G.qualityTier = 'high'` to game state. Monitor rolling FPS (already tracked via EMA). If FPS drops below 45 for more than 3 consecutive seconds: set `qualityTier = 'medium'` — reduce `ECHO_TRAIL_CAP` from 500 to 250, disable blur filter (Phase 16), disable shadow glow on enemies. If below 30fps: `qualityTier = 'low'` — reduce further. Add a "Quality" setting to the settings/pause screen.
-- [ ] **Ray object pool audit**: Confirm pool reuse rate in debug overlay. If pool grows unbounded, cap pool size at 200.
-- [ ] **Enemy step ray tuning**: Enemy step rays (Phase 17) add N×8 rays per frame per enemy. At 5 enemies, this is 40 extra ray traces/frame. Verify this stays within frame budget on mobile. Tune `ENEMY_STEP_RAYS` down to 5 if needed.
-- [ ] **GC pressure**: Profile allocation rate. If echo trail pruning creates GC pressure, switch to a ring buffer (fixed-size array with head/tail pointers) instead of `splice()`. `splice()` on arrays > 200 elements creates GC pressure.
-- [ ] **Offscreen canvas for static layers**: Move grid (which is never drawn — confirmed) and any static elements to an offscreen canvas if needed.
-- [ ] **Android WebView specific**: Test `willReadFrequently: true` on canvas context creation — can help on some Android WebView versions.
-- [ ] Run Lighthouse on the production build URL. Target: Performance ≥ 90, Accessibility ≥ 80.
-- [ ] Commit + push
+- [x] **Cache vignette gradient**: `_vignetteCanvas` offscreen canvas built once (`buildVignette()`); each frame `ctx.drawImage(_vignetteCanvas, 0, 0)` replaces the per-frame radial gradient. (Canvas is a fixed 800×600 backing store — CSS scales it — so no resize invalidation is needed.)
+- [x] **ShadowBlur audit**: The player glow is now a pre-rendered sprite (`buildPlayerGlow()` → `drawImage`), removing its per-frame gradient + shadowBlur. Additionally, every hot-path `shadowBlur` is routed through `sb()`, which forces it to 0 at medium/low tiers — so the blur compositing cost disappears entirely when quality is reduced.
+- [x] **Adaptive quality**: `G.qualityTier` (`high`/`medium`/`low`) + user preference `G.qualityMode` (`auto`/forced, persisted to `localStorage`). In auto mode, after FPS stays below `QUALITY_DOWNGRADE_FPS (45)` for `QUALITY_SUSTAIN_MS (3s)` it drops a tier (→medium, or →low if also below `QUALITY_LOW_FPS (30)`), downgrade-only to avoid oscillation. Medium/low reduce the echo-trail cap (500→250→150), disable shadowBlur glow, and cut enemy step rays. A **Quality** button on the pause screen cycles Auto→High→Medium→Low.
+- [x] **Ray object pool audit**: Pool size shown in the debug overlay; recycled `Ray` pool capped at `RAY_POOL_CAP (200)` in `RaySystem.update()`.
+- [x] **Enemy step ray tuning**: enemy step-ray count is now `G.enemyStepRays` — `ENEMY_STEP_RAYS (8)` at high, `ENEMY_STEP_RAYS_LOW (5)` at reduced tiers.
+- [x] **GC pressure**: reviewed — echo-trail pruning already compacts in place (single O(n) sweep, no per-frame `splice`); `splice` only runs in the rare over-cap case. Left as-is; the lower caps at reduced tiers further bound allocation. (Ring buffer not needed.)
+- [x] **Offscreen canvas for static layers**: grid is never drawn (confirmed); vignette + player glow are the static layers now pre-rendered offscreen.
+- [~] **Android WebView specific**: `willReadFrequently` intentionally **left false** — the game never calls `getImageData`, and enabling it forces software 2D rendering (would *hurt* GPU-accelerated canvas). No change made; documented here so it isn't "tried" later.
+- [ ] Run Lighthouse on the production build URL. Target: Performance ≥ 90, Accessibility ≥ 80. *(Not run — needs the deployed URL.)*
+- [x] Commit + push
 
 ### Files Modified
-- `js/renderer.js` — vignette cache, shadowBlur replacement, quality tier checks
-- `js/waves.js` — ring buffer if GC is an issue, pool cap
-- `js/game.js` — quality tier state, adaptive logic
-- `js/constants.js` — tuning constants for quality tiers
-- `index.html` — canvas context `willReadFrequently`
+- `js/renderer.js` — vignette cache, player-glow sprite, `setQualityTier()` + `sb()` shadowBlur gating
+- `js/waves.js` — configurable `trailCap`, `RAY_POOL_CAP` pool cap
+- `js/game.js` — quality mode/tier state, adaptive logic, pause-menu cycle, persistence
+- `js/ui.js` — `setQualityLabel()`
+- `js/debug.js` — quality tier/mode, ray-pool size, effective trail cap
+- `js/constants.js` — quality-tier tuning constants
+- `play/index.html` — `#quality-btn` on the pause screen
 
 ### Acceptance Criteria
-- [ ] 60fps stable on Samsung Galaxy A52 during full pulse burst (verify with DevTools USB debug)
-- [ ] 60fps stable on low-end desktop (test with CPU throttling 4x in DevTools)
-- [ ] No GC pause visible as long frame in performance trace during normal gameplay
-- [ ] Lighthouse Performance score ≥ 90
-- [ ] Adaptive quality correctly reduces cap and disables blur when FPS degrades
+- [ ] 60fps stable on Samsung Galaxy A52 during full pulse burst — **not yet profiled on hardware** (needs a device + USB DevTools)
+- [ ] 60fps stable on low-end desktop (CPU throttle 4×) — not yet profiled
+- [x] No GC pause from per-frame allocation in the hot path — vignette/gradient allocs removed; pool + trail caps bound growth
+- [ ] Lighthouse Performance ≥ 90 — not run (needs deployed URL)
+- [x] Adaptive quality correctly reduces cap and disables blur when FPS degrades — verified: forcing/auto-dropping a tier lowers the trail cap and zeroes shadowBlur via the same `applyQualityTier` path (headless smoke test green, no runtime errors)
 
 ---
 
 ## Phase 24 — Save System + Achievements
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete  
 **Goal:** Level persistence, best-time tracking, and a lightweight achievement system using localStorage only.  
 **Depends on:** Phase 20 complete (all 20 levels must exist before designing achievements)  
 **Estimated effort:** 3–5 days  
 **Risk:** Low
 
 ### Tasks
-- [ ] Extend localStorage schema (established in Phase 15):
+- [x] localStorage schema centralized in **`js/save.js`** (guarded read/write):
   ```javascript
-  resonance_progress: number        // highest level reached (1–20)
-  resonance_act1_complete: bool     // Level 10 completed
-  resonance_act2_complete: bool     // Level 20 completed
-  resonance_best_times: object      // { "1": 45200, "2": 67100, ... } ms per level
-  resonance_achievements: string[]  // list of earned achievement IDs
+  resonance_progress: number        // furthest 0-based level index reached (unlock cursor)
+  resonance_act1_complete: '1'      // Level 10 completed
+  resonance_act2_complete: '1'      // Level 20 completed
+  resonance_best_times: object      // { "<idx>": ms } — keyed by 0-based level index
+  resonance_achievements: string[]  // earned achievement IDs (deduped on write)
   ```
-- [ ] Add **level select screen**: accessible from title. Shows all 20 levels as a grid. Unlocked levels show best time. Locked levels show a lock icon. Click unlocked level → load it. `type: 'level-select'` screen state.
-- [ ] Add best time recording: start timer on level load, stop on exit trigger, compare to stored best.
-- [ ] Design 10 achievements:
-  - `act1_complete` — "Darkness Survived" — Complete all Act I levels
-  - `act2_complete` — "Into the Deep" — Complete all Act II levels  
-  - `silent_runner` — "The Silent" — Complete Level 6 (Whisper) without triggering the patrol
-  - `speedrun_1` — "Quick Echo" — Complete Level 1 in under 20 seconds
-  - `no_pulse_1` — "Blind Faith" — Complete Level 1 without using the pulse
-  - `water_survivor` — "Waterlogged" — Complete Level 7 without dying
-  - `screamer_avoided` — "Muffled" — Complete Level 14 without triggering any Screamer
-  - `stalker_proof` — "Ghost" — Complete Level 17 without the BlindStalker ever entering hunting state
-  - `all_levels` — "Complete Darkness" — Complete all 20 levels
-  - `first_death` — "It Heard You" — Die for the first time (tutorial completion)
-- [ ] Achievement unlock: save to localStorage. Show a toast notification at bottom of screen (2.5s, smooth fade). Draw after HUD, before debug overlay.
-- [ ] Add achievement gallery to pause menu (small icon grid; earned = full opacity, unearned = dim).
-- [ ] Commit + push
+- [x] **Level select screen** (`#screen-levelselect`): reached from the title's "Level Select" button. 20-cell grid; unlocked cells show best time, locked cells show a ◊ lock and are disabled. Click unlocked → `launchLevel(idx)`. Built dynamically in `ui.js buildLevelSelect()`. (Implemented as a DOM screen rather than a `type:` state — consistent with the other overlay screens.)
+- [x] **Best-time recording**: `G.levelStartTime` set on `loadLevel`; on exit, `Save.recordTime(idx, performance.now() - start)` keeps the min.
+- [x] **10 achievements** (`js/achievements.js`) — ids/names as specified. Notes on interpretation: `water_survivor` awards on completing Level 7 (death restarts the level, so a completion is inherently the deathless attempt); the rest use per-run flags (`usedPulse`, `patrolAlerted`, `screamerTriggered`, `stalkerHunted`).
+- [x] Achievement unlock: persisted via `Save.unlockAchievement` (returns true only on a genuinely new unlock). **Toast** shown via a DOM element `#achievement-toast` (queued, ~2.5s each, CSS fade). *(Implemented as a DOM toast rather than a canvas draw — the game's HUD/screens are all DOM, so this is consistent and crisper. Deviation from the "draw after HUD" wording, same result.)*
+- [x] **Achievement gallery** in the pause menu (`#achievement-gallery`): 10-cell glyph grid, earned = full opacity, unearned = dim with `???` tooltip. Rebuilt each time the pause screen opens.
+- [x] Commit + push
 
 ### Files Modified
-- `js/game.js` — timer tracking, achievement checks, level select loading
-- `js/ui.js` — level select screen show/hide, achievement toast, achievement gallery
-- `js/renderer.js` — achievement toast draw, level select grid render
-- `index.html` — `#screen-levelselect`, `#achievement-toast` elements
-- `css/style.css` — level select grid layout, toast animation, achievement icons
+- `js/save.js` (new) — localStorage schema + helpers + `formatTime`
+- `js/achievements.js` (new) — 10 definitions + pure `evaluate(ctx)`
+- `js/game.js` — per-run tracking, best-time + achievement wiring, level-select launch, progress refactored onto Save
+- `js/ui.js` — `buildLevelSelect`, `buildAchievementGallery`, `showAchievementToast`
+- `play/index.html` — Level Select button, `#screen-levelselect`, `#achievement-gallery`, `#achievement-toast`
+- `css/style.css` — level-select grid, gallery, toast styles (responsive)
+
+(Note: no `renderer.js` change was needed — the toast/gallery/grid are DOM, not canvas.)
 
 ### Acceptance Criteria
-- [ ] Level select screen shows all 20 levels; locked/unlocked state is correct
-- [ ] Best times display next to completed levels
-- [ ] All 10 achievements unlock correctly on first qualification (not re-trigger)
-- [ ] Achievement toast appears for 2.5s and fades smoothly
-- [ ] All save data persists across page refresh and app close/reopen
-- [ ] `resonance_achievements` array never contains duplicate IDs
+- [x] Level select shows all 20 levels; locked/unlocked state correct — verified (seeded progress=5 → 6 unlocked, cell 7 locked)
+- [x] Best times display next to completed levels — verified ("15.23s" from a seeded time)
+- [x] All 10 achievements unlock correctly on first qualification (not re-trigger) — evaluator unit-tested (12/12); `Save.unlockAchievement` dedupes
+- [x] Achievement toast appears for ~2.5s and fades smoothly — DOM element + CSS transition; queued for multiple simultaneous unlocks
+- [x] Save data persists across refresh — verified via seeded localStorage reflected in UI after boot
+- [x] `resonance_achievements` never contains duplicate IDs — `unlockAchievement` checks membership before push
 
 ---
 
 ## Phase 25 — Google Play Store Submission
-**Status:** ⬜ Pending  
+**Status:** ⏸️ Deferred (by owner decision, 2026-07-20)  
 **Goal:** Submit the Android app to Google Play and reach public availability.  
 **Depends on:** Phases 21 and 24 complete  
 **Estimated effort:** 3–5 days + 3–7 days Play review time  
 **Risk:** Medium-High (Play review can reject for unexpected reasons)
+
+> **Deferred:** the owner has chosen to hold off on Play Store submission for now —
+> the game is feature-complete for the roadmap's gameplay scope but not yet
+> considered fully production-ready for a public store launch (no signed release
+> build, no on-device 60fps/latency profiling, no store assets/privacy page).
+> Everything below remains the plan for when submission is picked back up; nothing
+> here is started. The tasks are unchecked intentionally.
 
 ### Tasks
 - [ ] Open Google Play Console at `play.google.com/console` ($25 one-time developer fee).

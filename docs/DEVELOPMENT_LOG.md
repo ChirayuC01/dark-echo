@@ -4,6 +4,163 @@
 
 ---
 
+## [Post-roadmap] Footstep Visuals + Phase 25 Deferred
+
+**Date:** 2026-07-20  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.5.0
+
+### Context
+
+Owner decided to **defer Google Play submission (Phase 25)** for now — the game is feature-complete for the roadmap's gameplay scope but not considered fully production-ready for a public store launch (no signed release build, no on-device 60fps/latency profiling, no store assets/privacy page). Phase 25 is marked ⏸️ Deferred in the roadmap; its tasks remain unchecked for when it's resumed. In the same pass, added a requested visual: player footprints.
+
+### What was done
+
+**Footstep audio — already present.** `Audio.playFootstepSurface()` already fires on every footstep (normal vs water variant, with a reverb tail). Confirmed the wiring in `update()` is intact; no change needed. The request was really about the *visual* to accompany it.
+
+**Footprint visuals (new).**
+- **Walking trail**: on each footstep, `game.js` pushes a print at the player's position, offset perpendicular to the heading by `FOOTPRINT_SIDE_OFF` to the current foot's side, and flips `G.nextFoot` so feet alternate — giving the "one foot at a time, one in front of the other" gait. Prints store their heading angle and creation time; the list is capped at `FOOTPRINT_MAX (48)` and each fades over `FOOTPRINT_FADE_MS (2.6s)`.
+- **Standing pose**: when `speed < PLAYER_IDLE_SPEED (6 px/s)`, both feet are drawn side by side at the player, oriented to `G.playerHeading` (the last non-zero travel direction, so they don't snap to a default when you stop).
+- **Rendering** (`renderer.js`): split into `drawFootprintTrail` (faint, drawn *under* the player dot so the current position still reads as the bright dot) and `drawStandingFeet` (drawn *over* the glow, at a slightly wider offset and higher alpha, so the pair stays legible instead of being washed out by the player's glow sprite). Each foot is a sole ellipse plus a smaller heel dab so it reads as a foot rather than a blob. No shadowBlur — cheap at every quality tier.
+- `G.playerHeading` and the footprint arrays reset in `loadLevel`.
+
+### Decisions
+
+- **Kept the player dot.** The footprints are additive flavor; the glowing dot is still the canonical player marker. The standing feet are offset wider than a stride and drawn over the glow specifically so they don't disappear into it (found during visual verification — at the first-pass offset/alpha they were invisible under the glow).
+- **Trail faint, standing pair clearer.** Matches the request ("trails should have faint and smaller foot print") while making the standing pose actually visible.
+
+### Follow-up (same day) — remove the dot, dim the rays
+
+On review the owner wanted the player shown **only** as footsteps (no white dot) and noted the prints were washed out by the sound rays. Changes:
+- **Removed the player dot + glow sprite entirely.** `drawPlayerFeet` now *is* the player: the live marker is bright feet at the true position — a single foot that alternates side each step while walking (`G.currentFootSide`), both feet side by side when standing. The faint trail remains as history underneath.
+- **Legibility fix**: the rays all converge on the player, so a soft **dark backing disc** is drawn under the feet, and the ray alphas were **dimmed** (active 0.72→0.5, live tip 0.88→0.62, echo 0.34→0.24). The feet now read clearly. Foot offset unified via `FOOTPRINT_STANCE_OFF (8px)` so the live feet and trail line up.
+- Kept the marker at the *true* player position (not lagging behind on the last footprint) so gameplay hit-detection still matches what's shown.
+
+Re-verified headless: standing → two bright feet, no dot; walking → single alternating bright foot; rays visibly dimmer; no errors.
+
+### Follow-up 2 — natural gait + keep feet off walls
+
+Owner: the feet should be "one in front of the other, like a real human / Dark Echo," and prints were landing on walls at wall edges.
+- **Gait**: walking now draws both feet staggered fore/aft (one leading, one trailing, alternating each step) with a narrow natural stance (lateral 8→3.5px, new `FOOTPRINT_STRIDE` 4px), instead of a single wide-offset foot. Standing stays level/side-by-side. Reads like a walking person.
+- **Walls**: `renderer.js drawFootClear` skips any foot whose center falls in a solid cell (grid passed into `drawPlayerFeet`); the trail spawn in `game.js` clamps a print to the player's cell if the lateral offset would put it in a wall. Pressing into a wall stalls velocity → the level standing pose, whose feet stay within the player's collision clearance, so nothing pokes onto the wall.
+
+Re-verified headless: walking shows two feet one-in-front-of-the-other; no errors.
+
+### Follow-up 3 — one foot at a time while walking
+
+Owner: while walking, show only one foot at a time (the trail supplies the other); both feet only when standing. Reverted the walking branch to a single alternating foot at the live position (kept the narrow natural stance); the fading one-per-step trail behind it gives the "one in front of the other" read. Removed the now-unused `FOOTPRINT_STRIDE` (no more fore/aft pair stagger). Standing still shows both feet side by side. Verified headless: no errors.
+
+### Follow-up 4 — recognizable feet + footfall animation
+
+Owner: the marks weren't recognizable as feet and popped in with no animation.
+- **Shape**: `drawFoot` now draws an actual foot — rounded sole/ball, a separate heel behind it, and three toe pads at the front, oriented along the heading. Enlarged ~1.5× (small blobs weren't readable at the old size) and widened the standing stance (`FOOTPRINT_STANCE_OFF` 3.5→5) so the two standing feet read as distinct.
+- **Animation**: `footStamp(age)` eases scale 1.32→1.0 and alpha in over `FOOT_POP_MS` (150ms). The live walking foot stamps on each step (age = `now − lastStepTime`); each trail print stamps in then fades over its lifetime. Footfalls now press down naturally instead of appearing instantly.
+
+Verified headless: standing shows two recognizable feet (sole + heel + toes); no errors.
+
+### Follow-up 5 — natural gait via distance-based footprints
+
+Owner: the steps still didn't feel like a human walking one-foot-in-front-of-the-other, and the motion needed a natural rhythm. Root cause: the "live" foot glided along with the player (following true position every frame) instead of behaving like discrete prints that stay put.
+- Rewrote footprints as **distance-based**: a print lands every `FOOTPRINT_STRIDE_PX` (22px) travelled, alternating sides (`game.js` accumulates player displacement; `prevFoot`/`strideAccum` seeded after the player spawns in `loadLevel`). Even stride spacing, framerate-independent.
+- The prints are now the **primary walking marker** — brightened (freshest ≈0.95 → fading) and fade faster (`FOOTPRINT_FADE_MS` 2600→1500) for a clear step rhythm. Removed the gliding live foot; `drawPlayerFeet` only plants both feet when standing.
+- Accepted the small position lag (the freshest print is ≤22px behind true position) as the natural footprint look — matches Dark Echo.
+- Fixed a null crash: `loadLevel` seeded the stride tracker from `G.player.x` before the player was spawned; moved the seed after spawn.
+
+Verified headless: walking lays an alternating trail one-in-front-of-the-other ending in two side-by-side feet when stopped; no errors.
+
+### Next
+
+No active roadmap phase. Phase 25 resumes at owner's discretion; until then, owner-driven polish.
+
+---
+
+## [Phase 24 — Complete] Save System + Level Select + Achievements
+
+**Date:** 2026-07-03  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.4.0
+
+### What was done
+
+Turned the game's single localStorage progress key into a proper persistence layer, and added the two retention features the roadmap called for: a level-select screen with best times, and a 10-achievement system.
+
+**`js/save.js` (new) — one place for all persistence.** Guarded read/write helpers (never throw in private mode) over five keys: `resonance_progress` (furthest 0-based index reached — the unlock cursor), `resonance_act1_complete` / `resonance_act2_complete`, `resonance_best_times` (`{idx: ms}`), `resonance_achievements` (`string[]`). Plus `isLevelUnlocked(idx)`, `recordTime(idx, ms)` (keeps the min), `unlockAchievement(id)` (returns true only on a new unlock, so callers toast once), and `formatTime(ms)`. The progress/continue logic that used to live inline in `game.js` was refactored onto this module.
+
+**`js/achievements.js` (new) — definitions + a pure evaluator.** Ten `{id, glyph, name, desc}` entries (geometric glyphs, not emoji, to match the visual grammar) and `evaluate(ctx)` that maps a `complete`/`death`/`win` event + run context to the ids that qualify. Keeping it pure made it unit-testable in isolation (12 cases, all green) without a browser or localStorage.
+
+**Per-run tracking (`js/game.js`).** `G.runStats` (`usedPulse`, `patrolAlerted`, `screamerTriggered`, `stalkerHunted`) and `G.levelStartTime` reset in `loadLevel`. Flags are set at their natural sites: pulse fire, screamer trigger, patrol `hearStep`/`onPulseHit`, and BlindStalker entering `hunting` (checked both on the hearing event and per-frame on state, so a screamer-induced hunt also counts). On exit, `checkExit` records the best time, evaluates + awards achievements, sets the Act I/II flags, and persists progress.
+
+**Level select.** `launchLevel(idx)` plus a dynamic `play-level:<idx>` action back the grid cells (they're built in JS, so their click handlers are attached on build rather than via the init-time `[data-action]` delegation). The title screen gained a "Level Select" button; the grid shows best times on unlocked cells and a disabled lock on the rest.
+
+**Achievement toast + gallery.** Both are DOM (the game's HUD and screens are all DOM, so this is consistent and crisper than a canvas draw — a deliberate deviation from the spec's "draw after HUD" wording, same user-facing result). The toast queues so multiple simultaneous unlocks (e.g. win → Act II + all-levels) show in sequence. The gallery is rebuilt each time the pause screen opens.
+
+### Decisions / notes
+
+- **Win now sets `progress = TOTAL`** instead of clearing it, so after finishing the game every level shows unlocked in level-select. The Continue button still hides correctly (its check is `0 < progress < TOTAL`).
+- **`water_survivor` = complete Level 7.** "Without dying" is implicit: death restarts the level, so any completion is by definition the attempt where you didn't die. Encoding a stricter "never died on L7 all session" wasn't worth the cross-run bookkeeping.
+- **Best times keyed by 0-based index** to match how the code already addresses levels, rather than the 1-based keys sketched in the roadmap.
+
+### Verification
+
+- `node` unit test of `achievements.evaluate`: 12/12 (death, L1 speed+no-pulse combos, L6 alert/no-alert, L7, L10, L14, L17, win).
+- Headless Chromium (Playwright): seeded `progress=5` + best times + two achievements, booted `/play/` → level-select shows 20 cells with exactly 6 unlocked, cell 1 reads "1 The Awakening 15.23s", cell 7 locked; launching level 3 shows the HUD; pausing shows the gallery with 2/10 earned; **no console or page errors**.
+- The live award-on-completion path (reaching a level's hidden exit) is the same `evaluate → Save.unlockAchievement → showAchievementToast` chain exercised above; it isn't driven end-to-end headlessly because that needs in-game navigation.
+
+### Next phase
+
+**Phase 25 — Google Play Store Submission**: signed AAB, Play Console listing, IARC content rating, privacy-policy page. Largely an external/manual process rather than code — the last roadmap phase.
+
+---
+
+## [Phase 23 — Complete] Performance Hardening + Adaptive Quality
+
+**Date:** 2026-07-03  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.3.0
+
+### What was done
+
+Reduced per-frame cost and added an automatic quality-scaling system so the game holds framerate on weaker hardware.
+
+**Static-layer caching (`js/renderer.js`):**
+- The **vignette** was recreating a full-screen `createRadialGradient` every frame. It's now rendered once into an offscreen canvas (`buildVignette()`) and blitted with `drawImage` each frame. Since the canvas backing store is a fixed 800×600 (CSS scales it), the cache never needs invalidating.
+- The **player glow** was also a per-frame radial gradient + `shadowBlur`. It's now a pre-rendered sprite (`buildPlayerGlow()`) blitted each frame; the crisp core dot draws on top.
+
+**ShadowBlur gating (`js/renderer.js`):**
+- `shadowBlur` (canvas soft-glow) is the single biggest GPU compositing cost on mobile. Added `setQualityTier(tier)` → module flag `_hq`, and a helper `sb(v)` that returns the blur value at `high` and `0` at `medium`/`low`. Every hot-path `shadowBlur = …` assignment now goes through `sb()` — rays (4 passes/frame), impact glints, enemies, hazards, screamers, exit, doors, keys, triggers, crushers. At reduced tiers the blur cost disappears entirely while the geometry still draws.
+
+**Adaptive quality (`js/game.js`):**
+- `G.qualityMode` — user preference: `auto` | `high` | `medium` | `low`, persisted under `localStorage['resonance_quality']`.
+- `G.qualityTier` — the effective tier actually in use.
+- In `auto`, `updateAdaptiveQuality()` accumulates time spent below `QUALITY_DOWNGRADE_FPS (45)`; after `QUALITY_SUSTAIN_MS (3s)` it drops a tier (→`medium`, or →`low` if also below `QUALITY_LOW_FPS (30)`). It is **downgrade-only** — it never auto-upgrades, which avoids the classic oscillation where dropping quality raises FPS which then re-raises quality which drops FPS again. A user can always force `high` from the pause menu.
+- `applyQualityTier()` is the single wiring point: sets the renderer flag, the `RaySystem.trailCap`, and `G.enemyStepRays`. It's reapplied after every `loadLevel()` because that constructs a fresh `RaySystem` (which defaults back to the full cap).
+
+**Ray system (`js/waves.js`):**
+- `RaySystem.trailCap` is now an instance field (default `ECHO_TRAIL_CAP = 500`; `250` medium, `150` low). The prune step honours it.
+- The recycled `Ray` pool is capped at `RAY_POOL_CAP (200)` so it can't grow without bound after a heavy pulse-spam moment.
+
+**UI + debug:**
+- Pause screen has a **Quality** button (`#quality-btn`, `data-action="cycle-quality"`) that cycles Auto→High→Medium→Low; `ui.js` `setQualityLabel()` keeps the label in sync.
+- The debug overlay (backtick) now shows quality tier/mode, ray-pool size, and the effective trail cap.
+
+### Decisions / notes
+
+- **`willReadFrequently` left false** (deliberately not "tried"): the game never calls `getImageData`, and enabling that flag forces a software 2D backend that would *hurt* our GPU-accelerated canvas. Documented so a future pass doesn't flip it expecting a win.
+- **GC**: echo-trail pruning already compacts in place with a single O(n) sweep (no per-frame `splice`), so no ring buffer was needed; the removed per-frame gradient allocations plus the pool/trail caps are the real GC wins.
+- **Downgrade-only auto** was the key stability choice — see above.
+
+### Verification
+
+- `npm run build` clean (26 modules; game bundle 77.5 kB / 21.7 kB gzip).
+- Headless Chromium (Playwright) smoke test: loads `/play/`, starts a game, runs 1.5s, pauses, cycles the Quality button — **no console or page errors**; button goes Auto→High→Medium→Low and each choice persists to `localStorage`. Forcing to a low tier exercises the same `applyQualityTier` path the auto-adaptor uses, so the full renderer/ray-system wiring is covered.
+- **Still open** (needs real hardware / deployed URL): on-device 60fps profiling on a mid-range 2021 Android, desktop CPU-throttle profiling, and a Lighthouse ≥90 run.
+
+### Next phase
+
+**Phase 24 — Save System + Achievements**: level-select screen, best-time tracking, and 10 localStorage achievements.
+
+---
+
 ## [Phase 22 — Complete] Marketing Landing Page + Multi-Page Build
 
 **Date:** 2026-07-03  

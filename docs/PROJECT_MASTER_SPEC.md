@@ -43,7 +43,7 @@
 | Pulse ray / echo | `rgba(185,220,255,α)` | Bright blue |
 | Hazard scan ray | `rgba(230,105,55,α)` | Orange |
 | Enemy reveal | `rgba(200,70,70,α)` | Muted red, fades |
-| Player dot | `rgba(255,255,255,α)` | Small white dot |
+| Player | `rgba(216,230,252,α)` footprints | **No dot** — recognizable feet; a distance-based footprint trail while walking (one in front of the other, freshest brightest, stamp-in animation), both feet planted when standing (2026-07-20) |
 | Exit | `rgba(80,210,120,α)` | Pulsing green, hidden until sound finds it |
 | Collapsible wall (revealed) | `rgba(200,175,120,α)` | Warm tan — differs from blue/red/green vocab |
 | Door (locked, revealed) | `rgba(210,160,50,α)` | Amber |
@@ -74,7 +74,7 @@ See KNOWN_ISSUES.md DC-004 for implementation notes.
 - Wall geometry is **never** drawn directly. Only ray impact glints reveal it.
 - All glints are short perpendicular lines (3–9px) at hit points, not tiles.
 - Echo trails have `lineWidth: 0.7`. Active ray segments have `lineWidth: 1.2`.
-- Player dot: `shadowBlur: 10`, radius: 4px, always drawn last (before vignette).
+- Player: rendered as footsteps (no dot) drawn last before the vignette — a distance-based footprint trail while walking (recognizable feet, one in front of the other, stamp-in animation, freshest brightest) and both feet planted when standing; a soft dark backing disc under the standing feet + dimmed active/echo ray alphas (2026-07-20) keep the prints legible.
 - Vignette: radial gradient, `rgba(0,0,0,0)` center → `rgba(0,0,0,0.85)` edge.
 
 ---
@@ -95,7 +95,7 @@ See KNOWN_ISSUES.md DC-004 for implementation notes.
 - **Stopping**: No movement = no step rays. Only hazard scans reveal geometry.
 
 ### 4.2 Pulse
-- Spacebar, or (mobile) **tap-and-hold directly on the player dot**. Cooldown: `PULSE_COOLDOWN = 3500ms`.
+- Spacebar, or (mobile) **tap-and-hold directly on the player** (its footstep position). Cooldown: `PULSE_COOLDOWN = 3500ms`.
 - Emits `RAY_COUNT_PULSE = 64` rays, max distance `PULSE_RAY_MAX = 340px`, 3 bounces.
 - High visibility. Enemies react. Collapsible walls can collapse on hit.
 - HUD shows cooldown as a fill bar.
@@ -366,7 +366,7 @@ UI:          gain 0.18  (level complete)
 - **Mobile** (redesigned Phase 21.1 — no on-screen buttons; the canvas is the whole control surface):
   - **Hold** anywhere → walk toward the touch point (direction from screen centre).
   - **Quick tap** in a direction → crouch-walk that way (repeat to chain).
-  - **Tap-and-hold on the player dot** → fire pulse.
+  - **Tap-and-hold on the player** (its footstep position) → fire pulse.
   - The canvas scales to fit any viewport/orientation via a `min()` aspect-fit (no fixed breakpoint); `touch-action: none` prevents OS gesture conflicts.
 
 ---
@@ -387,10 +387,13 @@ js/
   waves.js       — Ray class, RaySystem (burst, update, echoTrails)
   collision.js   — castRay (DDA), resolveWalls, circlesOverlap
   levels.js      — LEVELS array (all 20 level defs, Acts I + II)
-  game.js        — G state, loadLevel, update, loop, handleAction, Capacitor haptics/status-bar
-  renderer.js    — draw(), all drawX() helpers, hearing(), revealAlpha()
-  ui.js          — show/hide screens, setHint, setDeathMessage, continue button
+  game.js        — G state, loadLevel, update, loop, handleAction, footprints, Capacitor haptics/status-bar
+  renderer.js    — draw(), all drawX() helpers (incl. footprints), hearing(), revealAlpha(), quality gating
+  ui.js          — screens, hints, continue button, level-select grid, achievement gallery + toast
+  save.js        — localStorage schema: progress, act flags, best times, achievements
+  achievements.js— 10 achievement defs + pure evaluate(ctx)
   debug.js       — debug overlay toggle, stat display
+capacitor.config.ts — Capacitor (Android) config; android/ generated locally (gitignored)
 ```
 
 **Frame order in `game.js` update():**
@@ -419,7 +422,7 @@ js/
 - Impact glints hard cap: 200 entries (prune by time, already O(n) sweep).
 - Ray object pool: `RaySystem._pool[]` recycles Ray instances.
 - Canvas: single `requestAnimationFrame` loop, no retained mode, clear each frame.
-- No `shadowBlur` on echo trails (expensive). Only on player dot and exit glow.
+- No `shadowBlur` on echo trails or footprints (expensive). Reveal glows (exit, entities, etc.) use it, gated off at reduced quality tiers via `sb()` (Phase 23). The player is footsteps — no glow.
 - `dt` capped at 0.05s (20fps minimum) to prevent physics tunneling.
 
 ---
@@ -445,7 +448,7 @@ These were out of scope for the prototype. Status as of v2.2.0:
 - ⬜ **Analytics**: Cookieless (Umami or Plausible). **Deferred** — needs a hosted instance; not shipped.
 - ⬜ **Error tracking**: Sentry JS. **Deferred** — needs a DSN/account; not shipped.
 - ✅ **Content**: 20 levels across 2 acts (Phase 20).
-- ⬜ **Save/checkpoint**: best times per level + Act completion flags (Phase 24 — pending).
+- ✅ **Save/checkpoint**: level progress, best times per level, Act completion flags, and achievements (Phase 24 — `js/save.js`).
 
 ---
 
@@ -479,3 +482,14 @@ Capacitor 8 wrapper with `@capacitor/haptics` (buzz on death + collapse) and `@c
 
 ### 15.9 Landing Page + Multi-Page Build ✅ (Phase 22)
 Marketing landing page at `/`, game at `/play/`, via a Vite multi-page build. See `docs/PRODUCTION_ROADMAP.md` Phase 22 for routing details.
+
+### 15.10 Performance / Adaptive Quality ✅ (Phase 23)
+Offscreen-cached vignette + player glow; `high`/`medium`/`low` quality tiers (auto FPS-driven + pause-menu override) that gate shadowBlur, echo-trail cap, and enemy step rays. Ray pool capped. See `js/renderer.js`, `js/waves.js`.
+
+### 15.11 Save System + Achievements ✅ (Phase 24)
+`js/save.js` centralizes localStorage (progress, act flags, best times, achievements). Level-select screen (best times + lock state), 10 achievements (`js/achievements.js`) with toast + pause-menu gallery.
+
+### 15.12 Player as Animated Footsteps ✅ (post-roadmap, 2026-07-20)
+**The player is rendered purely as footsteps — the white dot/glow was removed.** Feet are recognizable (sole + heel + toe pads, pointing along the heading). While walking, discrete footprints are laid **distance-based** (every `FOOTPRINT_STRIDE_PX` = 22px), alternating sides, and **stay where they land** — a natural trail progressing one in front of the other; the freshest is brightest and each fades over `FOOTPRINT_FADE_MS` (1.5s), with a `footStamp()` press-in animation per footfall. There is no gliding foot. When standing, both feet are planted side by side. A dark backing disc under the standing feet + globally dimmed sound rays keep the prints legible; footprints never render on wall cells. Footstep audio (`playFootstepSurface`) already existed. See `js/renderer.js` `drawFootprintTrail`/`drawPlayerFeet`/`drawFoot` and `js/game.js` (distance-based spawn).
+
+> **Phase 25 (Google Play submission) deferred** by owner decision (2026-07-20) — feature-complete for gameplay, not yet pushed to a public store.

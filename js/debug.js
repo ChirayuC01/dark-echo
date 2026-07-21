@@ -7,16 +7,20 @@ export function isEnabled() { return _enabled; }
 export function toggle() { _enabled = !_enabled; }
 
 export function draw(ctx, state, fps) {
-  const { screen, player, enemies, hazards, rays, echoTrails, impacts, playerInWater } = state;
+  const { screen, player, enemies, hazards, rays, echoTrails, impacts, playerInWater,
+          qualityMode, qualityTier, poolSize, trailCap } = state;
 
   const lines = [];
   lines.push(`FPS: ${fps.toFixed(1)}`);
   lines.push(`Screen: ${screen}`);
+  lines.push(`Quality: ${qualityTier || 'high'} (${qualityMode || 'auto'})`);
   lines.push('────────────────────────────');
   lines.push(`Rays active: ${rays ? rays.length : 0}`);
+  lines.push(`Ray pool: ${poolSize ?? 0}`);
+  const cap = trailCap || ECHO_TRAIL_CAP;
   const trailCount = echoTrails ? echoTrails.length : 0;
-  const trailWarn = trailCount >= ECHO_TRAIL_CAP * 0.85 ? ' !' : '';
-  lines.push(`Echo trails: ${trailCount} / ${ECHO_TRAIL_CAP}${trailWarn}`);
+  const trailWarn = trailCount >= cap * 0.85 ? ' !' : '';
+  lines.push(`Echo trails: ${trailCount} / ${cap}${trailWarn}`);
   lines.push(`Glints: ${impacts ? impacts.length : 0}`);
 
   if (player) {
@@ -66,7 +70,7 @@ export function draw(ctx, state, fps) {
       ctx.fillStyle = 'rgba(100,200,255,0.18)';
     } else if (line.startsWith('FPS')) {
       ctx.fillStyle = fps >= 55 ? 'rgba(100,255,150,0.9)' : fps >= 30 ? 'rgba(255,220,80,0.9)' : 'rgba(255,80,80,0.9)';
-    } else if (line.includes('trails') && trailCount >= ECHO_TRAIL_CAP * 0.85) {
+    } else if (line.includes('trails') && trailCount >= cap * 0.85) {
       ctx.fillStyle = 'rgba(255,180,60,0.9)';
     } else if (line.includes('hunting') || line.includes('alert')) {
       ctx.fillStyle = 'rgba(255,120,100,0.9)';
