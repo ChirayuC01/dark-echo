@@ -4,7 +4,7 @@ export const ROWS = 15;
 export const W = TILE * COLS;   // 800
 export const H = TILE * ROWS;   // 600
 
-export const PLAYER_SPEED = 150;
+export const PLAYER_SPEED = 70;
 export const PLAYER_RADIUS = 7;
 
 export const STEP_INTERVAL = 240;
