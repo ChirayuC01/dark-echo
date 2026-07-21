@@ -58,6 +58,16 @@ Owner: the marks weren't recognizable as feet and popped in with no animation.
 
 Verified headless: standing shows two recognizable feet (sole + heel + toes); no errors.
 
+### Follow-up 5 — natural gait via distance-based footprints
+
+Owner: the steps still didn't feel like a human walking one-foot-in-front-of-the-other, and the motion needed a natural rhythm. Root cause: the "live" foot glided along with the player (following true position every frame) instead of behaving like discrete prints that stay put.
+- Rewrote footprints as **distance-based**: a print lands every `FOOTPRINT_STRIDE_PX` (22px) travelled, alternating sides (`game.js` accumulates player displacement; `prevFoot`/`strideAccum` seeded after the player spawns in `loadLevel`). Even stride spacing, framerate-independent.
+- The prints are now the **primary walking marker** — brightened (freshest ≈0.95 → fading) and fade faster (`FOOTPRINT_FADE_MS` 2600→1500) for a clear step rhythm. Removed the gliding live foot; `drawPlayerFeet` only plants both feet when standing.
+- Accepted the small position lag (the freshest print is ≤22px behind true position) as the natural footprint look — matches Dark Echo.
+- Fixed a null crash: `loadLevel` seeded the stride tracker from `G.player.x` before the player was spawned; moved the seed after spawn.
+
+Verified headless: walking lays an alternating trail one-in-front-of-the-other ending in two side-by-side feet when stopped; no errors.
+
 ### Next
 
 No active roadmap phase. Phase 25 resumes at owner's discretion; until then, owner-driven polish.
