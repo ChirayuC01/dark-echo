@@ -83,8 +83,9 @@ export const PLAYER_ACCEL    = 12;   // velocity lerp factor (unitless, not px/s
 export const DANGER_NEAR_PX  = 100; // enemy proximity threshold for danger audio
 
 // ─── Footprints ──────────────────────────────────────────────────────────────
-export const FOOTPRINT_FADE_MS   = 2600; // how long a trail footprint lingers (ms)
-export const FOOTPRINT_MAX        = 48;   // cap on stored trail footprints
+export const FOOTPRINT_FADE_MS   = 1500; // how long a footprint lingers before it's gone (ms)
+export const FOOTPRINT_STRIDE_PX  = 22;   // distance travelled between successive footprints (px)
+export const FOOTPRINT_MAX        = 48;   // cap on stored footprints
 export const FOOTPRINT_STANCE_OFF = 5;    // px lateral offset of each foot from the walking line
 export const PLAYER_IDLE_SPEED    = 6;    // px/s below which the player counts as standing still
 

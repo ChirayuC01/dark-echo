@@ -14,7 +14,7 @@ import { TILE, COLS, ROWS, W, H,
          ECHO_TRAIL_CAP, ECHO_TRAIL_CAP_MEDIUM, ECHO_TRAIL_CAP_LOW,
          ENEMY_STEP_RAYS_LOW,
          QUALITY_DOWNGRADE_FPS, QUALITY_LOW_FPS, QUALITY_SUSTAIN_MS,
-         FOOTPRINT_MAX, FOOTPRINT_STANCE_OFF } from './constants.js';
+         FOOTPRINT_MAX, FOOTPRINT_STANCE_OFF, FOOTPRINT_STRIDE_PX } from './constants.js';
 import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
@@ -64,8 +64,10 @@ const G = {
   // ─── Footprints ───
   footprints: [],                 // trail: {x, y, angle, createdAt}
   nextFoot: 1,                    // alternates ±1 (which foot lands next)
-  currentFootSide: 1,             // side of the most recently placed foot (live marker)
+  currentFootSide: 1,             // side of the most recently placed foot
   playerHeading: { x: 0, y: -1 }, // last facing direction (default: up)
+  prevFootX: 0, prevFootY: 0,     // previous player pos (for distance-based stride)
+  strideAccum: 0,                 // distance travelled since the last footprint
   // ─── Adaptive quality (Phase 23) ───
   qualityMode: 'auto',        // 'auto' | 'high' | 'medium' | 'low' (user preference)
   qualityTier: 'high',        // 'high' | 'medium' | 'low' (effective tier in use)
@@ -169,11 +171,12 @@ function loadLevel(idx) {
   // Reset per-run tracking (achievements + best-time timer)
   G.levelStartTime = performance.now();
   G.runStats = { usedPulse: false, patrolAlerted: false, screamerTriggered: false, stalkerHunted: false };
-  // Reset footprints
+  // Reset footprints (prevFoot position is seeded after the player is spawned below)
   G.footprints = [];
   G.nextFoot = 1;
   G.currentFootSide = 1;
   G.playerHeading = { x: 0, y: -1 };
+  G.strideAccum = 0;
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
@@ -184,6 +187,9 @@ function loadLevel(idx) {
       if (cell === CELL.EXIT)  G.exit = { x: cx, y: cy, revealedAt: -Infinity };
     }
   }
+
+  // Seed the footprint stride tracker at the player's start position
+  if (G.player) { G.prevFootX = G.player.x; G.prevFootY = G.player.y; }
 
   // Spawn enemies from def.enemies[]
   for (const e of def.enemies) {
@@ -557,25 +563,36 @@ function update(dt, now) {
     // quiet=true when crouching: rays still reveal geometry but won't re-alert chasers
     G.raySystem.burst(G.player.x, G.player.y, 'step', G.castFn, count, maxDist, crouching);
     Audio.playFootstepSurface(G.playerInWater ? 'water' : 'normal');
+  }
 
-    // Footprint — one foot at a time, offset to the side of travel, alternating.
-    // Clamp to the player's cell if the offset would land the print in a wall.
-    const perpX = -G.playerHeading.y, perpY = G.playerHeading.x; // left of heading
-    G.currentFootSide = G.nextFoot;
-    let fx = G.player.x + perpX * FOOTPRINT_STANCE_OFF * G.currentFootSide;
-    let fy = G.player.y + perpY * FOOTPRINT_STANCE_OFF * G.currentFootSide;
-    const fc = Math.floor(fx / TILE), fr = Math.floor(fy / TILE);
-    const fcell = G.grid[fr]?.[fc];
-    if (fcell === CELL.WALL || fcell === CELL.COLLAPSIBLE) { fx = G.player.x; fy = G.player.y; }
-    G.footprints.push({
-      x: fx, y: fy,
-      angle: Math.atan2(G.playerHeading.y, G.playerHeading.x),
-      createdAt: now,
-    });
-    G.nextFoot = -G.nextFoot;
-    if (G.footprints.length > FOOTPRINT_MAX) {
-      G.footprints.splice(0, G.footprints.length - FOOTPRINT_MAX);
+  // Footprints — distance-based so they land at an even stride and STAY where
+  // placed (like a real walking trail), independent of the audio/ray cadence.
+  const dxp = G.player.x - G.prevFootX, dyp = G.player.y - G.prevFootY;
+  G.prevFootX = G.player.x; G.prevFootY = G.player.y;
+  if (moving) {
+    G.strideAccum += Math.hypot(dxp, dyp);
+    if (G.strideAccum >= FOOTPRINT_STRIDE_PX) {
+      G.strideAccum -= FOOTPRINT_STRIDE_PX;
+      // One foot at a time, offset to the side of travel, alternating.
+      const perpX = -G.playerHeading.y, perpY = G.playerHeading.x; // left of heading
+      G.currentFootSide = G.nextFoot;
+      let fx = G.player.x + perpX * FOOTPRINT_STANCE_OFF * G.currentFootSide;
+      let fy = G.player.y + perpY * FOOTPRINT_STANCE_OFF * G.currentFootSide;
+      const fc = Math.floor(fx / TILE), fr = Math.floor(fy / TILE);
+      const fcell = G.grid[fr]?.[fc];
+      if (fcell === CELL.WALL || fcell === CELL.COLLAPSIBLE) { fx = G.player.x; fy = G.player.y; }
+      G.footprints.push({
+        x: fx, y: fy,
+        angle: Math.atan2(G.playerHeading.y, G.playerHeading.x),
+        createdAt: now,
+      });
+      G.nextFoot = -G.nextFoot;
+      if (G.footprints.length > FOOTPRINT_MAX) {
+        G.footprints.splice(0, G.footprints.length - FOOTPRINT_MAX);
+      }
     }
+  } else {
+    G.strideAccum = FOOTPRINT_STRIDE_PX;   // so the first step after standing lands promptly
   }
 
   // Pulse rays — track ready transition for audio cue

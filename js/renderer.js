@@ -74,7 +74,7 @@ export function draw(state, now) {
 
   if (state.screen !== 'playing' && state.screen !== 'paused' && state.screen !== 'levelup') return;
 
-  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake, footprints, playerHeading, currentFootSide, lastStepTime } = state;
+  const { impacts, rays, echoTrails, player, enemies, hazards, screamers, crushers, doors, keys, triggers, exit, playerInWater, grid, waterReveals, collapsibleReveals, shake, footprints, playerHeading } = state;
   const px = player ? player.x : W / 2;
   const py = player ? player.y : H / 2;
 
@@ -98,8 +98,8 @@ export function draw(state, now) {
   drawEnemies(enemies, now, px, py);
   drawActiveRays(rays, px, py);
   if (playerInWater) drawWaterZone(player);
-  drawFootprintTrail(footprints, now);   // faint history, under the live feet
-  drawPlayerFeet(player, playerHeading || { x: 0, y: -1 }, currentFootSide, grid, now, lastStepTime);
+  drawFootprintTrail(footprints, now);   // the walking marker (prints that stay put)
+  drawPlayerFeet(player, playerHeading || { x: 0, y: -1 }, grid);   // planted feet when standing
 
   if (shakeActive) ctx.restore();
 
@@ -646,8 +646,10 @@ function drawFootClear(grid, x, y, angle, alpha, scale = 1) {
   drawFoot(x, y, angle, alpha, scale);
 }
 
-// Fading trail of alternating prints left behind by walking — faint history.
-// Each print stamps in (press animation) then fades over its lifetime.
+// The walking representation: a line of discrete footprints that stay where they
+// landed and progress one in front of the other. Each stamps in (press) then
+// fades out over its lifetime; the freshest is brightest, so the "current" foot
+// stands out and the older ones recede — a natural gait rhythm.
 function drawFootprintTrail(footprints, now) {
   if (!footprints || footprints.length === 0) return;
   ctx.save();
@@ -656,7 +658,7 @@ function drawFootprintTrail(footprints, now) {
     if (age >= FOOTPRINT_FADE_MS) continue;
     const t = 1 - age / FOOTPRINT_FADE_MS;
     const st = footStamp(age);
-    const alpha = t * t * 0.45 * st.mul;   // faint, stamp-in then fade-out
+    const alpha = (0.15 + 0.80 * t) * st.mul;   // bright & fresh → fading; stamps in
     if (alpha < 0.01) continue;
     drawFoot(f.x, f.y, f.angle, alpha, st.scale);
   }
@@ -664,15 +666,15 @@ function drawFootprintTrail(footprints, now) {
 }
 
 // ─── Player (drawn purely as footsteps — no dot) ─────────────────────────────
-// A soft dark backing knocks the dense rays back right under the feet so the
-// bright prints read clearly; then the feet are drawn on top. Walking = a single
-// foot at a time (alternates each step) — the trail behind supplies the other
-// foot, so the gait reads "one in front of the other". Standing = both feet side
-// by side. Feet that fall in a wall cell are suppressed.
-function drawPlayerFeet(player, heading, footSide, grid, now, lastStepTime) {
+// While WALKING the player is shown by the moving footprint trail (above), which
+// stays where each foot landed. While STANDING we plant both feet at the current
+// position. A soft dark backing under the standing feet keeps them legible.
+function drawPlayerFeet(player, heading, grid) {
   if (!player) return;
-  ctx.save();
+  const speed = Math.hypot(player.vx || 0, player.vy || 0);
+  if (speed >= PLAYER_IDLE_SPEED) return;   // walking → the trail is the marker
 
+  ctx.save();
   // Backing shadow — a small dark disc that dims the rays converging on the player
   const r = 18;
   const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, r);
@@ -685,19 +687,9 @@ function drawPlayerFeet(player, heading, footSide, grid, now, lastStepTime) {
   const a = Math.atan2(heading.y, heading.x);
   const perpX = -heading.y, perpY = heading.x;   // left of forward
   const LAT = FOOTPRINT_STANCE_OFF;
-  const speed = Math.hypot(player.vx || 0, player.vy || 0);
-
-  if (speed < PLAYER_IDLE_SPEED) {
-    // Standing: both feet, side by side, steady
-    drawFootClear(grid, player.x + perpX * LAT, player.y + perpY * LAT, a, 0.95);
-    drawFootClear(grid, player.x - perpX * LAT, player.y - perpY * LAT, a, 0.95);
-  } else {
-    // Walking: one foot at a time (alternates each step), stamping down on the step
-    const side = footSide || 1;
-    const st = footStamp(now - (lastStepTime || 0));
-    drawFootClear(grid, player.x + perpX * LAT * side, player.y + perpY * LAT * side,
-                  a, 0.6 + 0.35 * st.e, st.scale);
-  }
+  // Standing: both feet, side by side, steady
+  drawFootClear(grid, player.x + perpX * LAT, player.y + perpY * LAT, a, 0.95);
+  drawFootClear(grid, player.x - perpX * LAT, player.y - perpY * LAT, a, 0.95);
   ctx.restore();
 }
 
