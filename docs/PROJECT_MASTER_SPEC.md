@@ -35,23 +35,24 @@
 
 ## 3. Visual Language (Canonical Color Grammar)
 
+**Strict 4-color sound coding (Dark Echo parity, 2026-07-20): WHITE = your sound / safe · BLUE = water · YELLOW = switches/keys/doors · RED = danger.**
+
 | Element | Color | Notes |
 |---|---|---|
 | Background | `#000000` | Always pure black |
-| Player position | White dot, radius 7px | Never drawn; only revealed if pulse hits it (future) |
-| Step ray / echo | `rgba(155,195,235,α)` | Pale blue |
-| Pulse ray / echo | `rgba(185,220,255,α)` | Bright blue |
-| Hazard scan ray | `rgba(230,105,55,α)` | Orange |
-| Enemy reveal | `rgba(200,70,70,α)` | Muted red, fades |
-| Player | `rgba(216,230,252,α)` footprints | **No dot** — recognizable feet; a distance-based footprint trail while walking (one in front of the other, freshest brightest, stamp-in animation), both feet planted when standing (2026-07-20) |
-| Exit | `rgba(80,210,120,α)` | Pulsing green, hidden until sound finds it |
-| Collapsible wall (revealed) | `rgba(200,175,120,α)` | Warm tan — differs from blue/red/green vocab |
-| Door (locked, revealed) | `rgba(210,160,50,α)` | Amber |
-| Door (open, revealed) | `rgba(80,210,120,0.3)` | Faint green tint |
-| Key (revealed) | `rgba(255,210,80,α)` | Gold |
-| Switch / trigger (revealed) | `rgba(100,160,255,α)` | Bright blue-white |
-| Water zone background | `rgba(50,150,160,0.04)` | Barely visible teal wash, only when player inside |
-| Crusher (revealed) | `rgba(230,105,55,α)` | Same as hazard — crushing is lethal |
+| Player | white footprints `rgba(235,243,255,α)` | **No dot** — recognizable feet; distance-based trail while walking (one in front of the other, freshest brightest, stamp-in), both feet planted when standing |
+| Step ray / echo | `rgba(210,225,245,α)` | **White** (your sound) |
+| Pulse ray / echo | `rgba(230,240,255,α)` | **White** (louder clap) |
+| Wall glint | `rgba(225,238,255,α)` | White |
+| Exit | white beacon `rgba(225,238,255,α)` | Pulsing white, hidden until sound finds it |
+| Collapsible wall (revealed) | `rgba(185,200,220,α)` | Muted white — a breakable wall variant |
+| Water (reveal + swim wash) | `rgba(60,120,220,α)` | **Blue** |
+| Switch / trigger | `rgba(240,215,70,α)` | **Yellow** |
+| Key | `rgba(245,220,80,α)` | **Yellow** |
+| Door (locked) | `rgba(240,215,70,α)` | **Yellow** |
+| Door (open) | `rgba(200,215,235,0.18)` | Faint white passage |
+| Enemy reveal / step-enemy ray | `rgba(210,60,55,α)` / red | **Red** (danger) |
+| Hazard / Crusher / Screamer | `rgba(225,60,55,α)` | **Red** (lethal) |
 
 **Enemy shape vocabulary (planned — Phase 14):**
 
@@ -489,6 +490,10 @@ Offscreen-cached vignette + player glow; `high`/`medium`/`low` quality tiers (au
 
 ### 15.11 Save System + Achievements ✅ (Phase 24)
 `js/save.js` centralizes localStorage (progress, act flags, best times, achievements). Level-select screen (best times + lock state), 10 achievements (`js/achievements.js`) with toast + pause-menu gallery.
+
+### 15.13 Player-centered Camera + Dark Echo Palette ✅ (post-roadmap, 2026-07-20)
+- **Camera**: the fixed whole-level view was replaced with a **player-centered zoom** (`CAMERA_ZOOM = 2.0`). `renderer.js draw()` wraps all world drawing in a transform (screen-space shake → `scale(ZOOM)` → `translate(-cam)`) centred exactly on the player, so only a local portion of the level is visible and you must explore/memorize — like the original. Vignette/HUD/debug stay in screen space; the title screen is unchanged. Because the player is always centred, touch input references the screen centre.
+- **Palette**: strict Dark Echo 4-color sound coding — white (sound/safe), blue (water), yellow (switches/keys/doors), red (danger). See §3.
 
 ### 15.12 Player as Animated Footsteps ✅ (post-roadmap, 2026-07-20)
 **The player is rendered purely as footsteps — the white dot/glow was removed.** Feet are recognizable (sole + heel + toe pads, pointing along the heading). While walking, discrete footprints are laid **distance-based** (every `FOOTPRINT_STRIDE_PX` = 22px), alternating sides, and **stay where they land** — a natural trail progressing one in front of the other; the freshest is brightest and each fades over `FOOTPRINT_FADE_MS` (1.5s), with a `footStamp()` press-in animation per footfall. There is no gliding foot. When standing, both feet are planted side by side. A dark backing disc under the standing feet + globally dimmed sound rays keep the prints legible; footprints never render on wall cells. Footstep audio (`playFootstepSurface`) already existed. See `js/renderer.js` `drawFootprintTrail`/`drawPlayerFeet`/`drawFoot` and `js/game.js` (distance-based spawn).

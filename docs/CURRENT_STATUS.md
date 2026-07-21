@@ -78,6 +78,8 @@ RESONANCE is a complete, playable 20-level top-down stealth/horror game where **
 | **Player = animated footsteps** | `js/game.js`, `js/renderer.js` | No dot — distance-based footprint trail while walking (recognizable feet, stamp-in animation, one in front of the other), both feet planted when standing; wall-aware; rays dimmed for contrast |
 | **Android packaging** | `capacitor.config.ts`, `android/` (gitignored) | Capacitor 8 + Haptics + StatusBar; build steps in `docs/ANDROID_BUILD_GUIDE.md` |
 | **Landing page + multi-page build** | `index.html`, `landing/`, `vite.config.js` | Marketing page at `/`, game at `/play/`; shared Vite build |
+| **Player-centered camera** | `js/renderer.js`, `js/constants.js` | `CAMERA_ZOOM` zoom + follow; only a local portion visible (Dark Echo parity) |
+| **Strict 4-color palette** | `js/renderer.js` | white=sound, blue=water, yellow=switch/key/door, red=danger (Dark Echo parity) |
 
 ---
 

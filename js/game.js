@@ -532,7 +532,9 @@ function checkExit() {
 
 // ─── Update ───────────────────────────────────────────────────────────────────
 function update(dt, now) {
-  Input.setPlayerScreenPos(G.player.x, G.player.y);
+  // The camera keeps the player at the centre of the screen, so touch controls
+  // reference the screen centre (walk toward finger = hold toward screen edge).
+  Input.setPlayerScreenPos(W / 2, H / 2);
   const move = Input.getMove();
   const moving = move.dx !== 0 || move.dy !== 0;
   const crouching = Input.isCrouching();
