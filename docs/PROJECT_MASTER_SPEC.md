@@ -363,10 +363,11 @@ UI:          gain 0.18  (level complete)
 - **Screens**: title → playing → (pause) → (dead | levelup | win)
 - **Hints**: Short text, shown on level entry, fades or dismissed on first input.
 - **No tutorial popups**. Mechanics are taught through level design.
-- **Mobile** (redesigned Phase 21.1 — no on-screen buttons; the canvas is the whole control surface):
-  - **Hold** anywhere → walk toward the touch point (direction from screen centre).
-  - **Quick tap** in a direction → crouch-walk that way (repeat to chain).
-  - **Tap-and-hold on the player** (its footstep position) → fire pulse.
+- **Mobile** (no on-screen buttons; the canvas is the whole control surface — modelled on the original Dark Echo, 2026-07-20):
+  - **Walk** — press-and-hold **away from the feet**; the player walks **toward your finger** (direction from the player → touch; steer by dragging). Normal footsteps.
+  - **Sneak** — a quick **tap** away from the feet → one quiet **crouched** step toward the tap; tap repeatedly to creep.
+  - **Stomp** — press-and-hold **on the feet**, then **release** → one pulse. Fires only when not walking (standing still).
+  - Tuning (`js/input.js`): `TAP_MAX_HOLD 160ms` / `DRAG_COMMIT 12px` split tap-sneak from hold-walk; `STOMP_RADIUS 44px` marks the feet zone; `STOMP_MIN_HOLD 110ms`; `WALK_DEADZONE 8px`.
   - The canvas scales to fit any viewport/orientation via a `min()` aspect-fit (no fixed breakpoint); `touch-action: none` prevents OS gesture conflicts.
 
 ---

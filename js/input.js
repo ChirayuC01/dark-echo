@@ -1,39 +1,51 @@
+// Input — keyboard + Dark Echo-style touch controls.
+//
+// Touch model (matches the original Dark Echo, mapped to our fixed 800×600 view):
+//   • WALK  — press-and-hold AWAY from the feet; the player walks toward your
+//             finger (steer by dragging). Normal footsteps. Direction is taken
+//             from the player → finger, so you head toward where you touch.
+//   • SNEAK — a quick TAP away from the feet takes one quiet, crouched step
+//             toward the tap. Tap repeatedly to creep. (Quieter, fewer rays.)
+//   • STOMP — press-and-hold ON the feet, then LET GO → one pulse. Only fires
+//             when you're not walking (i.e. standing still), like the original.
+
 const keys = new Set();
 let _pulsePressed  = false;
 let _pausePressed  = false;
-let _crouching     = false;
+let _crouching     = false;   // keyboard crouch (Shift / C)
 let _debugToggle   = false;
 
 const CANVAS_W = 800, CANVAS_H = 600;
-const TAP_MAX_HOLD     = 200;  // ms — touch released before this counts as a "tap" (crouch-walk)
-const CROUCH_TAP_DECAY = 350;  // ms — how long a tap keeps the player crouch-walking before stopping
-const PULSE_TOUCH_RADIUS = 42; // canvas-space px — tap-and-hold within this of the player fires pulse
+const TAP_MAX_HOLD   = 160;   // ms — released before this (with little drag) = a sneak tap
+const DRAG_COMMIT    = 12;    // canvas px — dragging this far commits to walking immediately
+const SNEAK_DECAY    = 320;   // ms — how long one sneak tap keeps the player crouch-stepping
+const STOMP_RADIUS   = 44;    // canvas px — pressing within this of the feet is a stomp, not a walk
+const STOMP_MIN_HOLD = 110;   // ms — min press-on-feet time before release counts as a stomp
+const WALK_DEADZONE  = 8;     // canvas px — finger nearer than this to the feet = stop (no walk)
 
 let canvasEl = null;
-let _playerX = -1000, _playerY = -1000; // canvas-space; updated every frame by setPlayerScreenPos()
+let _playerX = -1000, _playerY = -1000; // player position in canvas space (set each frame)
 
-// Single tracked "movement" touch: held → walk toward tapped direction from screen center.
-const move = { touchId: null, startTime: 0, dx: 0, dy: 0 };
-
-// Crouch-walk state, driven by quick taps (not holds) in the movement zone.
-const crouchTap = { active: false, dx: 0, dy: 0, until: 0 };
-
-// Any touch currently held on the player fires pulse continuously while cooldown allows.
-const pulseTouches = new Set();
+// The active walk/steer touch (started away from the feet).
+const move = { id: null, startX: 0, startY: 0, curX: 0, curY: 0, startTime: 0, committed: false };
+// Sneak state from a quick tap: crouch-step toward a direction for a short window.
+const sneak = { active: false, dx: 0, dy: 0, until: 0 };
+// The stomp touch (started on the feet); fires a pulse on release.
+const stomp = { id: null, startTime: 0 };
 
 function canvasToLocal(clientX, clientY) {
-  const rect = canvasEl.getBoundingClientRect();
+  const r = canvasEl.getBoundingClientRect();
   return {
-    x: (clientX - rect.left) / rect.width  * CANVAS_W,
-    y: (clientY - rect.top)  / rect.height * CANVAS_H,
+    x: (clientX - r.left) / r.width  * CANVAS_W,
+    y: (clientY - r.top)  / r.height * CANVAS_H,
   };
 }
 
-function dirFromCenter(x, y) {
-  const dx = x - CANVAS_W / 2, dy = y - CANVAS_H / 2;
-  const len = Math.sqrt(dx * dx + dy * dy);
-  if (len < 1e-3) return { dx: 0, dy: 0 };
-  return { dx: dx / len, dy: dy / len };
+// A walk touch counts as "walking" once it's been held past the tap threshold
+// or dragged far enough — before that it's still ambiguous (could be a sneak tap).
+function walkTouchActive(now) {
+  if (move.id === null) return false;
+  return move.committed || (now - move.startTime >= TAP_MAX_HOLD);
 }
 
 export function init() {
@@ -56,16 +68,18 @@ export function init() {
     e.preventDefault();
     for (const t of e.changedTouches) {
       const p = canvasToLocal(t.clientX, t.clientY);
-      const distToPlayer = Math.hypot(p.x - _playerX, p.y - _playerY);
-      if (distToPlayer < PULSE_TOUCH_RADIUS) {
-        pulseTouches.add(t.identifier);
-        continue;
-      }
-      if (move.touchId === null) {
-        move.touchId = t.identifier;
+      const distToFeet = Math.hypot(p.x - _playerX, p.y - _playerY);
+      if (distToFeet <= STOMP_RADIUS && stomp.id === null) {
+        // Press on the feet → a potential stomp (fires on release)
+        stomp.id = t.identifier;
+        stomp.startTime = performance.now();
+      } else if (move.id === null) {
+        // Press away from the feet → walk/sneak toward this point
+        move.id = t.identifier;
+        move.startX = move.curX = p.x;
+        move.startY = move.curY = p.y;
         move.startTime = performance.now();
-        const d = dirFromCenter(p.x, p.y);
-        move.dx = d.dx; move.dy = d.dy;
+        move.committed = false;
       }
     }
   }, { passive: false });
@@ -73,28 +87,34 @@ export function init() {
   canvasEl.addEventListener('touchmove', e => {
     e.preventDefault();
     for (const t of e.changedTouches) {
-      if (t.identifier === move.touchId) {
+      if (t.identifier === move.id) {
         const p = canvasToLocal(t.clientX, t.clientY);
-        const d = dirFromCenter(p.x, p.y);
-        move.dx = d.dx; move.dy = d.dy;
+        move.curX = p.x; move.curY = p.y;
+        if (Math.hypot(p.x - move.startX, p.y - move.startY) >= DRAG_COMMIT) move.committed = true;
       }
     }
   }, { passive: false });
 
   const endTouch = e => {
     for (const t of e.changedTouches) {
-      if (pulseTouches.has(t.identifier)) {
-        pulseTouches.delete(t.identifier);
-        continue;
-      }
-      if (t.identifier === move.touchId) {
-        const heldFor = performance.now() - move.startTime;
-        if (heldFor < TAP_MAX_HOLD) {
-          crouchTap.active = true;
-          crouchTap.dx = move.dx; crouchTap.dy = move.dy;
-          crouchTap.until = performance.now() + CROUCH_TAP_DECAY;
+      if (t.identifier === stomp.id) {
+        const held = performance.now() - stomp.startTime;
+        // Stomp fires on release — only when standing still (no active walk touch).
+        if (held >= STOMP_MIN_HOLD && move.id === null) _pulsePressed = true;
+        stomp.id = null;
+      } else if (t.identifier === move.id) {
+        const held = performance.now() - move.startTime;
+        if (!move.committed && held < TAP_MAX_HOLD) {
+          // Quick tap → one quiet SNEAK step toward the tapped point
+          const dx = move.curX - _playerX, dy = move.curY - _playerY;
+          const len = Math.hypot(dx, dy);
+          if (len > 1) {
+            sneak.active = true;
+            sneak.dx = dx / len; sneak.dy = dy / len;
+            sneak.until = performance.now() + SNEAK_DECAY;
+          }
         }
-        move.touchId = null; move.dx = 0; move.dy = 0;
+        move.id = null; move.committed = false;
       }
     }
   };
@@ -114,36 +134,31 @@ export function getMove() {
   if (keys.has('KeyW') || keys.has('ArrowUp'))    dy -= 1;
   if (keys.has('KeyS') || keys.has('ArrowDown'))  dy += 1;
 
-  if (move.touchId !== null) {
-    // Don't move yet while a fresh touch is still ambiguous (could resolve to a
-    // tap → crouch-walk). Only a touch held past the tap threshold counts as
-    // a real hold and walks at normal speed.
-    if (performance.now() - move.startTime >= TAP_MAX_HOLD) {
-      dx += move.dx; dy += move.dy;
-    }
-  } else if (crouchTap.active) {
-    if (performance.now() < crouchTap.until) {
-      dx += crouchTap.dx; dy += crouchTap.dy;
-    } else {
-      crouchTap.active = false;
-    }
+  const now = performance.now();
+  if (walkTouchActive(now)) {
+    // Walk toward the finger (from the player). Near the feet = dead zone (stop).
+    const wdx = move.curX - _playerX, wdy = move.curY - _playerY;
+    const len = Math.hypot(wdx, wdy);
+    if (len > WALK_DEADZONE) { dx += wdx / len; dy += wdy / len; }
+  } else if (sneak.active && now < sneak.until) {
+    dx += sneak.dx; dy += sneak.dy;
+  } else if (sneak.active) {
+    sneak.active = false;
   }
 
-  // Normalize diagonal
   const len = Math.sqrt(dx * dx + dy * dy);
   if (len > 1) { dx /= len; dy /= len; }
   return { dx, dy };
 }
 
 export function isCrouching() {
-  const touchCrouching = move.touchId === null && crouchTap.active && performance.now() < crouchTap.until;
-  return _crouching || touchCrouching;
+  const now = performance.now();
+  const sneaking = sneak.active && now < sneak.until && !walkTouchActive(now);
+  return _crouching || sneaking;
 }
 
 export function consumePulse() {
-  const v = _pulsePressed || pulseTouches.size > 0;
-  _pulsePressed = false;
-  return v;
+  const v = _pulsePressed; _pulsePressed = false; return v;
 }
 
 export function consumePause() {

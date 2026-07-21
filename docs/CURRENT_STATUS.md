@@ -43,7 +43,7 @@ RESONANCE is a complete, playable 20-level top-down stealth/horror game where **
 | PatrolEnemy | `js/entities.js` | Waypoint cycle, pulse-stun, step-aware hearing |
 | ChaserEnemy | `js/entities.js` | Idle wander + hunt state |
 | Hazard | `js/entities.js` | Timed pulse emitter, proximity kill |
-| **Tap-zone touch controls** | `js/input.js`, `js/game.js` | Whole canvas is the input surface — no visible buttons; see Phase 21.1 |
+| **Dark Echo-style touch controls** | `js/input.js`, `js/game.js` | Whole canvas is the surface: hold away from feet = walk toward finger; tap = sneak (crouched) step; hold on feet + release = stomp (pulse), only when standing |
 | All UI screens | `js/ui.js`, `index.html` | title/pause/dead/levelup/win |
 | Web Audio sounds | `js/audio.js` | SOUND_CONFIG + all play*() |
 | Game loop & state | `js/game.js` | G state machine, 6 screens |
