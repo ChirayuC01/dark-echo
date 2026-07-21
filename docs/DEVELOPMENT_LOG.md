@@ -4,6 +4,39 @@
 
 ---
 
+## [Post-roadmap] Dark Echo-faithful mobile controls
+
+**Date:** 2026-07-20  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.6.0
+
+### Research
+
+Owner asked to match the original **Dark Echo** (RAC7 Games, 2015) touch controls. Researched across the game's reviews/walkthrough (JayIsGames, TouchArcade, PopMatters, Namu Wiki, Macworld, DroidViews, Pocket Gamer, official site). Findings — the game is a noise trade-off with three movement "volumes":
+- **Walk** — tap-and-hold; the footprints walk **toward your finger**, emitting normal sound waves; steer by dragging.
+- **Sneak** — light **taps** take single quiet steps (small echo, low noise) — creep past enemies.
+- **Stomp** — press-and-hold **on your footprints** for ~a second and **let go** → a loud echo revealing a wide area, but you must **stop moving** and it alerts everything.
+
+Where you press (on the feet vs away) separates stomp from walk; tap vs hold separates sneak from walk.
+
+### Implementation (`js/input.js`)
+
+Mapped 1:1 to our fixed 800×600 top-down view (player world pos = canvas pos), reusing our crouch = sneak and pulse = stomp:
+- **Walk**: hold away from the feet → move in the direction **player → finger** (was: direction from screen-centre); dead zone near the feet.
+- **Sneak**: quick tap away from the feet → one crouched step toward the tap (`sneak` decays over `SNEAK_DECAY`); repeat to creep.
+- **Stomp**: press within `STOMP_RADIUS` (44px) of the feet, release after `STOMP_MIN_HOLD` → fire pulse, only if no walk touch is active (i.e. standing still).
+- Tap/hold disambiguation: a touch commits to walking once held past `TAP_MAX_HOLD` (160ms) **or** dragged `DRAG_COMMIT` (12px); released before that = a sneak tap (prevents a normal-speed blip before a sneak). Keyboard controls unchanged.
+
+### Verification
+
+Headless Chromium with synthesized `TouchEvent`s: holding to the right of the player walked it right (+48px, toward the finger); a stomp-on-feet + release fired a pulse (bright ray pixels 294 → 459); sneak tap stepped; no console/page errors.
+
+### Owner decision
+
+Chose the **full faithful** mapping and **stomp requires standing still**.
+
+---
+
 ## [Post-roadmap] Footstep Visuals + Phase 25 Deferred
 
 **Date:** 2026-07-20  

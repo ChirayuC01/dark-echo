@@ -5,6 +5,20 @@
 
 ---
 
+## [v2.6.0] — 2026-07-20 — Dark Echo-faithful mobile controls
+
+### Changed
+- **Mobile controls now match the original Dark Echo**, mapped to our fixed top-down view:
+  - **Walk** — press-and-hold away from the feet; the player walks **toward your finger** (steer by dragging). (Was: walk in the direction from screen-centre.)
+  - **Sneak** — a quick **tap** away from the feet takes one quiet **crouched** step toward the tap; tap repeatedly to creep.
+  - **Stomp** — press-and-hold **on the feet**, then **release** → fires one pulse, and only when standing still.
+- Pressing on the feet vs away separates stomp from walk; tap vs hold separates sneak from walk.
+
+### Notes
+- Based on research of the original game's controls (JayIsGames walkthrough, TouchArcade review, Namu Wiki, et al.). Keyboard controls are unchanged.
+
+---
+
 ## [v2.5.0] — 2026-07-20 — Player rendered as animated footsteps
 
 ### Changed
