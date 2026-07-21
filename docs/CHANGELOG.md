@@ -5,21 +5,18 @@
 
 ---
 
-## [v2.5.0] — 2026-07-20 — Footsteps: player is now footprints
+## [v2.5.0] — 2026-07-20 — Player rendered as animated footsteps
 
 ### Changed
-- **The player is rendered purely as footsteps — the white dot/glow is removed.** The live player marker is bright feet at the true position: a single **alternating** foot while walking, and **both feet side by side** when standing (facing the last direction of travel).
-- **Sound rays dimmed** so the bright feet stand out, and a soft dark backing is drawn under the feet where the rays converge — the prints now read clearly instead of being washed out.
-
-- **Natural walking gait**: walking is shown as discrete footprints that stay where they land and progress one in front of the other — spaced by an even stride (every ~22px travelled), alternating sides, the freshest brightest and older ones fading (a clear step rhythm). No more gliding foot. Both feet are planted side by side only when standing still.
-- **Feet stay off walls**: footprints near a wall edge no longer render on the wall (trail clamps to the player's cell; live feet in a wall cell are suppressed).
-- **Recognizable foot shape + footfall animation**: each mark is now clearly a foot (rounded sole, separate heel, toe pads) pointing along the heading, and every step "stamps" in (a quick press/scale + fade) instead of popping — walking feels natural.
-
-### Added
-- **Footprint trail**: walking leaves a faint, fading trail of prints (alternating sides, ~2.6s fade) marking where you've been.
+- **The player is now rendered purely as footsteps — the white dot/glow is removed.**
+- **Natural walking gait**: walking lays discrete footprints that **stay where they land** and progress one in front of the other — spaced by an even stride (a print every ~22px travelled), alternating sides, the freshest brightest with older prints fading (a clear step rhythm). No gliding marker.
+- **Recognizable feet + footfall animation**: each mark is clearly a foot (rounded sole, separate heel, toe pads) pointing along the heading, and every footfall "stamps" in (a quick press/scale + fade) instead of popping.
+- **Standing still** plants both feet side by side, facing the last direction of travel.
+- **Legibility**: the sound rays were dimmed and a soft dark backing is drawn under the standing feet where the rays converge, so the bright prints read clearly.
+- **Feet stay off walls**: footprints never render on wall cells (trail clamps to the player's cell; feet in a solid cell are suppressed).
 
 ### Notes
-- Footstep **audio** already existed (plays on every step, with a water variant) and is unchanged — this release adds/reworks the **visual**.
+- Footstep **audio** already existed (plays on every step, with a water variant) and is unchanged — this release is the **visual** representation.
 - **Google Play submission (Phase 25) is deferred** by owner decision; the game remains feature-complete for the gameplay roadmap but is not being pushed to a public store yet.
 
 ---

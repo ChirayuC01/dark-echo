@@ -1,7 +1,18 @@
 # CURRENT STATUS — RESONANCE
 
-> **Last updated:** Footprint visuals added; Phase 25 deferred (2026-07-20)  
+> **Last updated:** 2026-07-20 — full 20-level game; Phases 15–24 done (16 skipped); Phase 25 deferred; player rendered as animated footsteps.  
 > Update this file after every completed task or phase.
+
+## Project at a glance
+
+RESONANCE is a complete, playable 20-level top-down stealth/horror game where **sound is the only vision** — the screen is black and geometry is revealed by visualized sound echoes. Vanilla ES-module JavaScript on Canvas 2D + Web Audio, built with Vite, deployed on Cloudflare Workers Static Assets, and packaged for Android via Capacitor.
+
+- **Web**: landing page at `/`, game at `/play/`.
+- **Gameplay**: 2 Acts / 20 levels; 6 enemy archetypes (Patrol, Chaser, Sentry, BlindStalker, Hazard, Screamer) + Crushers; crouch stealth, water, collapsible walls, doors/keys, switch/spawn triggers.
+- **Audio**: procedural Web Audio — positional (HRTF), reverb (ConvolverNode), ambient drone + environmental sounds, enemy footsteps/breathing.
+- **Feel**: velocity inertia, screen-shake, adaptive quality tiers, animated footprint player representation.
+- **Meta**: localStorage save (progress, best times, achievements), level-select, 10 achievements.
+- **Remaining**: Phase 25 (Google Play submission) — deferred by owner; needs signed AAB + on-device profiling + store assets.
 
 ---
 
@@ -32,7 +43,6 @@
 | PatrolEnemy | `js/entities.js` | Waypoint cycle, pulse-stun, step-aware hearing |
 | ChaserEnemy | `js/entities.js` | Idle wander + hunt state |
 | Hazard | `js/entities.js` | Timed pulse emitter, proximity kill |
-| 9 levels | `js/levels.js` | Levels 1–9 complete (Level 9 = The Corridor) |
 | **Tap-zone touch controls** | `js/input.js`, `js/game.js` | Whole canvas is the input surface — no visible buttons; see Phase 21.1 |
 | All UI screens | `js/ui.js`, `index.html` | title/pause/dead/levelup/win |
 | Web Audio sounds | `js/audio.js` | SOUND_CONFIG + all play*() |
@@ -47,10 +57,9 @@
 | **Switches / Triggers** | `js/game.js`, `js/renderer.js`, `js/levels.js` | Blue-white pulsing dot; player proximity fires `open_door` or `remove_wall` once |
 | **Sentry Enemy** | `js/entities.js`, `js/game.js`, `js/renderer.js`, `js/levels.js` | Rotating ±45° scan cone, 180px LOS detection, 8s pursuit; stunned by pulse |
 | **BlindStalker Enemy** | `js/entities.js`, `js/game.js`, `js/levels.js` | Hears all sounds (step+pulse, incl. crouched); 104px/s hunt speed; 4s timer |
-| **10 levels** | `js/levels.js` | Level 10 "The Gauntlet II" — all mechanics + BlindStalker |
 | **ScreamerEnemy** | `js/entities.js`, `js/game.js`, `js/renderer.js` | Stationary trap; any ray triggers 48-ray burst + nearby enemy alert; killed on contact |
 | **`spawn_enemy` trigger** | `js/game.js` | `targetId = "type,col,row"`; spawns chaser / stalker / screamer mid-level |
-| **20 levels** | `js/levels.js` | Act II (Levels 11–20): Corridor II → The Deep; all mechanics, ScreamerEnemy, spawn_enemy |
+| **20 levels (Acts I + II)** | `js/levels.js` | L1–10 (The Awakening → The Gauntlet II) + L11–20 (Corridor II → The Deep) |
 | SOUND_CONFIG | `js/audio.js` | All sounds centralized; easy to tune |
 | **Ambient drone** | `js/audio.js`, `js/game.js` | 55Hz sine, gain 0.035, 1.5s fade-in/0.5s fade-out; starts on play, stops on death/win/title |
 | **Positional audio** | `js/audio.js`, `js/game.js` | PannerNode HRTF; updateListener() per frame; alert/sentry/hazard sounds positioned |
@@ -59,14 +68,16 @@
 | **Debug overlay** | `js/debug.js`, `js/input.js`, `js/game.js`, `js/renderer.js` | Backtick toggle; FPS, rays, trails, glints, player state, all enemy states |
 | Echo trail cap | `js/waves.js` | Hard cap at 500 entries (lowered to 250/150 at reduced quality tiers) |
 | Mutable grid copy | `js/game.js` `loadLevel()` | Enables in-run grid mutation (collapsibles) |
-| **Perf caching** | `js/renderer.js` | Vignette + player-glow pre-rendered offscreen; blitted each frame |
+| **Perf caching** | `js/renderer.js` | Vignette pre-rendered offscreen and blitted each frame |
 | **Adaptive quality** | `js/game.js`, `js/renderer.js`, `js/waves.js` | Auto FPS-driven high/medium/low tiers + pause-menu override; gates shadowBlur, trail cap, enemy step rays |
 | **Ray pool cap** | `js/waves.js` | Recycled Ray pool bounded at `RAY_POOL_CAP` (200) |
 | **Save system** | `js/save.js` | Progress, act flags, best times, achievements — guarded localStorage |
 | **Level select** | `js/ui.js`, `play/index.html` | 20-cell grid; lock state + best times; launch any unlocked level |
 | **Achievements** | `js/achievements.js`, `js/game.js`, `js/ui.js` | 10 achievements; queued toast + pause-menu gallery |
 | **Footsteps (audio)** | `js/audio.js`, `js/game.js` | `playFootstepSurface()` on each step (normal/water), reverb-tail |
-| **Player = footsteps** | `js/game.js`, `js/renderer.js` | No dot — one foot at a time while walking (both feet only when standing) + faint one-at-a-time trail; wall-aware (never on walls); rays dimmed |
+| **Player = animated footsteps** | `js/game.js`, `js/renderer.js` | No dot — distance-based footprint trail while walking (recognizable feet, stamp-in animation, one in front of the other), both feet planted when standing; wall-aware; rays dimmed for contrast |
+| **Android packaging** | `capacitor.config.ts`, `android/` (gitignored) | Capacitor 8 + Haptics + StatusBar; build steps in `docs/ANDROID_BUILD_GUIDE.md` |
+| **Landing page + multi-page build** | `index.html`, `landing/`, `vite.config.js` | Marketing page at `/`, game at `/play/`; shared Vite build |
 
 ---
 
@@ -178,11 +189,18 @@
 
 ---
 
-## Post-roadmap — Footstep visuals (2026-07-20)
+## Post-roadmap — Player rendered as animated footsteps (2026-07-20)
 
-- **Footstep audio** already existed (`Audio.playFootstepSurface` fires on every step, normal vs water) — confirmed working, left as-is.
-- **Player is rendered purely as footsteps — no white dot** (revised after feedback): the glowing dot/glow sprite was removed. The live player marker is now bright feet at the true position — a single **alternating** foot while walking (`G.currentFootSide` flips each step) and **both feet side by side** when standing (`speed < PLAYER_IDLE_SPEED`), oriented to `G.playerHeading`. A faint fading **trail** of prints (one per footstep, `FOOTPRINT_FADE_MS` 2.6s, capped at `FOOTPRINT_MAX` 48) marks history.
-- To keep the feet legible where the sound rays all converge on the player, `drawPlayerFeet` lays a soft **dark backing disc** under the feet, and the **rays were dimmed** (active 0.72→0.5, live tip 0.88→0.62, echo trails 0.34→0.24). Foot offset unified via `FOOTPRINT_STANCE_OFF` (8px). `renderer.js`: `drawFootprintTrail` + `drawPlayerFeet`. Verified headless (no errors; standing = two bright feet, walking = single alternating foot, no dot).
+The player is drawn **purely as footsteps — there is no dot/glow**. Final implementation after several rounds of feedback:
+
+- **Footstep audio** already existed (`Audio.playFootstepSurface` fires on every step, normal vs water) — confirmed working, unchanged.
+- **Recognizable feet**: `drawFoot` renders an actual foot — a rounded sole/ball, a separate heel, and three toe pads — pointing along the heading (`js/renderer.js`).
+- **Natural gait (distance-based)**: while walking, discrete footprints are laid every `FOOTPRINT_STRIDE_PX` (22px) of travel, alternating sides, and **stay where they land** — progressing one in front of the other like a real walking trail. The freshest is brightest; each fades over `FOOTPRINT_FADE_MS` (1.5s), giving a clear step rhythm. There is **no gliding foot** — the trail itself is the walking marker. (`js/game.js` accumulates player displacement in `strideAccum`; `prevFoot`/`strideAccum` seeded after the player spawns in `loadLevel`.)
+- **Footfall animation**: `footStamp()` eases each print's scale 1.32→1.0 and alpha in over `FOOT_POP_MS` (150ms) so prints press down rather than pop.
+- **Standing still**: both feet are planted side by side at the player, oriented to `G.playerHeading` (`drawPlayerFeet`, only when `speed < PLAYER_IDLE_SPEED`).
+- **Legibility**: a soft **dark backing disc** under the standing feet + globally **dimmed rays** (active 0.72→0.5, live tip 0.88→0.62, echo trails 0.34→0.24) keep the bright prints readable where the sound rays converge.
+- **Wall-aware**: footprints never render on wall/collapsible cells — the trail clamps to the player's cell and live feet in a solid cell are suppressed (`footInWall`/`drawFootClear`).
+- Constants: `FOOTPRINT_STRIDE_PX`, `FOOTPRINT_FADE_MS`, `FOOTPRINT_MAX`, `FOOTPRINT_STANCE_OFF`, `PLAYER_IDLE_SPEED`. Verified headless (no errors; walking lays an alternating one-in-front trail ending in two side-by-side feet when stopped).
 
 ## Phase 24 — Complete ✅
 

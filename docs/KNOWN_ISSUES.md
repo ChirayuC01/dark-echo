@@ -81,9 +81,9 @@ _None currently confirmed._
 ## Performance Concerns
 
 ### PC-001 — shadowBlur on large numbers of elements is expensive
-**Status:** ✅ Mitigated  
-**Description:** Canvas `shadowBlur` triggers GPU compositing. Currently only applied to: player dot (radius 10px glow), exit glow.  
-**Decision:** Echo trails and impact glints use NO shadowBlur. Acceptable trade-off.
+**Status:** ✅ Mitigated (further hardened in Phase 23)  
+**Description:** Canvas `shadowBlur` triggers GPU compositing. Applied to reveal glows (exit, entities, doors, keys, triggers, crushers) and the active-ray passes.  
+**Decision:** Echo trails, footprints, and impact glint bodies use NO shadowBlur. Phase 23 routes every remaining `shadowBlur` through `sb()`, which forces it to 0 at medium/low quality tiers. The player is drawn as footsteps (no glow) as of 2026-07-20.
 
 ---
 
