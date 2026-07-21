@@ -5,6 +5,19 @@
 
 ---
 
+## [v2.7.0] — 2026-07-20 — Player-centered camera + Dark Echo palette
+
+### Added
+- **Player-centered scrolling camera** (`CAMERA_ZOOM = 2.0`): the view is now zoomed in and follows the player, keeping you centered while only a local portion of the level is visible — so you explore and memorize the map, instead of seeing the whole level at once (Dark Echo parity). The touch controls reference the screen centre, making "walk toward finger" faithful to the original.
+
+### Changed
+- **Strict Dark Echo 4-color sound palette**: your sound (steps, pulse, wall glints, echo trails, footprints, exit) is now **white**; **blue** = water; **yellow** = switches/keys/doors; **red** = danger (enemies, hazards, crushers, screamers). Replaces the previous mixed palette (blue sound, orange hazards, teal water, amber doors, green exit).
+
+### Notes
+- Both changes come from researching the original game (mechanics, camera, color coding). Remaining differences from Dark Echo (a Light World second half, red instant-death floor tiles, ~80 levels) are separate future items.
+
+---
+
 ## [v2.6.0] — 2026-07-20 — Dark Echo-faithful mobile controls
 
 ### Changed

@@ -4,6 +4,35 @@
 
 ---
 
+## [Post-roadmap] Player-centered camera + Dark Echo palette
+
+**Date:** 2026-07-20  
+**Branch:** `claude/beautiful-fermat-5102bb`  
+**Version:** v2.7.0
+
+### Research → gap analysis
+
+Owner asked to compare our game against the real Dark Echo. Researched its mechanics (TV Tropes, GameDeveloper design write-up, JayIsGames, Namu Wiki, GameRant, GameTyrant, PopMatters, MobyGames). Key findings: **player-centered camera** that follows the feet with levels **larger than the screen** (explore/memorize); strict **white/blue/yellow/red** sound coding (white=safe, blue=water, yellow=switch/key, red=danger, step-on-red=death); enemies are red blobs that hunt by sound; ~80 levels split into a Dark World and a **Light World** (white, buffed enemies that phase walls / absorb sound). Owner chose to implement the **camera + strict palette** first.
+
+### Camera (`js/renderer.js`, `js/constants.js`, `js/game.js`)
+
+- Added `CAMERA_ZOOM = 2.0`. `draw()` now wraps all world drawing in a camera transform: screen-space shake → `scale(ZOOM)` → `translate(-cam)`, with the camera centred **exactly** on the player (no clamp, so the player is always dead-centre). Only ~a quarter of the level shows at once. Vignette/HUD/debug stay in screen space; the title screen keeps its full-view demo.
+- Since the player is always at screen centre, `game.js` feeds the **screen centre** to `Input.setPlayerScreenPos()` — so "walk toward finger" = "hold toward the screen edge", which is exactly the original's feel.
+
+### Palette (`js/renderer.js`)
+
+Bulk-remapped every color literal to the strict 4-color scheme (verified triple-by-triple): white sound (steps/pulse/glints/echo/footprints/exit), blue water, yellow switches/keys/doors, red danger (enemies/hazards/crushers/screamers); collapsible = muted white wall, open door = faint white passage. Replaces the old mixed palette.
+
+### Verification
+
+Headless Chromium: player stays centred and the view scrolls as you move (screenshots before/after moving right); level 1 renders as **white sound on black**; no console/page errors.
+
+### Still different from Dark Echo (future)
+
+Light World second half; red instant-death floor tiles; enemy wall-phasing / sound-absorbing variants; ~80 levels (we have 20).
+
+---
+
 ## [Post-roadmap] Dark Echo-faithful mobile controls
 
 **Date:** 2026-07-20  
