@@ -138,20 +138,20 @@ function drawImpacts(impacts, now, px, py) {
     const len = 3 + im.energy * 6; // brighter hits leave longer marks
 
     if (im.cellType === 'crusher') {
-      ctx.strokeStyle = `rgba(230,105,55,${(alpha * 0.95).toFixed(3)})`;
-      ctx.shadowColor = 'rgba(230,105,55,0.5)';
+      ctx.strokeStyle = `rgba(225,60,55,${(alpha * 0.95).toFixed(3)})`;
+      ctx.shadowColor = 'rgba(225,60,55,0.5)';
     } else if (im.cellType === 'collapsible') {
-      ctx.strokeStyle = `rgba(200,175,120,${(alpha * 0.95).toFixed(3)})`;
-      ctx.shadowColor = 'rgba(200,175,120,0.5)';
+      ctx.strokeStyle = `rgba(185,200,220,${(alpha * 0.95).toFixed(3)})`;
+      ctx.shadowColor = 'rgba(185,200,220,0.5)';
     } else if (im.cellType === 'door') {
-      ctx.strokeStyle = `rgba(210,160,50,${(alpha * 0.95).toFixed(3)})`;
-      ctx.shadowColor = 'rgba(210,160,50,0.5)';
+      ctx.strokeStyle = `rgba(240,215,70,${(alpha * 0.95).toFixed(3)})`;
+      ctx.shadowColor = 'rgba(240,215,70,0.5)';
     } else if (im.type === 'hazard') {
-      ctx.strokeStyle = `rgba(225,100,50,${(alpha * 0.85).toFixed(3)})`;
-      ctx.shadowColor = 'rgba(225,100,50,0.5)';
+      ctx.strokeStyle = `rgba(225,60,55,${(alpha * 0.85).toFixed(3)})`;
+      ctx.shadowColor = 'rgba(225,60,55,0.5)';
     } else {
       ctx.strokeStyle = `rgba(225,238,255,${(alpha * 0.95).toFixed(3)})`;
-      ctx.shadowColor = 'rgba(170,205,255,0.55)';
+      ctx.shadowColor = 'rgba(210,225,250,0.55)';
     }
     ctx.shadowBlur = sb(6 * fade);
     ctx.lineWidth = 1.4;
@@ -171,13 +171,13 @@ function drawExit(exit, now) {
   const pulse = (0.5 + 0.25 * Math.sin(now / 500)) * alpha;
   ctx.save();
   ctx.shadowBlur = sb(14 * alpha);
-  ctx.shadowColor = 'rgba(60,220,110,0.5)';
+  ctx.shadowColor = 'rgba(210,225,250,0.5)';
   const grd = ctx.createRadialGradient(exit.x, exit.y, 2, exit.x, exit.y, 20);
-  grd.addColorStop(0, `rgba(80,220,120,${pulse.toFixed(3)})`);
-  grd.addColorStop(1, 'rgba(80,220,120,0)');
+  grd.addColorStop(0, `rgba(225,238,255,${pulse.toFixed(3)})`);
+  grd.addColorStop(1, 'rgba(225,238,255,0)');
   ctx.fillStyle = grd;
   ctx.beginPath(); ctx.arc(exit.x, exit.y, 20, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = `rgba(160,255,180,${(pulse * 0.95).toFixed(3)})`;
+  ctx.fillStyle = `rgba(245,250,255,${(pulse * 0.95).toFixed(3)})`;
   ctx.beginPath(); ctx.arc(exit.x, exit.y, 3.5, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
@@ -191,13 +191,13 @@ function drawHazards(hazards, now, px, py) {
     const alpha = revealAlpha(h.revealedAt, now) * heard;
     if (alpha < 0.004) continue;
     ctx.shadowBlur = sb(10 * alpha);
-    ctx.shadowColor = `rgba(220,80,40,${alpha * 0.5})`;
+    ctx.shadowColor = `rgba(225,60,55,${alpha * 0.5})`;
     const grd = ctx.createRadialGradient(h.x, h.y, 2, h.x, h.y, h.radius + 8);
-    grd.addColorStop(0, `rgba(200,60,30,${alpha * 0.45})`);
-    grd.addColorStop(1, 'rgba(180,50,20,0)');
+    grd.addColorStop(0, `rgba(220,55,50,${alpha * 0.45})`);
+    grd.addColorStop(1, 'rgba(220,55,50,0)');
     ctx.fillStyle = grd;
     ctx.beginPath(); ctx.arc(h.x, h.y, h.radius + 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = `rgba(255,100,60,${alpha})`;
+    ctx.fillStyle = `rgba(255,80,70,${alpha})`;
     ctx.beginPath(); ctx.arc(h.x, h.y, 4.5, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
@@ -213,7 +213,7 @@ function drawScreamers(screamers, now, px, py) {
     const alpha = revealAlpha(s.revealedAt, now) * heard;
     if (alpha < 0.004) continue;
     const pulse = 0.5 + 0.5 * Math.sin(now / 200);
-    const r = s.triggered ? 'rgba(255,40,40' : 'rgba(255,130,30';
+    const r = s.triggered ? 'rgba(255,40,40' : 'rgba(230,70,60';
     ctx.shadowBlur = sb(14 * alpha * (s.triggered ? 1 : pulse));
     ctx.shadowColor = `${r},${(alpha * 0.6).toFixed(3)})`;
     // Outer glow ring
@@ -257,7 +257,7 @@ function drawEnemies(enemies, now, px, py) {
     // Sentry scan cone — drawn before dot so dot appears on top
     if (e.scanRange !== undefined) {
       const alerting = e.state === 'alert';
-      const coneColor = alerting ? '255,55,35' : '220,100,50';
+      const coneColor = alerting ? '255,55,35' : '210,70,60';
       const coneAlpha = alerting ? alpha * 0.30 : alpha * 0.14;
       if (e.state !== 'stunned') {
         ctx.save();
@@ -366,13 +366,13 @@ function drawEchoTrails(trails, now, px, py) {
     if (alpha < 0.005) continue;
 
     if (t.type === 'hazard') {
-      ctx.strokeStyle = `rgba(215,95,45,${alpha.toFixed(3)})`;
+      ctx.strokeStyle = `rgba(220,60,55,${alpha.toFixed(3)})`;
     } else if (t.type === 'pulse') {
-      ctx.strokeStyle = `rgba(175,210,255,${alpha.toFixed(3)})`;
+      ctx.strokeStyle = `rgba(225,238,255,${alpha.toFixed(3)})`;
     } else if (t.type === 'step-enemy') {
-      ctx.strokeStyle = `rgba(165,50,50,${alpha.toFixed(3)})`;
+      ctx.strokeStyle = `rgba(190,55,50,${alpha.toFixed(3)})`;
     } else {
-      ctx.strokeStyle = `rgba(145,180,225,${alpha.toFixed(3)})`;
+      ctx.strokeStyle = `rgba(200,215,235,${alpha.toFixed(3)})`;
     }
     ctx.beginPath();
     ctx.moveTo(t.x1, t.y1);
@@ -394,19 +394,19 @@ function drawActiveRays(rays, px, py) {
     if (type === 'step') {
       ctx.lineWidth = 1.0;
       ctx.shadowBlur = sb(4);
-      ctx.shadowColor = 'rgba(140,185,245,0.5)';
+      ctx.shadowColor = 'rgba(210,225,250,0.5)';
     } else if (type === 'pulse') {
       ctx.lineWidth = 1.4;
       ctx.shadowBlur = sb(9);
-      ctx.shadowColor = 'rgba(160,210,255,0.75)';
+      ctx.shadowColor = 'rgba(220,235,255,0.75)';
     } else if (type === 'hazard') {
       ctx.lineWidth = 1.1;
       ctx.shadowBlur = sb(6);
-      ctx.shadowColor = 'rgba(230,100,55,0.6)';
+      ctx.shadowColor = 'rgba(225,65,58,0.6)';
     } else {
       ctx.lineWidth = 0.9;
       ctx.shadowBlur = sb(4);
-      ctx.shadowColor = 'rgba(180,60,60,0.5)';
+      ctx.shadowColor = 'rgba(210,60,55,0.5)';
     }
 
     for (const ray of rays) {
@@ -438,10 +438,10 @@ function drawActiveRays(rays, px, py) {
 }
 
 function rayColor(type, alpha) {
-  if (type === 'hazard')     return `rgba(230,105,55,${alpha.toFixed(3)})`;
-  if (type === 'pulse')      return `rgba(185,220,255,${alpha.toFixed(3)})`;
-  if (type === 'step-enemy') return `rgba(180,60,60,${alpha.toFixed(3)})`;
-  return                            `rgba(155,195,235,${alpha.toFixed(3)})`;
+  if (type === 'hazard')     return `rgba(225,60,55,${alpha.toFixed(3)})`;
+  if (type === 'pulse')      return `rgba(230,240,255,${alpha.toFixed(3)})`;
+  if (type === 'step-enemy') return `rgba(210,60,55,${alpha.toFixed(3)})`;
+  return                            `rgba(210,225,245,${alpha.toFixed(3)})`;
 }
 
 // ─── Doors — amber when locked, faint green when open ────────────────────────
@@ -453,19 +453,19 @@ function drawDoors(doors, now, px, py) {
     if (alpha < 0.004) continue;
     const x = door.col * TILE, y = door.row * TILE;
     if (door.open) {
-      ctx.fillStyle = `rgba(80,210,120,${(alpha * 0.18).toFixed(3)})`;
+      ctx.fillStyle = `rgba(200,215,235,${(alpha * 0.18).toFixed(3)})`;
       ctx.fillRect(x, y, TILE, TILE);
-      ctx.strokeStyle = `rgba(80,210,120,${(alpha * 0.4).toFixed(3)})`;
+      ctx.strokeStyle = `rgba(200,215,235,${(alpha * 0.4).toFixed(3)})`;
       ctx.lineWidth = 1.5;
       ctx.shadowBlur = 0;
       ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
     } else {
-      ctx.fillStyle = `rgba(210,160,50,${(alpha * 0.32).toFixed(3)})`;
+      ctx.fillStyle = `rgba(240,215,70,${(alpha * 0.32).toFixed(3)})`;
       ctx.fillRect(x, y, TILE, TILE);
-      ctx.strokeStyle = `rgba(230,175,60,${(alpha * 0.85).toFixed(3)})`;
+      ctx.strokeStyle = `rgba(245,220,80,${(alpha * 0.85).toFixed(3)})`;
       ctx.lineWidth = 1.5;
       ctx.shadowBlur = sb(8 * alpha);
-      ctx.shadowColor = 'rgba(220,160,50,0.55)';
+      ctx.shadowColor = 'rgba(240,215,70,0.55)';
       ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
     }
   }
@@ -482,13 +482,13 @@ function drawKeys(keys, now, px, py) {
     if (alpha < 0.004) continue;
     const pulse = (0.5 + 0.25 * Math.sin(now / 400)) * alpha;
     ctx.shadowBlur = sb(12 * alpha);
-    ctx.shadowColor = 'rgba(255,210,80,0.65)';
+    ctx.shadowColor = 'rgba(245,220,80,0.65)';
     const grd = ctx.createRadialGradient(key.x, key.y, 1, key.x, key.y, 14);
-    grd.addColorStop(0, `rgba(255,225,100,${pulse.toFixed(3)})`);
-    grd.addColorStop(1, 'rgba(255,210,80,0)');
+    grd.addColorStop(0, `rgba(245,225,90,${pulse.toFixed(3)})`);
+    grd.addColorStop(1, 'rgba(245,220,80,0)');
     ctx.fillStyle = grd;
     ctx.beginPath(); ctx.arc(key.x, key.y, 14, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = `rgba(255,240,130,${(pulse * 1.1 > 1 ? 1 : pulse * 1.1).toFixed(3)})`;
+    ctx.fillStyle = `rgba(250,235,120,${(pulse * 1.1 > 1 ? 1 : pulse * 1.1).toFixed(3)})`;
     ctx.beginPath(); ctx.arc(key.x, key.y, 3, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
@@ -507,24 +507,24 @@ function drawTriggers(triggers, now, px, py) {
 
     // Outer glow
     ctx.shadowBlur = sb(22 * alpha);
-    ctx.shadowColor = 'rgba(100,160,255,0.75)';
+    ctx.shadowColor = 'rgba(240,215,70,0.75)';
     const grd = ctx.createRadialGradient(tr.x, tr.y, 2, tr.x, tr.y, 28);
-    grd.addColorStop(0, `rgba(140,200,255,${beat.toFixed(3)})`);
-    grd.addColorStop(1, 'rgba(100,160,255,0)');
+    grd.addColorStop(0, `rgba(245,225,90,${beat.toFixed(3)})`);
+    grd.addColorStop(1, 'rgba(240,215,70,0)');
     ctx.fillStyle = grd;
     ctx.beginPath(); ctx.arc(tr.x, tr.y, 28, 0, Math.PI * 2); ctx.fill();
 
     // Pulsing outer ring
-    ctx.strokeStyle = `rgba(120,180,255,${(alpha * 0.6).toFixed(3)})`;
+    ctx.strokeStyle = `rgba(240,215,80,${(alpha * 0.6).toFixed(3)})`;
     ctx.lineWidth = 1.2;
     ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.arc(tr.x, tr.y, 14 + beat * 6, 0, Math.PI * 2); ctx.stroke();
 
     // 4-point cross indicator
-    ctx.strokeStyle = `rgba(170,220,255,${(alpha * 0.8).toFixed(3)})`;
+    ctx.strokeStyle = `rgba(250,230,120,${(alpha * 0.8).toFixed(3)})`;
     ctx.lineWidth = 1.5;
     ctx.shadowBlur = sb(8 * alpha);
-    ctx.shadowColor = 'rgba(140,200,255,0.9)';
+    ctx.shadowColor = 'rgba(245,225,90,0.9)';
     for (let i = 0; i < 4; i++) {
       const a = (i * Math.PI / 2) + (now / 4000);
       const r0 = 5, r1 = 11;
@@ -536,7 +536,7 @@ function drawTriggers(triggers, now, px, py) {
 
     // Bright center dot
     ctx.shadowBlur = sb(12 * alpha);
-    ctx.fillStyle = `rgba(200,230,255,${Math.min(1, beat * 1.2).toFixed(3)})`;
+    ctx.fillStyle = `rgba(252,240,150,${Math.min(1, beat * 1.2).toFixed(3)})`;
     ctx.beginPath(); ctx.arc(tr.x, tr.y, 4.5, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
@@ -557,12 +557,12 @@ function drawCrushers(crushers, now, px, py) {
     const alpha = crusherRevealAlpha(c.revealedAt, now) * hearing(Math.hypot(c.x - px, c.y - py));
     if (alpha < 0.004) continue;
     const b = c.bounds();
-    ctx.fillStyle = `rgba(230,105,55,${(alpha * 0.55).toFixed(3)})`;
+    ctx.fillStyle = `rgba(225,60,55,${(alpha * 0.55).toFixed(3)})`;
     ctx.fillRect(b.x1, b.y1, TILE, TILE);
-    ctx.strokeStyle = `rgba(240,120,65,${(alpha * 0.85).toFixed(3)})`;
+    ctx.strokeStyle = `rgba(235,75,68,${(alpha * 0.85).toFixed(3)})`;
     ctx.lineWidth = 1.5;
     ctx.shadowBlur = sb(8 * alpha);
-    ctx.shadowColor = 'rgba(230,105,55,0.6)';
+    ctx.shadowColor = 'rgba(225,60,55,0.6)';
     ctx.strokeRect(b.x1 + 0.5, b.y1 + 0.5, TILE - 1, TILE - 1);
   }
   ctx.restore();
@@ -578,9 +578,9 @@ function drawRevealedCollapsible(grid, collapsibleReveals, now) {
     const [r, c] = key.split(',').map(Number);
     if (grid[r]?.[c] !== CELL.COLLAPSIBLE) continue; // already collapsed
     const x = c * TILE, y = r * TILE;
-    ctx.fillStyle = `rgba(200,175,120,${(alpha * 0.45).toFixed(3)})`;
+    ctx.fillStyle = `rgba(185,200,220,${(alpha * 0.45).toFixed(3)})`;
     ctx.fillRect(x, y, TILE, TILE);
-    ctx.strokeStyle = `rgba(220,195,140,${(alpha * 0.7).toFixed(3)})`;
+    ctx.strokeStyle = `rgba(200,213,230,${(alpha * 0.7).toFixed(3)})`;
     ctx.lineWidth = 1;
     ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
   }
@@ -595,7 +595,7 @@ function drawRevealedWater(grid, waterReveals, now) {
     const alpha = revealAlpha(revealTime, now);
     if (alpha < 0.004) continue;
     const [r, c] = key.split(',').map(Number);
-    ctx.fillStyle = `rgba(50,150,160,${(alpha * 0.4).toFixed(3)})`;
+    ctx.fillStyle = `rgba(60,120,220,${(alpha * 0.4).toFixed(3)})`;
     ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
   }
   ctx.restore();
@@ -606,8 +606,8 @@ function drawWaterZone(player) {
   if (!player) return;
   ctx.save();
   const grd = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 28);
-  grd.addColorStop(0, 'rgba(50,180,190,0.45)');
-  grd.addColorStop(1, 'rgba(50,150,160,0)');
+  grd.addColorStop(0, 'rgba(70,140,235,0.45)');
+  grd.addColorStop(1, 'rgba(60,120,220,0)');
   ctx.fillStyle = grd;
   ctx.beginPath();
   ctx.arc(player.x, player.y, 28, 0, Math.PI * 2);
@@ -625,7 +625,7 @@ function drawFoot(x, y, angle, alpha, scale = 1) {
   ctx.translate(x, y);
   ctx.rotate(angle);
   ctx.scale(scale, scale);
-  ctx.fillStyle = `rgba(216,230,252,${alpha.toFixed(3)})`;
+  ctx.fillStyle = `rgba(235,243,255,${alpha.toFixed(3)})`;
   ctx.beginPath(); ctx.ellipse(1.6, 0, 4.6, 2.9, 0, 0, Math.PI * 2); ctx.fill();   // sole / ball
   ctx.beginPath(); ctx.ellipse(-4.9, 0, 2.4, 2.2, 0, 0, Math.PI * 2); ctx.fill();  // heel
   for (const ty of [-2.0, 0, 2.0]) {                                               // toe pads
