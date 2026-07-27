@@ -27,7 +27,104 @@
       <button class="btn" id="continue-btn" data-action="continue" style="display:none">Continue</button>
       <button class="btn" data-action="start">New Game</button>
       <button class="btn" data-action="level-select">Level Select</button>
+      <button class="btn" data-action="howto">How to Play</button>
       <span class="hint">WASD / arrows · SPACE = pulse · P / ESC = pause</span>
+    </div>
+
+    <!-- How to Play / tutorial -->
+    <div id="screen-howto" class="screen screen-wide">
+      <h2>How to Play</h2>
+      <div class="howto-body">
+
+        <p class="howto-lead">
+          The screen is black. You see only what <b>sound</b> reveals. Make a
+          sound and the nearby walls light up as the echo passes — then find the
+          hidden <b>exit</b> and reach it. But everything you hear can hear you
+          too. Move loud to see far; move quiet to stay alive.
+        </p>
+
+        <div class="howto-sec">
+          <h3>Controls — Keyboard</h3>
+          <div class="kv"><span>Move</span><span>W A S D · Arrow keys</span></div>
+          <div class="kv"><span>Crouch (quiet &amp; slow)</span><span>Shift · C</span></div>
+          <div class="kv"><span>Pulse (loud sonar)</span><span>Spacebar</span></div>
+          <div class="kv"><span>Pause</span><span>P · Esc</span></div>
+        </div>
+
+        <div class="howto-sec">
+          <h3>Controls — Touch</h3>
+          <div class="kv"><span>Move</span><span>Hold anywhere — walk toward your finger</span></div>
+          <div class="kv"><span>Sneak</span><span>Quick tap in a direction — one quiet step</span></div>
+          <div class="kv"><span>Pulse</span><span>Hold on your feet, then release</span></div>
+        </div>
+
+        <div class="howto-sec">
+          <h3>The color language</h3>
+          <div class="legend">
+            <div class="lg-row">
+              <svg viewBox="0 0 34 34" class="lg-ico" aria-hidden="true"><g fill="#e9f2ff"><ellipse cx="13" cy="16" rx="2.6" ry="4.4"/><ellipse cx="21" cy="20" rx="2.6" ry="4.4"/></g></svg>
+              <div class="lg-txt"><b class="c-white">White — you</b>Your footsteps, pulse and echoes. Your feet leave white prints. The exit is a soft pulsing white beacon, hidden until your sound finds it.</div>
+            </div>
+            <div class="lg-row">
+              <span class="chip c-blue-bg"></span>
+              <div class="lg-txt"><b class="c-blue">Blue — water</b>Slows you down and makes your steps louder. Harder to stay quiet.</div>
+            </div>
+            <div class="lg-row">
+              <span class="chip c-yellow-bg"></span>
+              <div class="lg-txt"><b class="c-yellow">Yellow — switches, keys &amp; doors</b>Pick up keys and touch switches to open the way forward.</div>
+            </div>
+            <div class="lg-row">
+              <span class="chip c-red-bg"></span>
+              <div class="lg-txt"><b class="c-red">Red — danger</b>Enemies, hazards and crushers. Touching red means death.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="howto-sec">
+          <h3>What hunts you</h3>
+          <div class="legend">
+            <div class="lg-row">
+              <svg viewBox="0 0 34 34" class="lg-ico" aria-hidden="true"><polygon points="12,9 25,17 12,25" fill="#d94b40"/><circle cx="11" cy="17" r="2.4" fill="#d94b40" opacity="0.7"/></svg>
+              <div class="lg-txt"><b class="c-red">Patrol</b>Walks a fixed route — predictable. Reacts to loud sounds. Time your crossing when it looks away.</div>
+            </div>
+            <div class="lg-row">
+              <svg viewBox="0 0 34 34" class="lg-ico" aria-hidden="true"><circle cx="17" cy="17" r="5" fill="#d94b40"/><circle cx="17" cy="17" r="10" fill="none" stroke="#d94b40" stroke-width="1.5" opacity="0.7"/></svg>
+              <div class="lg-txt"><b class="c-red">Chaser</b>Wanders until it hears you, then rushes the sound. Its ring flares brighter while hunting.</div>
+            </div>
+            <div class="lg-row">
+              <svg viewBox="0 0 34 34" class="lg-ico" aria-hidden="true"><path d="M17 17 L30.6 10.7 A15 15 0 0 1 30.6 23.3 Z" fill="#d94b40" opacity="0.26"/><path d="M17 17 L30.6 10.7 A15 15 0 0 1 30.6 23.3 Z" fill="none" stroke="#d94b40" stroke-width="1" opacity="0.6"/><circle cx="17" cy="17" r="4" fill="#d94b40"/></svg>
+              <div class="lg-txt"><b class="c-red">Sentry</b>Sweeps a cone of vision. It detects you by <i>sight</i>, not sound — cross behind it. A pulse stuns it.</div>
+            </div>
+            <div class="lg-row">
+              <svg viewBox="0 0 34 34" class="lg-ico" aria-hidden="true"><circle cx="17" cy="17" r="4.5" fill="#d94b40"/><g fill="none" stroke="#d94b40" stroke-width="1.6" opacity="0.72"><path d="M27.2 12.9 A11 11 0 0 1 27.2 21.1"/><path d="M27.2 12.9 A11 11 0 0 1 27.2 21.1" transform="rotate(120 17 17)"/><path d="M27.2 12.9 A11 11 0 0 1 27.2 21.1" transform="rotate(240 17 17)"/></g></svg>
+              <div class="lg-txt"><b class="c-red">Blind Stalker</b>Hears <i>everything</i> — even crouched steps. Fast and relentless, but loses you quickly if you go silent.</div>
+            </div>
+            <div class="lg-row">
+              <svg viewBox="0 0 34 34" class="lg-ico" aria-hidden="true"><g stroke="#d94b40" stroke-width="3" stroke-linecap="round"><line x1="10" y1="10" x2="24" y2="24"/><line x1="24" y1="10" x2="10" y2="24"/></g></svg>
+              <div class="lg-txt"><b class="c-red">Hazard</b>Stationary. Emits scan pulses that give away its position. Lethal if you touch it — keep your distance.</div>
+            </div>
+            <div class="lg-row">
+              <svg viewBox="0 0 34 34" class="lg-ico" aria-hidden="true"><g fill="none" stroke="#d94b40" stroke-width="1.4"><circle cx="17" cy="17" r="4" fill="#d94b40" stroke="none"/><circle cx="17" cy="17" r="8" opacity="0.6"/><circle cx="17" cy="17" r="12" opacity="0.3"/></g></svg>
+              <div class="lg-txt"><b class="c-red">Screamer</b>A silent trap. Any sound that reaches it — even a stray echo — triggers a scream that alerts every enemy nearby.</div>
+            </div>
+            <div class="lg-row">
+              <svg viewBox="0 0 34 34" class="lg-ico" aria-hidden="true"><rect x="13" y="6" width="8" height="22" rx="1.5" fill="#d94b40" opacity="0.85"/><g stroke="#d94b40" stroke-width="1.6" stroke-linecap="round" opacity="0.7"><path d="M9 17 l-3 0 M6 17 l2 -2 M6 17 l2 2"/><path d="M25 17 l3 0 M28 17 l-2 -2 M28 17 l-2 2"/></g></svg>
+              <div class="lg-txt"><b class="c-red">Crusher</b>A heavy slab sliding back and forth. Slip through between passes — it crushes on contact.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="howto-sec">
+          <h3>Remember</h3>
+          <ul class="howto-tips">
+            <li>Louder means you see more — and so do they. Pulse only when you must.</li>
+            <li>Standing still makes no sound. Stop to listen and let a threat pass.</li>
+            <li>Water and screamers make noise <i>for</i> you — cross them carefully.</li>
+          </ul>
+        </div>
+
+      </div>
+      <button class="btn" data-action="howto-back">Back</button>
     </div>
 
     <!-- Level select -->
@@ -43,6 +140,7 @@
       <button class="btn" data-action="resume">Resume</button>
       <button class="btn" data-action="restart">Restart Level</button>
       <button class="btn" id="quality-btn" data-action="cycle-quality">Quality: Auto</button>
+      <button class="btn" data-action="howto">How to Play</button>
       <button class="btn btn-danger" data-action="title">Main Menu</button>
       <div id="achievement-gallery"></div>
     </div>

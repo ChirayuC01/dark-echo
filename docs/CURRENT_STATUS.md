@@ -80,6 +80,7 @@ RESONANCE is a complete, playable 20-level top-down stealth/horror game where **
 | **Landing page + multi-page build** | `index.html`, `landing/`, `vite.config.js` | Marketing page at `/`, game at `/play/`; shared Vite build |
 | **Player-centered camera** | `js/renderer.js`, `js/constants.js` | `CAMERA_ZOOM` zoom + follow; only a local portion visible (Dark Echo parity) |
 | **Strict 4-color palette** | `js/renderer.js` | white=sound, blue=water, yellow=switch/key/door, red=danger (Dark Echo parity) |
+| **How to Play tutorial** | `play/index.html`, `css/style.css`, `js/game.js` | Goal + keyboard/touch controls + color language + illustrated threat legend; from title/pause menus, auto-shown once on first visit |
 
 ---
 

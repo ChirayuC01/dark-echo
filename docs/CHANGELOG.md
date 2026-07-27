@@ -5,6 +5,14 @@
 
 ---
 
+## [v2.8.0] — 2026-07-27 — How to Play tutorial
+
+### Added
+- **"How to Play" tutorial screen** (`play/index.html`, `css/style.css`, `js/game.js`) so new players understand the game and what each entity means. It explains the goal (sound is vision), the keyboard **and** touch controls, the 4-color language (white = you, blue = water, yellow = switches/keys/doors, red = danger), and every threat — Patrol, Chaser, Sentry, Blind Stalker, Hazard, Screamer, Crusher — each with a small icon matching its in-game look and a one-line description of its behavior, plus a few survival tips.
+- Reachable from the **title menu** and the **pause menu** ("How to Play" buttons), and **auto-shown once** on a player's first ever visit (guarded by a `resonance_seen_howto` localStorage flag). "Back" returns to whichever screen it was opened from. The tutorial content is scrollable so it fits small screens.
+
+---
+
 ## [v2.7.0] — 2026-07-20 — Player-centered camera + Dark Echo palette
 
 ### Added

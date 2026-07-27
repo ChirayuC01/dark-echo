@@ -856,8 +856,22 @@ function handleAction(action) {
       setQualityMode(QUALITY_CYCLE[(i + 1) % QUALITY_CYCLE.length]);
       break;
     }
+    case 'howto': {
+      // Remember the screen we opened from so "Back" returns there.
+      const cur = document.querySelector('.screen.visible');
+      _howtoReturn = cur ? cur.id : 'screen-title';
+      UI.show('screen-howto');
+      break;
+    }
+    case 'howto-back':
+      UI.show(_howtoReturn);
+      break;
   }
 }
+
+// Which screen the How-to-Play overlay returns to on "Back".
+let _howtoReturn = 'screen-title';
+const HOWTO_SEEN_KEY = 'resonance_seen_howto';
 
 // ─── Continue button ──────────────────────────────────────────────────────────
 function refreshContinueButton() {
@@ -889,6 +903,16 @@ export function init() {
   initTitleScreen();
   UI.show('screen-title');
   refreshContinueButton();
+
+  // First-ever visit: show the tutorial once so new players learn the rules.
+  try {
+    if (!localStorage.getItem(HOWTO_SEEN_KEY) && Save.getProgress() === 0) {
+      _howtoReturn = 'screen-title';
+      UI.show('screen-howto');
+      localStorage.setItem(HOWTO_SEEN_KEY, '1');
+    }
+  } catch (e) { /* ignore */ }
+
   G.lastTime = performance.now();
   requestAnimationFrame(loop);
 }

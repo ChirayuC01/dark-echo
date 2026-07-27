@@ -156,6 +156,66 @@ canvas {
 /* ── Level select (Phase 24) ─────────────────────────────────────────────── */
 .screen-wide { max-width: min(680px, calc(100vw - 24px)); }
 
+/* ── How to Play / tutorial ──────────────────────────────────────────────── */
+.howto-body {
+  width: min(560px, calc(100vw - 40px));
+  max-height: 66vh;
+  overflow-y: auto;
+  text-align: left;
+  padding-right: 8px;
+}
+.howto-lead {
+  font-size: 0.8rem; line-height: 1.65; letter-spacing: 0.03em;
+  color: #97a2b6; max-width: 100%; margin: 0 0 18px;
+}
+.howto-lead b { color: #d6e2f5; font-weight: 400; }
+.howto-sec { margin-bottom: 20px; }
+.howto-sec h3 {
+  font-size: 0.66rem; font-weight: 400;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: #6f7b92; margin: 0 0 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;
+}
+.kv {
+  display: flex; justify-content: space-between; gap: 16px;
+  font-size: 0.74rem; letter-spacing: 0.02em; color: #9aa4b8;
+  padding: 4px 0;
+}
+.kv span:first-child { color: #808ba1; }
+.kv span:last-child { color: #cdd9ef; text-align: right; }
+
+.legend { display: flex; flex-direction: column; gap: 12px; }
+.lg-row { display: flex; align-items: flex-start; gap: 12px; }
+.lg-ico { width: 34px; height: 34px; flex-shrink: 0; margin-top: 1px; }
+.lg-txt { font-size: 0.72rem; line-height: 1.55; color: #98a2b6; letter-spacing: 0.02em; }
+.lg-txt b { display: block; font-weight: 400; letter-spacing: 0.05em; margin-bottom: 2px; }
+.lg-txt i { color: #c2cee2; font-style: italic; }
+
+.chip {
+  width: 22px; height: 22px; flex-shrink: 0; margin: 4px 6px 0 6px;
+  border-radius: 3px; border: 1px solid rgba(255,255,255,0.15);
+}
+.c-white  { color: #e9f2ff; }
+.c-blue   { color: #6fa0f0; }
+.c-yellow { color: #e8cf55; }
+.c-red    { color: #e0655a; }
+.c-blue-bg   { background: #3c78dc; }
+.c-yellow-bg { background: #f0d746; }
+.c-red-bg    { background: #d94b40; }
+
+.howto-tips {
+  margin: 0; padding-left: 18px;
+  font-size: 0.72rem; line-height: 1.6; color: #98a2b6; letter-spacing: 0.02em;
+}
+.howto-tips li { margin-bottom: 6px; }
+.howto-tips i { color: #c2cee2; }
+
+@media (max-width: 640px) {
+  .howto-body { max-height: 62vh; }
+  .kv { font-size: 0.68rem; }
+  .lg-txt, .howto-tips, .howto-lead { font-size: 0.68rem; }
+}
+
 #levelselect-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
