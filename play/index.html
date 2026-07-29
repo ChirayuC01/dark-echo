@@ -183,6 +183,21 @@
 
   <!-- Achievement toast (non-interactive; shown during play) -->
   <div id="achievement-toast"></div>
+
+  <!-- Rotate prompt: shown on touch devices held in portrait, when the platform
+       won't let us lock orientation programmatically. -->
+  <div id="rotate-notice">
+    <div class="rotate-inner">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="20" y="6" width="24" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="2.5"/>
+        <line x1="28" y1="11" x2="36" y2="11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M14 52 A18 18 0 0 0 50 52" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M50 52 l-5 -5 M50 52 l5 -5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <p>Rotate your device</p>
+      <span>RESONANCE is played in landscape</span>
+    </div>
+  </div>
 </div>
 
 <script type="module">

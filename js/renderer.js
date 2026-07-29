@@ -111,6 +111,105 @@ export function init(canvasEl) {
   }
 }
 
+// ─── Segment batching + culling (perf) ────────────────────────────────────────
+// Draw-call count and string churn dominated the frame when the screen filled
+// with sound: ~500 echo trails plus a 64-ray pulse meant ~800 individual
+// stroke() calls AND ~800 freshly-allocated `rgba(...)` strings (each with a
+// toFixed(3)) every single frame.
+//
+// Two fixes, neither of which changes what you see:
+//   1. Cull segments outside the visible camera rect. The camera shows only a
+//      slice of the level, so a large share of trails were being submitted just
+//      for the rasterizer to clip them away.
+//   2. Quantize alpha into buckets and batch. Every segment sharing a colour and
+//      bucket goes into ONE path stroked ONCE, with its colour looked up from a
+//      table built at module load. ~800 draw calls collapse to a few dozen.
+const ALPHA_BUCKETS = 64;
+const SEG_TYPES = ['step', 'pulse', 'hazard', 'step-enemy'];
+
+function typeIndex(t) {
+  return t === 'pulse' ? 1 : t === 'hazard' ? 2 : t === 'step-enemy' ? 3 : 0;
+}
+
+function buildLut(rgb) {
+  const lut = new Array(ALPHA_BUCKETS);
+  for (let i = 0; i < ALPHA_BUCKETS; i++) {
+    lut[i] = `rgba(${rgb},${((i + 0.5) / ALPHA_BUCKETS).toFixed(3)})`;
+  }
+  return lut;
+}
+
+// Trail palette and (slightly brighter) active-ray palette, indexed by SEG_TYPES.
+const TRAIL_LUT = ['200,215,235', '225,238,255', '220,60,55', '190,55,50'].map(buildLut);
+const RAY_LUT   = ['210,225,245', '230,240,255', '225,60,55', '210,60,55'].map(buildLut);
+
+// Reusable coordinate bins — cleared per frame, never reallocated after warm-up.
+const _bins = SEG_TYPES.map(() => Array.from({ length: ALPHA_BUCKETS }, () => []));
+
+// Impact glints get their own bins: 4 colour classes (wall / danger / collapsible / door).
+const IMPACT_CLASSES = ['wall', 'danger', 'collapsible', 'door'];
+const IMPACT_LUT = ['225,238,255', '225,60,55', '185,200,220', '240,215,70'].map(buildLut);
+const IMPACT_GLOW = ['rgba(210,225,250,0.55)', 'rgba(225,60,55,0.5)',
+                     'rgba(185,200,220,0.5)', 'rgba(240,215,70,0.5)'];
+const _impactBins = IMPACT_CLASSES.map(() => Array.from({ length: ALPHA_BUCKETS }, () => []));
+
+// Visible world rect (set each frame from the camera), used for cheap AABB culls.
+let _cullX1 = -Infinity, _cullY1 = -Infinity, _cullX2 = Infinity, _cullY2 = Infinity;
+
+function setCullRect(x1, y1, x2, y2) {
+  const m = 8; // margin so wide strokes near the edge aren't popped
+  _cullX1 = x1 - m; _cullY1 = y1 - m; _cullX2 = x2 + m; _cullY2 = y2 + m;
+}
+function resetCullRect() {
+  _cullX1 = _cullY1 = -Infinity; _cullX2 = _cullY2 = Infinity;
+}
+
+function segVisible(x1, y1, x2, y2) {
+  if (x1 < _cullX1 && x2 < _cullX1) return false;
+  if (x1 > _cullX2 && x2 > _cullX2) return false;
+  if (y1 < _cullY1 && y2 < _cullY1) return false;
+  if (y1 > _cullY2 && y2 > _cullY2) return false;
+  return true;
+}
+
+function binInto(bins, ti, alpha, x1, y1, x2, y2) {
+  let b = (alpha * ALPHA_BUCKETS) | 0;
+  if (b < 0) b = 0; else if (b >= ALPHA_BUCKETS) b = ALPHA_BUCKETS - 1;
+  bins[ti][b].push(x1, y1, x2, y2);
+}
+function binSeg(ti, alpha, x1, y1, x2, y2) {
+  binInto(_bins, ti, alpha, x1, y1, x2, y2);
+}
+
+// Stroke every non-empty bucket of one class as a single batched path.
+// `setup` runs once per class (lineWidth / shadow), only if that class has work.
+function flushBinsOf(bins, names, lutSet, setup) {
+  for (let t = 0; t < names.length; t++) {
+    const buckets = bins[t];
+    let any = false;
+    for (let b = 0; b < ALPHA_BUCKETS; b++) if (buckets[b].length) { any = true; break; }
+    if (!any) continue;
+    if (setup) setup(names[t], t);
+    const lut = lutSet[t];
+    for (let b = 0; b < ALPHA_BUCKETS; b++) {
+      const arr = buckets[b];
+      if (arr.length === 0) continue;
+      ctx.strokeStyle = lut[b];
+      ctx.beginPath();
+      for (let i = 0; i < arr.length; i += 4) {
+        ctx.moveTo(arr[i], arr[i + 1]);
+        ctx.lineTo(arr[i + 2], arr[i + 3]);
+      }
+      ctx.stroke();
+      arr.length = 0;
+    }
+  }
+}
+
+function flushBins(lutSet, setup) {
+  flushBinsOf(_bins, SEG_TYPES, lutSet, setup);
+}
+
 // Smoothstep fade used for entity reveals
 function revealAlpha(revealTime, now) {
   const age = now - revealTime;
@@ -133,6 +232,7 @@ export function draw(state, now) {
     ctx.save();
     ctx.translate((view.w - W * s) / 2, (view.h - H * s) / 2);
     ctx.scale(s, s);
+    resetCullRect();   // the title shows the whole world — nothing to cull
     drawEchoTrails(state.echoTrails || [], now, W / 2, H / 2);
     drawActiveRays(state.rays || [], W / 2, H / 2);
     ctx.restore();
@@ -157,6 +257,10 @@ export function draw(state, now) {
   const camX = px - viewW / 2;
   const camY = py - viewH / 2;
   const shakeActive = shake && shake.timer > 0;
+  // Everything outside this rect is off-screen; the draw helpers reject against it
+  // before doing any per-segment maths (big win now that the camera shows only a
+  // slice of the level while trails persist across the whole of it).
+  setCullRect(camX, camY, camX + viewW, camY + viewH);
   ctx.save();
   if (shakeActive) ctx.translate(shake.x, shake.y);
   ctx.scale(zoom, zoom);
@@ -198,6 +302,7 @@ function drawImpacts(impacts, now, px, py) {
   for (const im of impacts) {
     const age = now - im.createdAt;
     if (age >= IMPACT_FADE_MS) continue;
+    if (!segVisible(im.x, im.y, im.x, im.y)) continue;   // off-screen glints cost nothing
     const heard = hearing(Math.hypot(im.x - px, im.y - py));
     if (heard <= 0) continue;
     const t = 1 - age / IMPACT_FADE_MS;
@@ -209,29 +314,24 @@ function drawImpacts(impacts, now, px, py) {
     const txv = -im.ny, tyv = im.nx;
     const len = 3 + im.energy * 6; // brighter hits leave longer marks
 
-    if (im.cellType === 'crusher') {
-      ctx.strokeStyle = `rgba(225,60,55,${(alpha * 0.95).toFixed(3)})`;
-      ctx.shadowColor = 'rgba(225,60,55,0.5)';
-    } else if (im.cellType === 'collapsible') {
-      ctx.strokeStyle = `rgba(185,200,220,${(alpha * 0.95).toFixed(3)})`;
-      ctx.shadowColor = 'rgba(185,200,220,0.5)';
-    } else if (im.cellType === 'door') {
-      ctx.strokeStyle = `rgba(240,215,70,${(alpha * 0.95).toFixed(3)})`;
-      ctx.shadowColor = 'rgba(240,215,70,0.5)';
-    } else if (im.type === 'hazard') {
-      ctx.strokeStyle = `rgba(225,60,55,${(alpha * 0.85).toFixed(3)})`;
-      ctx.shadowColor = 'rgba(225,60,55,0.5)';
-    } else {
-      ctx.strokeStyle = `rgba(225,238,255,${(alpha * 0.95).toFixed(3)})`;
-      ctx.shadowColor = 'rgba(210,225,250,0.55)';
-    }
-    ctx.shadowBlur = sb(6 * fade);
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(im.x - txv * len, im.y - tyv * len);
-    ctx.lineTo(im.x + txv * len, im.y + tyv * len);
-    ctx.stroke();
+    let cls, mul;
+    if (im.cellType === 'crusher')          { cls = 1; mul = 0.95; }
+    else if (im.cellType === 'collapsible') { cls = 2; mul = 0.95; }
+    else if (im.cellType === 'door')        { cls = 3; mul = 0.95; }
+    else if (im.type === 'hazard')          { cls = 1; mul = 0.85; }
+    else                                    { cls = 0; mul = 0.95; }
+
+    binInto(_impactBins, cls, alpha * mul,
+            im.x - txv * len, im.y - tyv * len,
+            im.x + txv * len, im.y + tyv * len);
   }
+
+  // One state change + one stroke per colour/alpha bucket instead of per glint.
+  ctx.lineWidth = 1.4;
+  flushBinsOf(_impactBins, IMPACT_CLASSES, IMPACT_LUT, (_name, i) => {
+    ctx.shadowColor = IMPACT_GLOW[i];
+    ctx.shadowBlur  = sb(6);
+  });
   ctx.restore();
 }
 
@@ -427,30 +527,22 @@ function drawEchoTrails(trails, now, px, py) {
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineWidth = 0.7;
-  for (const t of trails) {
+  ctx.shadowBlur = 0;
+  for (let i = 0; i < trails.length; i++) {
+    const t = trails[i];
     const age = now - t.createdAt;
     if (age >= RAY_TRAIL_MS) continue;
+    // Cheap rejects first — cull before the sqrt in segPtDist.
+    if (!segVisible(t.x1, t.y1, t.x2, t.y2)) continue;
     const heard = hearing(segPtDist(px, py, t.x1, t.y1, t.x2, t.y2));
     if (heard <= 0) continue;
     const p = 1 - age / RAY_TRAIL_MS;
     const fade = p * p * (3 - 2 * p); // smooth ease-out
     const alpha = t.energy * fade * 0.24 * heard;   // dimmed so the bright feet read (2026-07-20)
     if (alpha < 0.005) continue;
-
-    if (t.type === 'hazard') {
-      ctx.strokeStyle = `rgba(220,60,55,${alpha.toFixed(3)})`;
-    } else if (t.type === 'pulse') {
-      ctx.strokeStyle = `rgba(225,238,255,${alpha.toFixed(3)})`;
-    } else if (t.type === 'step-enemy') {
-      ctx.strokeStyle = `rgba(190,55,50,${alpha.toFixed(3)})`;
-    } else {
-      ctx.strokeStyle = `rgba(200,215,235,${alpha.toFixed(3)})`;
-    }
-    ctx.beginPath();
-    ctx.moveTo(t.x1, t.y1);
-    ctx.lineTo(t.x2, t.y2);
-    ctx.stroke();
+    binSeg(typeIndex(t.type), alpha, t.x1, t.y1, t.x2, t.y2);
   }
+  flushBins(TRAIL_LUT, null);   // uniform width/no glow for trails — one setup for all
   ctx.restore();
 }
 
@@ -460,9 +552,29 @@ function drawActiveRays(rays, px, py) {
   ctx.save();
   ctx.lineCap = 'round';
 
-  for (let pass = 0; pass < 4; pass++) {
-    const type = pass === 0 ? 'step' : pass === 1 ? 'pulse' : pass === 2 ? 'hazard' : 'step-enemy';
+  // Single pass over the rays, binning by type + alpha; the batched flush then
+  // applies each type's width/glow once instead of per segment.
+  for (let r = 0; r < rays.length; r++) {
+    const ray = rays[r];
+    const ti = typeIndex(ray.type);
+    const segs = ray.segments;
+    for (let s = 0; s < segs.length; s++) {
+      const seg = segs[s];
+      if (!segVisible(seg.x1, seg.y1, seg.x2, seg.y2)) continue;
+      const heard = hearing(segPtDist(px, py, seg.x1, seg.y1, seg.x2, seg.y2));
+      const alpha = seg.energy * 0.5 * heard;   // dimmed so the bright feet read (2026-07-20)
+      if (alpha < 0.01) continue;
+      binSeg(ti, alpha, seg.x1, seg.y1, seg.x2, seg.y2);
+    }
+    // The live leading edge of the ray
+    if (!segVisible(ray.segX, ray.segY, ray.tipX, ray.tipY)) continue;
+    const heard = hearing(segPtDist(px, py, ray.segX, ray.segY, ray.tipX, ray.tipY));
+    const liveAlpha = ray.energy * 0.62 * heard;
+    if (liveAlpha < 0.01) continue;
+    binSeg(ti, liveAlpha, ray.segX, ray.segY, ray.tipX, ray.tipY);
+  }
 
+  flushBins(RAY_LUT, type => {
     if (type === 'step') {
       ctx.lineWidth = 1.0;
       ctx.shadowBlur = sb(4);
@@ -480,40 +592,9 @@ function drawActiveRays(rays, px, py) {
       ctx.shadowBlur = sb(4);
       ctx.shadowColor = 'rgba(210,60,55,0.5)';
     }
-
-    for (const ray of rays) {
-      if (ray.type !== type) continue;
-
-      for (const seg of ray.segments) {
-        const heard = hearing(segPtDist(px, py, seg.x1, seg.y1, seg.x2, seg.y2));
-        const alpha = seg.energy * 0.5 * heard;   // dimmed so the bright feet read (2026-07-20)
-        if (alpha < 0.01) continue;
-        ctx.strokeStyle = rayColor(type, alpha);
-        ctx.beginPath();
-        ctx.moveTo(seg.x1, seg.y1);
-        ctx.lineTo(seg.x2, seg.y2);
-        ctx.stroke();
-      }
-
-      const heard = hearing(segPtDist(px, py, ray.segX, ray.segY, ray.tipX, ray.tipY));
-      const liveAlpha = ray.energy * 0.62 * heard;
-      if (liveAlpha < 0.01) continue;
-      ctx.strokeStyle = rayColor(type, liveAlpha);
-      ctx.beginPath();
-      ctx.moveTo(ray.segX, ray.segY);
-      ctx.lineTo(ray.tipX, ray.tipY);
-      ctx.stroke();
-    }
-  }
+  });
 
   ctx.restore();
-}
-
-function rayColor(type, alpha) {
-  if (type === 'hazard')     return `rgba(225,60,55,${alpha.toFixed(3)})`;
-  if (type === 'pulse')      return `rgba(230,240,255,${alpha.toFixed(3)})`;
-  if (type === 'step-enemy') return `rgba(210,60,55,${alpha.toFixed(3)})`;
-  return                            `rgba(210,225,245,${alpha.toFixed(3)})`;
 }
 
 // ─── Doors — amber when locked, faint green when open ────────────────────────

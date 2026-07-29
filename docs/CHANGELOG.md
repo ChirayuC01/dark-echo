@@ -5,6 +5,49 @@
 
 ---
 
+## [v2.9.1] — 2026-07-27 — Landscape lock + wave-load performance
+
+### Added
+- **Mobile now opens in landscape.** The touch scheme assumes a thumb at each screen
+  edge, so being dropped into portrait forced players to rotate before they could play.
+  New `js/orientation.js` locks orientation via the Screen Orientation API where the
+  platform allows (Capacitor WebView; browsers once fullscreen, retried on first tap),
+  and shows a **"Rotate your device"** prompt as the visible fallback where it doesn't.
+  The definitive fix for the packaged APK — `android:screenOrientation="sensorLandscape"`
+  in `AndroidManifest.xml` — is documented in `docs/ANDROID_BUILD_GUIDE.md` §5b
+  (`android/` is gitignored, so it can't be committed).
+
+### Fixed
+- **Wall glints grew without bound.** `G.impacts` was pruned only by age (3.6 s) and never
+  capped by count — unlike echo trails, which have always had a hard cap. A single 64-ray
+  pulse can bounce into ~250 glints, so repeated pulses plus footsteps in a reflective room
+  pushed the array into the thousands, every entry re-drawn each frame with its own
+  `stroke()` **and** its own `shadowBlur`. Now capped (420 / 260 / 160 by quality tier),
+  oldest dropped first.
+
+### Changed (performance)
+- **Batched sound rendering.** Echo trails, active rays and impact glints were each issuing
+  one `stroke()` per segment plus a freshly-allocated `rgba(...)` string (with `toFixed(3)`)
+  — roughly 800 draw calls and 800 allocations per frame under heavy wave load. Alpha is now
+  quantized into 64 buckets and every segment sharing a colour+bucket is stroked as **one
+  batched path**, with colours read from a table built once at module load. Max colour error
+  is 2/255 — visually identical.
+- **Off-screen culling.** The camera shows only a slice of the level while trails persist
+  across all of it, so segments outside the view rect are now rejected before any per-segment
+  maths or draw submission.
+- Removed a per-frame array allocation in `processRayEntities` (rebuilt with spread every
+  frame purely to feed a read-only loop).
+- **Adaptive quality reacts 2.5× faster** — `QUALITY_SUSTAIN_MS` 3000 → 1200 ms, so players
+  no longer sit through ~3 s of visible jank before the game downgrades. It remains
+  downgrade-only, so it still cannot oscillate.
+
+> **Measurement note:** these are algorithmic fixes (bounded memory, fewer draw calls, less
+> GC). They could not be shown as an FPS gain in the headless test environment, which uses
+> software rasterization and is fill-bound — frame time there scales with pixel count, so it
+> swamps draw-call and allocation differences. On-device confirmation is still needed.
+
+---
+
 ## [v2.9.0] — 2026-07-27 — Full-screen mobile viewport (Phase 31)
 
 ### Fixed

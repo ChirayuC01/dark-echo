@@ -1,7 +1,8 @@
 import { TILE, COLS, ROWS, W, H,
          STEP_INTERVAL, PULSE_COOLDOWN,
          PLAYER_RADIUS, ENEMY_RADIUS,
-         IMPACT_FADE_MS, HEARING_NEAR, HEARING_FAR,
+         IMPACT_FADE_MS, IMPACT_CAP, IMPACT_CAP_MEDIUM, IMPACT_CAP_LOW,
+         HEARING_NEAR, HEARING_FAR,
          CELL,
          RAY_COUNT_STEP, STEP_RAY_MAX,
          ENEMY_STEP_RAYS, ENEMY_STEP_MAX,
@@ -20,6 +21,7 @@ import * as Audio from './audio.js';
 import * as Input from './input.js';
 import * as Renderer from './renderer.js';
 import * as Viewport from './viewport.js';
+import * as Orientation from './orientation.js';
 import * as UI from './ui.js';
 import * as Save from './save.js';
 import { ACHIEVEMENTS, getById, evaluate as evalAchievements } from './achievements.js';
@@ -38,6 +40,7 @@ const G = {
   levelIndex: 0,
   grid: null,
   impacts: [],        // wall impact glints: {x,y,nx,ny,energy,type,createdAt}
+  impactCap: IMPACT_CAP, // bounded per quality tier (see applyQualityTier)
   player: null,
   enemies: [],
   hazards: [],
@@ -103,6 +106,9 @@ function applyQualityTier(tier) {
             : tier === 'medium' ? ECHO_TRAIL_CAP_MEDIUM
             : ECHO_TRAIL_CAP_LOW;
   if (G.raySystem) G.raySystem.trailCap = cap;
+  G.impactCap = tier === 'high'   ? IMPACT_CAP
+              : tier === 'medium' ? IMPACT_CAP_MEDIUM
+              : IMPACT_CAP_LOW;
 }
 
 // Set the user preference. 'auto' hands control to the FPS-driven adaptor;
@@ -321,11 +327,24 @@ function applyWallHits(hits, now) {
     if (now - G.impacts[i].createdAt < IMPACT_FADE_MS) G.impacts[wi++] = G.impacts[i];
   }
   G.impacts.length = wi;
+  // Age-pruning alone let this grow without bound during heavy wave activity
+  // (a 64-ray pulse can add ~250 glints that each live 3.6s). Drop the oldest
+  // beyond the cap — the same treatment echo trails already get.
+  if (G.impacts.length > G.impactCap) {
+    G.impacts.splice(0, G.impacts.length - G.impactCap);
+  }
 }
 
 // ─── Ray segments → entity reveal + hearing ───────────────────────────────────
+// Reused scratch array — this runs every frame, and rebuilding it with spread
+// allocated a fresh array per frame purely to feed a read-only loop (GC churn).
+const _allEntities = [];
+
 function processRayEntities(now) {
-  const allEntities = [...G.enemies, ...G.hazards];
+  const allEntities = _allEntities;
+  allEntities.length = 0;
+  for (let i = 0; i < G.enemies.length; i++) allEntities.push(G.enemies[i]);
+  for (let i = 0; i < G.hazards.length; i++) allEntities.push(G.hazards[i]);
   const isStepLevel = G.levelIndex >= 3;
   const REVEAL_D = 28;
 
@@ -888,6 +907,9 @@ function refreshContinueButton() {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 export function init() {
   StatusBar.hide().catch(() => {});
+  // Mobile is landscape-only (the touch scheme puts both thumbs at the screen
+  // edges); locks where the platform allows, prompts to rotate where it doesn't.
+  Orientation.init();
 
   const canvas = document.getElementById('canvas');
   Renderer.init(canvas);

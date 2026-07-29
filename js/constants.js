@@ -51,6 +51,12 @@ export const MIN_ENERGY       = 0.06;  // ray dies below this energy after bounc
 export const RAY_TRAIL_MS     = 4200;  // echo trail persistence (ms)
 export const ECHO_TRAIL_CAP   = 500;   // hard cap to prevent unbounded growth
 export const IMPACT_FADE_MS   = 3600;  // wall impact glint persistence (ms)
+// Hard cap on stored wall glints. A single 64-ray pulse can bounce into ~250
+// impacts, each living IMPACT_FADE_MS — with steps and repeated pulses the array
+// grew unbounded and every entry was drawn each frame. Bounded like ECHO_TRAIL_CAP.
+export const IMPACT_CAP       = 420;
+export const IMPACT_CAP_MEDIUM = 260;
+export const IMPACT_CAP_LOW    = 160;
 
 // Hearing attenuation: full intensity within NEAR px, silent beyond FAR px
 export const HEARING_NEAR = 130;
@@ -125,7 +131,10 @@ export const ECHO_TRAIL_CAP_LOW     = 150;  // trail cap at 'low' quality tier
 export const ENEMY_STEP_RAYS_LOW    = 5;    // enemy step rays at reduced tiers
 export const QUALITY_DOWNGRADE_FPS  = 45;   // sustained below this → drop a tier
 export const QUALITY_LOW_FPS        = 30;   // sustained below this → jump to 'low'
-export const QUALITY_SUSTAIN_MS     = 3000; // how long FPS must stay low before acting
+// How long FPS must stay low before dropping a tier. Kept short enough that a
+// player doesn't sit through seconds of visible jank before the game reacts —
+// the adaptor is downgrade-only, so a brief spike can't make it oscillate.
+export const QUALITY_SUSTAIN_MS     = 1200;
 
 // ─── Cell types ──────────────────────────────────────────────────────────────
 export const CELL = {

@@ -162,6 +162,48 @@ adb install -r android\app\build\outputs\apk\debug\app-debug.apk
 
 ---
 
+## 5b. Lock the app to landscape (one-time, recommended)
+
+The game is designed for landscape — the touch controls assume a thumb at each
+screen edge. The web code already tries to lock orientation at runtime and shows
+a "rotate your device" prompt when it can't, but **the reliable fix for the
+packaged app is one line in the Android manifest**, so the app never even opens
+in portrait.
+
+`android/` is gitignored (it's generated locally), so this edit lives here rather
+than in the repo. You only need to do it once per fresh `npx cap add android`.
+
+Open:
+
+```
+android/app/src/main/AndroidManifest.xml
+```
+
+Find the `<activity ... android:name=".MainActivity"` element and add the
+`screenOrientation` attribute:
+
+```xml
+<activity
+    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+    android:name=".MainActivity"
+    android:label="@string/title_activity_main"
+    android:theme="@style/AppTheme.NoActionBarLaunch"
+    android:launchMode="singleTask"
+    android:screenOrientation="sensorLandscape"
+    android:exported="true">
+```
+
+- `sensorLandscape` — landscape only, but still flips between the two landscape
+  directions so the phone can be held either way. **Recommended.**
+- `landscape` — pins one landscape direction only.
+
+Then rebuild (`npm run build; npx cap sync android; cd android; .\gradlew.bat assembleDebug`).
+
+> If you ever delete and re-add the `android/` folder, re-apply this edit —
+> Capacitor regenerates the manifest from its template.
+
+---
+
 ## What ends up in the app
 
 - The app loads `dist/index.html` (the landing page), whose `<head>` detects the
