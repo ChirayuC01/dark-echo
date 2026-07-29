@@ -18,9 +18,9 @@ RESONANCE is a complete, playable 20-level top-down stealth/horror game where **
 
 ## Active Phase
 
-**None active — next up: Phase 26 (Sound Grammar Fixes). Phase 25 (Play Store) deferred by owner.**
+**None active — next up: Phase 31 (Full-Screen Mobile Viewport). Phase 25 (Play Store) deferred by owner.**
 
-> See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–30 specifications.  
+> See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–31 specifications.  
 > Phase 16 was skipped (wavefront visual not preferred). Phases 17–24 are complete.
 > **Phase 25 (Google Play submission) is deferred by owner decision** — the game is
 > feature-complete for the roadmap's gameplay scope but not yet considered fully
@@ -42,6 +42,22 @@ phases in `docs/PRODUCTION_ROADMAP.md` (~12–19 days total):
 
 Phase 27 is the keystone: 28, 29 and the meaning of sprint all depend on
 loudest-wins AI arbitration. Phase 26 is independent and the cheapest win.
+
+### Phase 31 — Full-Screen Mobile Viewport (added 2026-07-27, **do first**)
+
+Not a parity item — an on-device usability defect. `#wrap` locks the play area to
+the game's native 4:3, so on a modern ~19.5:9 phone in landscape the game occupies
+only ~60% of the screen with **~180px of black bar on each side**. Those bars are
+also **dead to touch** (listeners are bound to `canvasEl`), so players must reach
+inward to the centre-left/centre-right instead of resting their thumbs at the screen
+edges. Portrait is worse — 34% of the screen used.
+
+Fix is an **aspect-adaptive viewport** (widen the field of view; never stretch or
+crop), with camera zoom compensated by aspect so wide phones don't see more level
+than narrow ones. Requires separating world-space `W`/`H` from runtime view
+dimensions across `renderer.js`, `input.js` and `game.js`. Effort 3–5 days.
+**Recommended before Phases 26–30** — it's the only item that makes the shipped
+Android build actively uncomfortable to play.
 
 ---
 

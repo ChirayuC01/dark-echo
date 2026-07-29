@@ -3,6 +3,7 @@
 > **This document picks up where IMPLEMENTATION_ROADMAP.md ends.**  
 > Phases 0–14 are complete (v1.0.0). Phases 15–25 take the game from local prototype to commercial browser + Android product.  
 > Phases 26–30 close the remaining mechanical gaps against the original *Dark Echo* design spec.  
+> Phase 31 fixes the Android full-screen/pillarboxing defect — **highest user impact, recommended next**.  
 > Read CURRENT_STATUS.md first in every new session to confirm which phase is active.
 
 ---
@@ -36,6 +37,10 @@ RESONANCE v1.0.0 is a fully working 10-level browser game. All core mechanics ar
 10. Google Play submission (Phase 25)
 
 **Phases 26–30 address a different gap: *mechanical parity* with the original Dark Echo** — see the audit below.
+
+**Phase 31 is a platform/ergonomics fix, not parity** — the Android build pillarboxes
+into a 4:3 box and wastes ~40 % of the screen (dead to touch), forcing players to reach
+inward. It is independent of 26–30 and is the **recommended next phase**.
 
 ---
 
@@ -877,6 +882,115 @@ loudness meaningless: a sprint can't be riskier than a walk, and a thrown decoy
 
 ---
 
+## Phase 31 — Full-Screen Mobile Viewport (Android)
+**Status:** ⬜ Pending — **Priority: High. Recommended before Phases 26–30.**  
+**Goal:** Make the game fill the entire device screen on Android instead of pillarboxing into a 4:3 box, so the touch controls sit under the player's thumbs at the real screen edges.  
+**Covers:** Reported on-device usability defect (not a Dark Echo parity item)  
+**Depends on:** Nothing — independent of the parity phases  
+**Estimated effort:** 3–5 days  
+**Risk:** Medium (touches the render transform, input mapping, and every screen-space constant)
+
+> **Why this jumps the queue.** This is the only item in the backlog that makes the
+> shipped Android build actively uncomfortable to play. Parity mechanics (26–30)
+> add depth to a game people can already play; this one fixes a game people are
+> *straining* to play. Do it first.
+
+### The defect (measured)
+
+`css/style.css` locks the play area to the game's native 4:3:
+
+```css
+#wrap {
+  width:  min(800px, 100vw, calc(100vh * 4 / 3));
+  height: min(600px, 100vh, calc(100vw * 3 / 4));
+}
+```
+
+Modern phones are ~19.5:9 in landscape, so 4:3 pillarboxes hard:
+
+| Device (landscape) | Viewport | Game area | Dead bar each side | Screen used |
+|---|---|---|---|---|
+| Pixel 7 | 915×412 | 549×412 | **183 px** | 60 % |
+| Galaxy S23 | 854×393 | 524×393 | **165 px** | 61 % |
+| iPhone-class | 932×430 | 573×430 | **179 px** | 62 % |
+| Pixel 7 **portrait** | 412×915 | 412×309 | 303 px top/bottom | 34 % |
+
+Two consequences, both reported:
+1. **Ergonomics** — the player must reach inward to the centre-left / centre-right of
+   the *canvas* rather than resting their thumbs at the natural screen edges.
+2. **Dead zones** — touch listeners are bound to `canvasEl` (`js/input.js`), so the
+   black bars are entirely unresponsive. Roughly 40 % of the screen does nothing.
+
+### Approach — widen the field of view, do **not** stretch
+
+The camera is already player-centred and only shows a slice of the level
+(`CAMERA_ZOOM`), so rendering a wider view is natural and non-distorting.
+
+- ❌ **Stretch to fill** — distorts circles into ellipses; breaks the visual language. Rejected.
+- ❌ **Zoom-to-fill / crop** — preserves aspect but silently removes vertical play area. Rejected.
+- ✅ **Aspect-adaptive viewport** — size the canvas backing store to the *device*
+  aspect and let the camera reveal the correct world area for that shape.
+
+**Fairness constraint:** a 20:9 phone must not see meaningfully more of the level
+than a 4:3 tablet, or the game gets easier on wider hardware. Scale `CAMERA_ZOOM`
+by aspect so the *visible world area* stays roughly constant, letting shape — not
+area — change with the device.
+
+### Tasks
+- [ ] Replace the fixed `canvas.width = W; canvas.height = H` in `Renderer.init()`
+      with a `resizeCanvas()` that sets the backing store from the real viewport
+      (× `devicePixelRatio`, clamped for perf) and runs on load, `resize`, and
+      `orientationchange`.
+- [ ] **Refactor screen-space `W`/`H` off the 800×600 constants.** They are imported
+      widely for the camera transform, vignette, HUD and title screen. Introduce
+      runtime `viewW`/`viewH` (screen space) and keep `W`/`H` meaning *world/level*
+      size only. Audit every current use of `W`/`H` and classify it as one or the other.
+- [ ] `js/renderer.js` camera block: derive the view rect from the live viewport
+      instead of `W / CAMERA_ZOOM`, `H / CAMERA_ZOOM`.
+- [ ] Aspect-compensated zoom so visible world **area** is constant across devices
+      (wide screens see wider but proportionally shorter). Add the constant + rationale.
+- [ ] `buildVignette()` is pre-rendered at a fixed size — rebuild it on resize
+      (it is cached offscreen from Phase 23; a stale cache will smear or letterbox).
+- [ ] **`js/input.js`**: `CANVAS_W`/`CANVAS_H` are hardcoded `800`/`600` and used by
+      `canvasToLocal()`. Read live canvas dimensions instead, or the entire touch
+      model mis-maps once the canvas is no longer 800×600.
+- [ ] `js/game.js` currently feeds `Input.setPlayerScreenPos(W / 2, H / 2)` — must
+      become the live viewport centre, or "walk toward finger" aims at the wrong point.
+- [ ] Make the whole screen touch-active: move listeners to a full-bleed element (or
+      ensure the canvas genuinely covers the viewport) so there are no dead margins.
+- [ ] **Safe-area insets** — `viewport-fit=cover` is already set in `play/index.html`;
+      add `env(safe-area-inset-*)` padding for HUD/overlay screens so nothing sits
+      under a notch, punch-hole, or the gesture bar.
+- [ ] Decide portrait behaviour: portrait wastes 66 % of the screen today. Either
+      support it properly via the same adaptive viewport, or lock the Android app to
+      landscape in `AndroidManifest.xml` (`android:screenOrientation="sensorLandscape"`).
+      Recommend locking to landscape — the control scheme assumes two thumbs at the edges.
+- [ ] Re-verify Phase 21.1's canvas-cutoff fix and Phase 23's quality tiers still hold
+      (a larger backing store raises fill cost; confirm the `low` tier still holds frame rate).
+- [ ] Rebuild the APK (`docs/ANDROID_BUILD_GUIDE.md`) and confirm on a real device.
+- [ ] Build, verify headless at several viewport aspects, commit + push.
+
+### Files Modified
+- `css/style.css` — `#wrap` sizing; safe-area padding
+- `js/renderer.js` — `resizeCanvas()`, camera from live viewport, aspect-compensated zoom, vignette rebuild
+- `js/constants.js` — world vs. view separation, aspect-compensation constant
+- `js/input.js` — live canvas dimensions in `canvasToLocal()`
+- `js/game.js` — live viewport centre for `setPlayerScreenPos`
+- `play/index.html` — safe-area / full-bleed container
+- `android/app/src/main/AndroidManifest.xml` — orientation lock (if adopted; `android/` is gitignored — document in the build guide)
+
+### Acceptance Criteria
+- [ ] Game fills 100 % of the screen on a real Android device — no black bars in landscape
+- [ ] Touch works at the extreme left and right screen edges; no dead margins anywhere
+- [ ] Nothing is stretched or distorted — circles stay circular at every aspect ratio
+- [ ] A 20:9 phone does not see materially more level area than a 4:3 display
+- [ ] Rotating / resizing re-lays out cleanly with no stale vignette or mis-mapped touch
+- [ ] HUD and overlay screens clear notches and the gesture bar
+- [ ] Frame rate holds at the larger backing store on the `low` quality tier
+- [ ] Desktop browser at 800×600 is visually unchanged from today
+
+---
+
 ## Summary: Effort Estimate and Sequence
 
 ```
@@ -904,34 +1018,43 @@ All tracks can proceed independently after Phase 15 is done.
 
 ---
 
-## Summary: Dark Echo Parity (Phases 26–30)
+## Summary: Parity + Platform (Phases 26–31)
 
 ```
-Phase 26 — Sound grammar fixes        1–2 days    [independent — START HERE]
+Phase 31 — Full-screen mobile viewport 3–5 days   [independent — DO FIRST]
+Phase 26 — Sound grammar fixes        1–2 days    [independent — cheapest parity win]
 Phase 27 — Noise magnitude + sprint   4–6 days    [independent — KEYSTONE]
 Phase 28 — Charge clap                2–3 days    [after 27]
 Phase 29 — Throwable noise decoy      4–6 days    [after 27]
 Phase 30 — Zero-HUD immersion mode    1–2 days    [after 28 + 29 · needs decision]
 ─────────────────────────────────────────────────
-Parity total:                         12–19 days  (~3–4 focused weeks)
+Parity total (26–30):                 12–19 days  (~3–4 focused weeks)
+Including Phase 31:                   15–24 days  (~4–5 focused weeks)
 ```
 
 **Dependency graph:**
 
 ```
-26 (grammar)  ──────────────── independent, cheapest win
+31 (full-screen viewport) ──── independent · highest user impact
+26 (grammar) ───────────────── independent, cheapest win
 27 (noise + sprint) ──┬── 28 (charge clap)
                       └── 29 (decoy)  ──┬── 30 (zero-HUD)
                           28 ───────────┘
 ```
 
-**Recommended order:** 26 → 27 → 28 → 29 → 30.
+**Recommended order:** **31** → 26 → 27 → 28 → 29 → 30.
 
-- **26 first** — it is 1–2 days, depends on nothing, and fixes a colour-grammar bug
-  that actively misleads players today (the exit reads as "your sound").
+- **31 first** — it is the only item that makes the shipped Android build actively
+  uncomfortable: ~40 % of the screen is wasted black bar *and* dead to touch, forcing
+  players to reach inward. Everything else adds depth to a game people can already
+  play; this fixes a game people are straining to play.
+- **26 next** — 1–2 days, depends on nothing, and fixes a colour-grammar bug that
+  actively misleads players today (the exit reads as "your sound").
 - **27 is the keystone** — 28, 29 and the *meaning* of sprint all collapse without
   loudness arbitration. Do not start 28 or 29 before it.
 - **30 last, and only after an owner decision** — it trades usability for immersion,
   and it depends on 28/29 having already moved their feedback on-screen diegetically.
 
 After Phase 30, all 20 mechanics in the original Dark Echo design spec are covered.
+Phase 31 is orthogonal to parity — it is a platform/ergonomics fix, tracked here
+because it gates how playable the Android build actually is.
