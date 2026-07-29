@@ -18,7 +18,7 @@ RESONANCE is a complete, playable 20-level top-down stealth/horror game where **
 
 ## Active Phase
 
-**None active — Phase 31 complete ✅. Next up: Phase 26 (Sound Grammar Fixes). Phase 25 (Play Store) deferred by owner.**
+**None active — Phases 31 + 26 complete ✅. Next up: Phase 27 (Noise Magnitude Model + Sprint). Phase 25 (Play Store) deferred by owner.**
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–31 specifications.  
 > Phase 16 was skipped (wavefront visual not preferred). Phases 17–24 are complete.
@@ -29,19 +29,35 @@ RESONANCE is a complete, playable 20-level top-down stealth/horror game where **
 ### Dark Echo parity backlog (Phases 26–30, added 2026-07-27)
 
 An audit against the original Dark Echo design spec (20 mechanics) found
-**12 fully present · 5 partial · 3 missing**. The gaps are now planned as five
+**12 fully present · 5 partial · 3 missing**; Phase 26 has since closed three,
+leaving **15 present · 2 partial · 3 missing**. The gaps are now planned as five
 phases in `docs/PRODUCTION_ROADMAP.md` (~12–19 days total):
 
 | Phase | Scope | Covers | Effort |
 |---|---|---|---|
-| **26** | Yellow exit + sound-activated switches | `SND-06`, `ENV-01`, `ENV-02` | 1–2 d |
+| ~~**26**~~ ✅ | Yellow exit + sound-activated switches | `SND-06`, `ENV-01`, `ENV-02` | done |
 | **27** | Noise-magnitude model + sprint (**keystone**) | `PLR-04`, `AI-01` | 4–6 d |
 | **28** | Charge clap (variable-intensity pulse) | `PLR-05` | 2–3 d |
 | **29** | Throwable noise decoy | `PLR-06` | 4–6 d |
 | **30** | Zero-HUD immersion mode (**needs owner decision**) | `UI-01` | 1–2 d |
 
 Phase 27 is the keystone: 28, 29 and the meaning of sprint all depend on
-loudest-wins AI arbitration. Phase 26 is independent and the cheapest win.
+loudest-wins AI arbitration.
+
+### Phase 26 — Sound Grammar Fixes ✅ Complete (2026-07-27)
+
+- **Exit is now objective-yellow** (`drawExit`), matching keys/doors/switches. It was
+  white, i.e. the same colour as the player's own sound, so the goal read as "you".
+- **Sound-activated switches** (`soundActivated` opt-in flag): a player pulse passing
+  within `TRIGGER_ACTIVATE_D` (26 px) with energy ≥ `TRIGGER_SOUND_ENERGY` (0.5) fires a
+  switch without the player touching it. The gate sits above a footstep's 0.42, so only a
+  deliberate clap works — you can't trip one by walking past. These switches render
+  outward ripples so the affordance is visible.
+- **Level 19 "The Vault" puzzle**: a new door blocks row 8's only gap — the sole route to
+  the exit half — and its switch sits behind a hazard. Sound crosses a hazard, a body does
+  not, so the switch cannot be stepped on and must be clapped from row 7. Verified by BFS +
+  raycast that the exit is blocked without it, that the switch is unreachable on foot, and
+  that a pulse from a safe cell reaches it.
 
 ### Phase 31 — Full-Screen Mobile Viewport ✅ Complete (2026-07-27)
 

@@ -597,7 +597,7 @@ export const LEVELS = [
   // avoid the screamers, cross the crusher, and slip past the stalker.
   {
     name: 'The Vault',
-    hint: 'Key behind the sentinels · Crusher in the hall · Stalker at the gate',
+    hint: 'The far switch is sealed by fire — reach it with sound, not with your feet',
     reverb: 'large',
     grid: [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // 0
@@ -622,9 +622,22 @@ export const LEVELS = [
       { type: 'crusher',  col: 5,  row: 7, axis: 'h', range: 3, period: 7.0 },
       { type: 'stalker',  col: 10, row: 12 },
       { type: 'sentry',   col: 3,  row: 13, angle: 0 },
+      // Seals the mouth of the switch alcove at the right end of the crusher hall.
+      // Sound passes straight through a hazard; a body does not.
+      { type: 'hazard',   col: 16, row: 7 },
     ],
     keys:  [{ id: 'vault-k1', col: 17, row: 3, doorId: 'vault-d1' }],
-    doors: [{ id: 'vault-d1', col: 10, row: 12 }],
+    doors: [
+      { id: 'vault-d1', col: 10, row: 12 },
+      // Row 8's only gap — the sole route from the crusher hall down to the exit
+      // half of the level. Opens ONLY via the sound-activated switch below.
+      { id: 'vault-d2', col: 10, row: 8 },
+    ],
+    // Sound-activated switch (Phase 26). It sits past the hazard, so it cannot be
+    // stepped on — the player has to clap at it from a safe distance in row 7.
+    triggers: [
+      { col: 17, row: 7, action: 'open_door', targetId: 'vault-d2', soundActivated: true },
+    ],
   },
 
   // ─── Level 20 ─── "The Deep"  (final — all mechanics, hardest execution)

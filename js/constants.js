@@ -105,6 +105,16 @@ export const ENEMY_STEP_MAX           = 80;   // max travel distance for enemy s
 export const BLIND_STALKER_BREATH_MIN = 2000; // ms min interval between breathing cues
 export const BLIND_STALKER_BREATH_MAX = 3000; // ms max interval between breathing cues
 
+// ─── Switches / triggers ─────────────────────────────────────────────────────
+// Triggers marked `soundActivated` fire when a loud enough sound wave passes
+// within this radius — you can clap a switch open from across a gap instead of
+// having to physically stand on it (Dark Echo ENV-02, Phase 26).
+export const TRIGGER_ACTIVATE_D   = 26;   // px — ray-to-switch distance that trips it
+// Min ray energy to trip a switch. Deliberately above a footstep's 0.42 so only a
+// PULSE opens these — direct pulse rays are 1.0 and survive one bounce at 0.55, but
+// footsteps and faint multi-bounce tails never trip a switch by accident.
+export const TRIGGER_SOUND_ENERGY = 0.5;
+
 // ─── Doors / keys ────────────────────────────────────────────────────────────
 export const KEY_PICKUP_RADIUS    = 12;
 export const CRUSHER_REVEAL_MS    = 5500;  // crushers stay visible longer than walls

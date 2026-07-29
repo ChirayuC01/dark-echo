@@ -342,14 +342,16 @@ function drawExit(exit, now) {
   if (alpha < 0.004) return;
   const pulse = (0.5 + 0.25 * Math.sin(now / 500)) * alpha;
   ctx.save();
+  // Objective yellow, matching keys/doors/switches. Previously white, which made
+  // the goal read as "your own sound" and broke the 4-colour grammar (Phase 26).
   ctx.shadowBlur = sb(14 * alpha);
-  ctx.shadowColor = 'rgba(210,225,250,0.5)';
+  ctx.shadowColor = 'rgba(240,215,70,0.55)';
   const grd = ctx.createRadialGradient(exit.x, exit.y, 2, exit.x, exit.y, 20);
-  grd.addColorStop(0, `rgba(225,238,255,${pulse.toFixed(3)})`);
-  grd.addColorStop(1, 'rgba(225,238,255,0)');
+  grd.addColorStop(0, `rgba(240,215,70,${pulse.toFixed(3)})`);
+  grd.addColorStop(1, 'rgba(240,215,70,0)');
   ctx.fillStyle = grd;
   ctx.beginPath(); ctx.arc(exit.x, exit.y, 20, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = `rgba(245,250,255,${(pulse * 0.95).toFixed(3)})`;
+  ctx.fillStyle = `rgba(252,240,150,${(pulse * 0.95).toFixed(3)})`;
   ctx.beginPath(); ctx.arc(exit.x, exit.y, 3.5, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
@@ -691,6 +693,21 @@ function drawTriggers(triggers, now, px, py) {
     ctx.shadowBlur = sb(12 * alpha);
     ctx.fillStyle = `rgba(252,240,150,${Math.min(1, beat * 1.2).toFixed(3)})`;
     ctx.beginPath(); ctx.arc(tr.x, tr.y, 4.5, 0, Math.PI * 2); ctx.fill();
+
+    // Sound-activated switches get outward-travelling ripples — a visual promise
+    // that sound alone will trip this one, so the player thinks to clap at it.
+    if (tr.soundActivated) {
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1.1;
+      for (let i = 0; i < 3; i++) {
+        const phase = ((now / 1100) + i / 3) % 1;        // 0→1 outward sweep
+        const r = 8 + phase * 20;
+        const ringAlpha = alpha * 0.55 * (1 - phase);     // fade as it expands
+        if (ringAlpha < 0.01) continue;
+        ctx.strokeStyle = `rgba(245,225,90,${ringAlpha.toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(tr.x, tr.y, r, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
   }
   ctx.restore();
 }

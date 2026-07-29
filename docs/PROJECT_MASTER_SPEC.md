@@ -35,7 +35,7 @@
 
 ## 3. Visual Language (Canonical Color Grammar)
 
-**Strict 4-color sound coding (Dark Echo parity, 2026-07-20): WHITE = your sound / safe · BLUE = water · YELLOW = switches/keys/doors · RED = danger.**
+**Strict 4-color sound coding (Dark Echo parity): WHITE = your sound / safe · BLUE = water · YELLOW = objective — exit, switches, keys, doors · RED = danger.**
 
 | Element | Color | Notes |
 |---|---|---|
@@ -44,10 +44,10 @@
 | Step ray / echo | `rgba(210,225,245,α)` | **White** (your sound) |
 | Pulse ray / echo | `rgba(230,240,255,α)` | **White** (louder clap) |
 | Wall glint | `rgba(225,238,255,α)` | White |
-| Exit | white beacon `rgba(225,238,255,α)` | Pulsing white, hidden until sound finds it |
+| Exit | yellow beacon `rgba(240,215,70,α)` | **Yellow** (objective) — pulsing, hidden until sound finds it. Was white until Phase 26, which made the goal read as your own sound. |
 | Collapsible wall (revealed) | `rgba(185,200,220,α)` | Muted white — a breakable wall variant |
 | Water (reveal + swim wash) | `rgba(60,120,220,α)` | **Blue** |
-| Switch / trigger | `rgba(240,215,70,α)` | **Yellow** |
+| Switch / trigger | `rgba(240,215,70,α)` | **Yellow**. Switches flagged `soundActivated` draw outward ripples and are opened by a pulse rather than by standing on them. |
 | Key | `rgba(245,220,80,α)` | **Yellow** |
 | Door (locked) | `rgba(240,215,70,α)` | **Yellow** |
 | Door (open) | `rgba(200,215,235,0.18)` | Faint white passage |

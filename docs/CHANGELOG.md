@@ -5,6 +5,38 @@
 
 ---
 
+## [v2.10.0] — 2026-07-27 — Sound grammar: yellow exit + sound-activated switches (Phase 26)
+
+### Changed
+- **The exit is now yellow, not white.** It was drawn in the same white as your own
+  footsteps and echoes, so the goal read as "you" instead of "objective" — a break in the
+  game's own colour grammar. Yellow now consistently means *the way out*: exit, keys,
+  doors and switches. (Closes Dark Echo spec items `SND-06` + `ENV-01`.)
+
+### Added
+- **Sound-activated switches** (`ENV-02`). A switch can now be opened by a **pulse**
+  instead of by standing on it: any player sound ray passing within `TRIGGER_ACTIVATE_D`
+  (26 px) with energy ≥ `TRIGGER_SOUND_ENERGY` (0.5) trips it. The threshold sits
+  deliberately **above a footstep's 0.42**, so only a deliberate clap works — you can
+  never trip a switch just by walking past one. Enemy and hazard sound can't trip them.
+- These switches draw **outward-travelling ripples**, so the affordance is visible at a
+  glance rather than something you'd have to guess at.
+- `soundActivated` is opt-in per trigger, so every existing presence-based switch behaves
+  exactly as before.
+- **New puzzle — Level 19 "The Vault".** A door now blocks row 8's only gap, which is that
+  level's sole route from the crusher hall down to the exit half. Its switch sits behind a
+  hazard: sound passes straight through a hazard, a body does not — so the switch
+  **cannot be stepped on** and has to be clapped from a safe distance. This is the first
+  puzzle in the game that is unsolvable without using sound as a *tool* rather than just
+  as vision.
+
+### Verified
+BFS + raycast checks against the real level data confirm the exit is genuinely blocked
+without the switch, the switch is unreachable on foot from every approach, a pulse from a
+safe cell reaches it, footsteps cannot trip it, and all 20 levels remain completable.
+
+---
+
 ## [v2.9.1] — 2026-07-27 — Landscape lock + wave-load performance
 
 ### Added

@@ -47,7 +47,8 @@ inward. It is independent of 26–30 and is the **recommended next phase**.
 ## Dark Echo Parity Audit (2026-07-27)
 
 Audited the shipped code against the original Dark Echo Game Design Specification
-(20 mechanics). Result: **12 fully present · 5 partial · 3 missing.**
+(20 mechanics). Original result: **12 fully present · 5 partial · 3 missing**.
+After Phase 26: **15 present · 2 partial · 3 missing** (`SND-06`, `ENV-01`, `ENV-02` closed).
 
 Present and requiring no work: `PLR-01` footprint avatar · `PLR-02` sneak ·
 `PLR-03` normal walk · `SND-01` specular reflection (`R = D − 2(D·N)N`, 3 bounces) ·
@@ -62,9 +63,9 @@ contact · `ENV-03` static lethal traps (Hazard/Crusher) · `AUD-01` HRTF spatia
 | UI-01 | Zero-HUD Interface | ❌ Missing | `#hud` persistently shows pulse bar, level label, crouch indicator. Original is chrome-free. | **30** |
 | PLR-05 | Charge Clap | ⚠️ Partial | 360° burst exists (`RAY_COUNT_PULSE 64`) but is fixed-intensity/binary — no hold-to-charge or variable radius. | **28** |
 | AI-01 | Sound Tracking | ⚠️ Partial | Enemies seek `ray.burstX/burstY` but there is **no loudness arbitration** — last-heard-wins, not loudest-wins. | **27** |
-| SND-06 | Colour: Yellow | ⚠️ Partial | Doors/keys/switches are yellow, but the **exit renders white** (`drawExit` → `rgba(225,238,255)`). | **26** |
-| ENV-01 | Yellow Exit Portal | ⚠️ Partial | Same root cause as SND-06 — exit works, but reads as "your sound" not "objective". | **26** |
-| ENV-02 | Switches / Doors | ⚠️ Partial | Triggers fire on **physical presence only** (`dist < 10`). Spec requires "presence **or sound waves**". | **26** |
+| SND-06 | Colour: Yellow | ✅ **Done (26)** | Exit is now objective-yellow, matching keys/doors/switches. | 26 |
+| ENV-01 | Yellow Exit Portal | ✅ **Done (26)** | Same fix as SND-06 — the goal no longer reads as your own sound. | 26 |
+| ENV-02 | Switches / Doors | ✅ **Done (26)** | `soundActivated` switches are opened by a pulse; Level 19 has a switch that *cannot* be reached on foot. | 26 |
 
 **Key dependency:** `PLR-04`, `PLR-06` and `PLR-05` are all downstream of `AI-01`.
 A decoy is meaningless unless AI arbitrates by *loudness* — otherwise a thrown noise
@@ -635,7 +636,7 @@ Use Chrome DevTools Performance tab. Record a 10-second segment with full pulse 
 ---
 
 ## Phase 26 — Sound Grammar Fixes (Yellow Exit + Sound-Activated Switches)
-**Status:** ⬜ Pending  
+**Status:** ✅ Complete (2026-07-27)  
 **Goal:** Close the three colour/interaction spec violations: make the exit yellow, and let sound waves — not just the player's body — activate switches.  
 **Covers:** `SND-06`, `ENV-01`, `ENV-02`  
 **Depends on:** Nothing (fully independent — safe to do first)  
@@ -648,40 +649,64 @@ exit is drawn in the same white as the player's own sound, so the objective read
 as "you" instead of "goal". Every other yellow object already follows the rule.
 
 ### Tasks
-- [ ] **Yellow exit** — `drawExit()` in `js/renderer.js`: swap the white
-      `rgba(225,238,255,…)` gradient + core dot for the canonical objective yellow
-      (`rgba(240,215,70,…)` fill, `rgba(245,225,110,…)` core), matching the existing
-      key/door/trigger palette. Keep the pulsing animation and the `revealedAt` hide.
-- [ ] Update the exit row in **`docs/PROJECT_MASTER_SPEC.md` §3** (currently documents
-      the exit as a white beacon) so the colour table stays truthful.
-- [ ] Update the **How to Play** legend (`play/index.html`): the "White — you" row
-      currently claims the exit is white; move the exit into the yellow row.
-- [ ] **Sound-activated switches** — in `processRayEntities()` (`js/game.js`), the
-      trigger loop currently only sets `tr.revealedAt`. Add activation: if a ray of
-      type `pulse` (and optionally `step` when loud enough) passes within
-      `TRIGGER_ACTIVATE_D` of an unfired trigger **and** the trigger is marked
-      `soundActivated: true`, fire it via the existing `fireTrigger(tr)` path.
-- [ ] Add `soundActivated` as an opt-in flag on trigger defs in `js/levels.js` so
-      existing presence-triggers keep working unchanged (no level regressions).
-- [ ] Author/retune at least one level to use a sound-activated switch — a switch
-      behind a gap the player cannot reach, opened by clapping at it. This is the
-      puzzle type the mechanic exists to enable.
-- [ ] Add `TRIGGER_ACTIVATE_D` + colour constants to `js/constants.js`.
-- [ ] Build, verify headless (exit renders yellow; sound-fired trigger opens its door), commit + push.
+- [x] **Yellow exit** — `drawExit()` now uses objective yellow (`rgba(240,215,70,…)`
+      gradient, `rgba(252,240,150,…)` core, yellow glow), matching keys/doors/switches.
+      Pulsing animation and the `revealedAt` hide are unchanged.
+- [x] `docs/PROJECT_MASTER_SPEC.md` §3 colour table updated (exit row + the header
+      rule now reads "YELLOW = objective — exit, switches, keys, doors").
+- [x] **How to Play** legend updated — the exit moved out of the white row into the
+      yellow row, which now also explains rippling sound-activated switches.
+- [x] **Sound-activated switches** — the trigger loop in `processRayEntities()` now
+      also activates: a *player* sound ray (not hazard/enemy) passing within
+      `TRIGGER_ACTIVATE_D` of an unfired `soundActivated` trigger, with energy
+      ≥ `TRIGGER_SOUND_ENERGY`, fires it through the existing `fireTrigger(tr)` path.
+- [x] `soundActivated` is **opt-in** per trigger def, so all existing presence-only
+      triggers behave exactly as before (verified: no level regressions).
+- [x] Constants added: `TRIGGER_ACTIVATE_D = 26`, `TRIGGER_SOUND_ENERGY = 0.5`.
+      The energy gate sits deliberately **above a footstep's 0.42** so only a *pulse*
+      (1.0 direct, 0.55 after one bounce) opens these — you can never trip a switch by
+      walking past it, which is what makes it a puzzle rather than an accident.
+- [x] Sound-activated switches render **outward-travelling ripples** so the player can
+      tell at a glance that this one answers to sound.
+- [x] **Puzzle authored — Level 19 "The Vault".** A new door (`vault-d2`) sits in the
+      col-10 gap of row 8, which is that level's *only* route from the crusher hall down
+      to the exit half. Its switch sits at (17,7) behind a hazard at (16,7): sound passes
+      through a hazard, a body does not — so the switch **cannot be stepped on** and must
+      be clapped from row 7. Hint rewritten to teach it.
+
+### Verification
+
+A dedicated checker (BFS + raycast against the real level data and constants) proves the
+puzzle is sound, not just present:
+
+| Check | Result |
+|---|---|
+| Exit reachable once the switch is used | ✅ |
+| Exit **blocked** while the switch is unused (puzzle is *required*, not optional) | ✅ |
+| Switch cell **unreachable on foot** (every approach is inside the hazard's lethal radius) | ✅ |
+| A pulse from a safe reachable cell reaches it (clear LOS, 80 px from (15,7)) | ✅ |
+| Footsteps **cannot** trip it (0.42 < 0.5 energy gate) | ✅ |
+| All 20 levels still start→exit reachable (no regressions) | ✅ |
+
+Ray angular quantization checked analytically: 64 rays ⇒ ≤2.8° error ⇒ ≤3.9 px lateral
+offset at 80 px, well inside the 26 px activation radius, so a clap always connects.
+Also verified in-browser: level 19 loads and plays with no console/page errors, and the
+built bundle contains the yellow exit gradient with the old white one gone.
 
 ### Files Modified
-- `js/renderer.js` — `drawExit()` colour
-- `js/game.js` — trigger activation from rays in `processRayEntities()`
-- `js/levels.js` — `soundActivated` flag + one puzzle using it
-- `js/constants.js` — activation radius
-- `play/index.html`, `docs/PROJECT_MASTER_SPEC.md` — legend/colour-table truth
+- `js/renderer.js` — yellow `drawExit()`; ripple rings for sound-activated switches
+- `js/game.js` — sound activation in `processRayEntities()`; `soundActivated` carried into `G.triggers`
+- `js/levels.js` — Level 19 puzzle (door `vault-d2`, sealing hazard, sound switch, new hint)
+- `js/constants.js` — `TRIGGER_ACTIVATE_D`, `TRIGGER_SOUND_ENERGY`
+- `play/index.html`, `docs/PROJECT_MASTER_SPEC.md` — legend / colour-table truth
 
 ### Acceptance Criteria
-- [ ] Exit renders in objective-yellow, distinct from player sound, still hidden until revealed
-- [ ] All four colour classes are unambiguous on screen: white = you, blue = water, yellow = objective, red = danger
-- [ ] A pulse aimed at a `soundActivated` switch fires it without the player touching it
-- [ ] Presence-activated triggers still fire exactly as before (no level regressions across all 20 levels)
-- [ ] A trigger fires at most once (`tr.fired` guard holds under multi-ray bursts)
+- [x] Exit renders in objective-yellow, distinct from player sound, still hidden until revealed
+- [x] All four colour classes are unambiguous on screen: white = you, blue = water, yellow = objective, red = danger
+- [x] A pulse aimed at a `soundActivated` switch fires it without the player touching it
+- [x] Presence-activated triggers still fire exactly as before (no level regressions across all 20 levels)
+- [x] A trigger fires at most once (`tr.fired` set before `fireTrigger`, and the loop skips fired triggers — holds under a 64-ray burst)
+- [x] The mechanic is *load-bearing*: Level 19 cannot be completed without using it
 
 ---
 
@@ -1044,7 +1069,7 @@ All tracks can proceed independently after Phase 15 is done.
 
 ```
 Phase 31 — Full-screen mobile viewport ✅ DONE    [was: do first]
-Phase 26 — Sound grammar fixes        1–2 days    [independent — cheapest parity win · NEXT]
+Phase 26 — Sound grammar fixes        ✅ DONE     [was: cheapest parity win]
 Phase 27 — Noise magnitude + sprint   4–6 days    [independent — KEYSTONE]
 Phase 28 — Charge clap                2–3 days    [after 27]
 Phase 29 — Throwable noise decoy      4–6 days    [after 27]
@@ -1064,13 +1089,14 @@ Including Phase 31:                   15–24 days  (~4–5 focused weeks)
                           28 ───────────┘
 ```
 
-**Recommended order:** ~~31~~ ✅ → **26** → 27 → 28 → 29 → 30.
+**Recommended order:** ~~31~~ ✅ → ~~26~~ ✅ → **27** → 28 → 29 → 30.
 
 - ~~**31 first**~~ — **done.** It was the only item that made the shipped Android build
   actively uncomfortable: ~40 % of the screen was wasted black bar *and* dead to touch,
   forcing players to reach inward. Now 100 % coverage at constant world area.
-- **26 next** — 1–2 days, depends on nothing, and fixes a colour-grammar bug that
-  actively misleads players today (the exit reads as "your sound").
+- ~~**26 next**~~ — **done.** The exit is now objective-yellow instead of reading as
+  "your own sound", and switches can be opened by a clap — with a Level 19 puzzle that
+  genuinely requires it.
 - **27 is the keystone** — 28, 29 and the *meaning* of sprint all collapse without
   loudness arbitration. Do not start 28 or 29 before it.
 - **30 last, and only after an owner decision** — it trades usability for immersion,

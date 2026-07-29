@@ -10,6 +10,7 @@ import { TILE, COLS, ROWS, W, H,
          WATER_INTERVAL_MULT, WATER_RAY_MULT,
          COLLAPSE_ENERGY_THRESHOLD, COLLAPSE_BURST_RAYS,
          KEY_PICKUP_RADIUS, CRUSHER_REVEAL_MS,
+         TRIGGER_ACTIVATE_D, TRIGGER_SOUND_ENERGY,
          DANGER_NEAR_PX,
          SCREAMER_BURST_RAYS,
          ECHO_TRAIL_CAP, ECHO_TRAIL_CAP_MEDIUM, ECHO_TRAIL_CAP_LOW,
@@ -264,6 +265,8 @@ function loadLevel(idx) {
         y: t.row * TILE + TILE / 2,
         action: t.action,
         targetId: t.targetId,
+        // Opt-in: existing presence-only triggers are unaffected (Phase 26).
+        soundActivated: !!t.soundActivated,
         fired: false,
         revealedAt: -Infinity,
       });
@@ -397,11 +400,19 @@ function processRayEntities(now) {
       if (d < REVEAL_D) G.exit.revealedAt = now;
     }
 
-    // Trigger reveal
+    // Trigger reveal — and, for sound-activated switches, activation.
+    // A loud enough player sound passing close enough trips the switch without
+    // the player ever touching it (Phase 26). Enemy/hazard sound can't do it.
+    const playerSound = ray.type !== 'hazard' && ray.type !== 'step-enemy';
     for (const tr of G.triggers) {
       if (tr.fired) continue;
       const d = segPtDist(tr.x, tr.y, sx, sy, tx, ty);
       if (d < REVEAL_D) tr.revealedAt = now;
+      if (tr.soundActivated && playerSound &&
+          d < TRIGGER_ACTIVATE_D && ray.energy >= TRIGGER_SOUND_ENERGY) {
+        tr.fired = true;
+        fireTrigger(tr);
+      }
     }
 
     // Enemy hearing (one-shot per ray)
