@@ -3,9 +3,11 @@ import { TILE, COLS, ROWS, W, H, WALL_FADE_MS,
          HEARING_NEAR, HEARING_FAR, CELL,
          CRUSHER_REVEAL_MS,
          FOOTPRINT_FADE_MS, FOOTPRINT_STANCE_OFF,
-         PLAYER_IDLE_SPEED, CAMERA_ZOOM } from './constants.js';
+         PLAYER_IDLE_SPEED,
+         RENDER_SCALE_MEDIUM, RENDER_SCALE_LOW } from './constants.js';
 import { segPtDist } from './utils.js';
 import * as Debug from './debug.js';
+import { view, updateViewport, containScale, setRenderScale } from './viewport.js';
 
 // How loudly the player "hears" something at distance d:
 // 1 inside HEARING_NEAR, smoothstep down to 0 at HEARING_FAR
@@ -23,30 +25,90 @@ let canvas, ctx;
 // the per-frame shadowBlur compositing cost — the biggest GPU hit on mobile — is
 // skipped entirely. `sb(v)` returns the blur value at high quality, 0 otherwise.
 let _hq = true;
-export function setQualityTier(tier) { _hq = (tier === 'high'); }
+export function setQualityTier(tier) {
+  _hq = (tier === 'high');
+  // Reduced tiers also render fewer pixels — the cheapest fill-rate win now that
+  // the canvas covers the whole screen at native resolution (Phase 31).
+  const scale = tier === 'low'    ? RENDER_SCALE_LOW
+              : tier === 'medium' ? RENDER_SCALE_MEDIUM
+              : 1;
+  if (setRenderScale(scale) && canvas) {
+    // Re-derive the backing store at the new scale.
+    const { w, h } = measure();
+    updateViewport(w, h);
+    applyCanvasSize();
+    buildVignette();
+  }
+}
 function sb(v) { return _hq ? v : 0; }
 
 // Pre-rendered offscreen layer (built once) to avoid per-frame gradient allocation.
 let _vignetteCanvas = null;   // full-screen vignette
 
+// Built at the live view size — must be rebuilt whenever the viewport changes,
+// or a stale cache smears/letterboxes across the new surface.
 function buildVignette() {
+  const vw = view.w, vh = view.h;
   const c = document.createElement('canvas');
-  c.width = W; c.height = H;
+  c.width = vw; c.height = vh;
   const g = c.getContext('2d');
-  const grd = g.createRadialGradient(W/2, H/2, H * 0.28, W/2, H/2, H * 0.82);
+  // Radius follows the shorter axis so the falloff reads the same on any aspect.
+  const short = Math.min(vw, vh);
+  const grd = g.createRadialGradient(vw/2, vh/2, short * 0.28, vw/2, vh/2, short * 0.82);
   grd.addColorStop(0, 'rgba(0,0,0,0)');
   grd.addColorStop(1, 'rgba(0,0,0,0.6)');
   g.fillStyle = grd;
-  g.fillRect(0, 0, W, H);
+  g.fillRect(0, 0, vw, vh);
   _vignetteCanvas = c;
+}
+
+// Size the backing store to the canvas's laid-out CSS size × the (clamped) DPR,
+// then scale the context so all drawing stays in CSS-pixel logical space.
+// CSS owns layout (#wrap is 100vw × 100dvh); we only measure it — that avoids the
+// scrollbar / mobile-browser-chrome mismatches you get from window.innerWidth.
+function applyCanvasSize() {
+  canvas.width  = Math.round(view.w * view.dpr);
+  canvas.height = Math.round(view.h * view.dpr);
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+}
+
+function measure() {
+  const r = canvas.getBoundingClientRect();
+  // Fall back to the window if layout hasn't resolved yet (e.g. display:none).
+  return {
+    w: r.width  || window.innerWidth,
+    h: r.height || window.innerHeight,
+  };
+}
+
+// Recompute viewport + resize the surface. Safe to call on every resize event.
+export function handleResize() {
+  const { w, h } = measure();
+  if (!updateViewport(w, h)) return false;
+  applyCanvasSize();
+  buildVignette();
+  return true;
 }
 
 export function init(canvasEl) {
   canvas = canvasEl;
   ctx = canvas.getContext('2d');
-  canvas.width = W; canvas.height = H;
-  ctx.imageSmoothingEnabled = true;
+  const { w, h } = measure();
+  updateViewport(w, h);
+  applyCanvasSize();
   buildVignette();
+
+  window.addEventListener('resize', handleResize);
+  window.addEventListener('orientationchange', () => {
+    // Some Android browsers report stale dimensions on the event itself.
+    handleResize();
+    setTimeout(handleResize, 150);
+  });
+  // Catches container-driven size changes that don't fire window resize.
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(handleResize).observe(canvas);
+  }
 }
 
 // Smoothstep fade used for entity reveals
@@ -59,14 +121,21 @@ function revealAlpha(revealTime, now) {
 
 // ─── Main draw ────────────────────────────────────────────────────────────────
 export function draw(state, now) {
-  ctx.clearRect(0, 0, W, H);
+  ctx.clearRect(0, 0, view.w, view.h);
   ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, 0, view.w, view.h);
 
-  // Title screen: show demo pulse to communicate the core mechanic before play
+  // Title screen: show demo pulse to communicate the core mechanic before play.
+  // This one shows the whole 800×600 world, so it is contain-fitted and centred
+  // rather than player-centred.
   if (state.screen === 'title') {
+    const s = containScale();
+    ctx.save();
+    ctx.translate((view.w - W * s) / 2, (view.h - H * s) / 2);
+    ctx.scale(s, s);
     drawEchoTrails(state.echoTrails || [], now, W / 2, H / 2);
     drawActiveRays(state.rays || [], W / 2, H / 2);
+    ctx.restore();
     drawVignette();
     if (Debug.isEnabled()) Debug.draw(ctx, state, state.fps || 60);
     return;
@@ -81,13 +150,16 @@ export function draw(state, now) {
   // Player-centered camera: zoom in and follow the player so only a local portion
   // of the level is visible. Shake is applied in screen space, then the world is
   // scaled and translated so the player sits at the centre of the screen.
-  const viewW = W / CAMERA_ZOOM, viewH = H / CAMERA_ZOOM;
+  // Zoom is derived per-device (viewport.js) so the visible world AREA is constant
+  // across screen shapes — a wide phone sees wider but proportionally shorter.
+  const zoom = view.zoom;
+  const viewW = view.w / zoom, viewH = view.h / zoom;
   const camX = px - viewW / 2;
   const camY = py - viewH / 2;
   const shakeActive = shake && shake.timer > 0;
   ctx.save();
   if (shakeActive) ctx.translate(shake.x, shake.y);
-  ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
+  ctx.scale(zoom, zoom);
   ctx.translate(-camX, -camY);
 
   // Walls are intentionally never drawn — the world exists only as sound,

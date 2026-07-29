@@ -18,7 +18,7 @@ RESONANCE is a complete, playable 20-level top-down stealth/horror game where **
 
 ## Active Phase
 
-**None active — next up: Phase 31 (Full-Screen Mobile Viewport). Phase 25 (Play Store) deferred by owner.**
+**None active — Phase 31 complete ✅. Next up: Phase 26 (Sound Grammar Fixes). Phase 25 (Play Store) deferred by owner.**
 
 > See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–31 specifications.  
 > Phase 16 was skipped (wavefront visual not preferred). Phases 17–24 are complete.
@@ -43,21 +43,34 @@ phases in `docs/PRODUCTION_ROADMAP.md` (~12–19 days total):
 Phase 27 is the keystone: 28, 29 and the meaning of sprint all depend on
 loudest-wins AI arbitration. Phase 26 is independent and the cheapest win.
 
-### Phase 31 — Full-Screen Mobile Viewport (added 2026-07-27, **do first**)
+### Phase 31 — Full-Screen Mobile Viewport ✅ Complete (2026-07-27)
 
-Not a parity item — an on-device usability defect. `#wrap` locks the play area to
-the game's native 4:3, so on a modern ~19.5:9 phone in landscape the game occupies
-only ~60% of the screen with **~180px of black bar on each side**. Those bars are
-also **dead to touch** (listeners are bound to `canvasEl`), so players must reach
-inward to the centre-left/centre-right instead of resting their thumbs at the screen
-edges. Portrait is worse — 34% of the screen used.
+Not a parity item — an on-device usability defect. `#wrap` locked the play area to
+the game's native 4:3, so on a ~19.5:9 phone in landscape the game filled only ~60%
+of the screen with **~180px of black bar on each side** — bars that were also **dead
+to touch** (listeners bind to `canvasEl`), forcing players to reach inward instead of
+resting their thumbs at the screen edges. Portrait was worse: 34% of the screen used.
 
-Fix is an **aspect-adaptive viewport** (widen the field of view; never stretch or
-crop), with camera zoom compensated by aspect so wide phones don't see more level
-than narrow ones. Requires separating world-space `W`/`H` from runtime view
-dimensions across `renderer.js`, `input.js` and `game.js`. Effort 3–5 days.
-**Recommended before Phases 26–30** — it's the only item that makes the shipped
-Android build actively uncomfortable to play.
+**Fixed with an aspect-adaptive viewport** — widen the field of view; never stretch
+(distorts) or crop (loses play area):
+
+- New **`js/viewport.js`** owns live screen state (`view.w/h/dpr/zoom`). `W`/`H` in
+  `constants.js` now strictly mean **world/level** size; all screen-space use moved to `view.*`.
+- **Fairness invariant:** `zoom = sqrt(viewW·viewH / 120000)` holds the visible world
+  **area** constant, so a wide phone sees wider-but-shorter, never *more*. Verified at
+  exactly **120k px² on every device**.
+- Backing store = laid-out CSS size × clamped DPR (measured, not `window.innerWidth`),
+  rebuilt on `resize` / `orientationchange` / `ResizeObserver`; vignette rebuilt with it.
+- `input.js` maps touch through live view dims (hardcoded 800×600 removed); `game.js`
+  feeds the live viewport centre. Title screen is contain-fitted.
+- Quality tiers now also scale **render resolution** (medium 0.85×, low 0.7×) to protect
+  fill rate at the larger surface.
+- Safe-area insets for notches/gesture bar; short-viewport CSS so menus fit landscape phones.
+
+**Verified:** 100% coverage and 120k area on 11 viewports; all four screen edges register
+touch with correct direction; 20/20 levels load with no errors; portrait now fully
+supported (100% coverage) so an orientation lock is optional.
+*Remaining:* rebuild the APK and confirm on a real device.
 
 ---
 

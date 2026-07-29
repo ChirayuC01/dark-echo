@@ -5,6 +5,37 @@
 
 ---
 
+## [v2.9.0] — 2026-07-27 — Full-screen mobile viewport (Phase 31)
+
+### Fixed
+- **The game now fills the entire phone screen.** It was locked to the native 4:3 play
+  area, so on a modern ~19.5:9 phone in landscape it occupied only ~60% of the display
+  with **~180px of black bar on each side** — and because touch listeners are bound to the
+  canvas, those bars were **completely dead to touch**. Players had to reach inward to the
+  centre-left/centre-right instead of resting their thumbs at the screen edges. Portrait
+  was worse still, using just 34% of the screen. Both orientations now reach **100% coverage**.
+
+### Changed
+- **Aspect-adaptive viewport** (new `js/viewport.js`): the view now matches the device's
+  shape by widening the field of view — nothing is stretched (which would distort) or
+  cropped (which would remove play area). `W`/`H` now strictly mean *world/level* size;
+  live screen dimensions live in `view.*`.
+- **Fairness invariant:** camera zoom is derived as `sqrt(viewW·viewH / 120000)`, holding
+  the visible world **area** constant, so a wide phone sees a wider-but-shorter slice and
+  never *more* of the level. Measured at exactly 120k px² on every device tested.
+- Canvas renders at native device resolution (clamped by a pixel budget) instead of a
+  fixed 800×600 surface, and re-lays out on resize, rotation and container changes.
+- Reduced quality tiers now also lower **render resolution** (medium 0.85×, low 0.7×) to
+  protect frame rate at the larger surface — gameplay is unaffected.
+- Safe-area insets for notches/punch-holes/gesture bars, plus a short-viewport layout so
+  menus fit on a landscape phone (the old mobile breakpoint keyed on width, which a
+  915px-wide landscape phone never matched).
+- **Note:** on large desktop windows the game now fills the window rather than sitting in
+  an 800×600 box. The visible world area is unchanged — it simply draws larger. Desktop at
+  800×600 is pixel-identical to before.
+
+---
+
 ## [v2.8.0] — 2026-07-27 — How to Play tutorial
 
 ### Added

@@ -19,6 +19,7 @@ import { dist, segPtDist } from './utils.js';
 import * as Audio from './audio.js';
 import * as Input from './input.js';
 import * as Renderer from './renderer.js';
+import * as Viewport from './viewport.js';
 import * as UI from './ui.js';
 import * as Save from './save.js';
 import { ACHIEVEMENTS, getById, evaluate as evalAchievements } from './achievements.js';
@@ -534,7 +535,8 @@ function checkExit() {
 function update(dt, now) {
   // The camera keeps the player at the centre of the screen, so touch controls
   // reference the screen centre (walk toward finger = hold toward screen edge).
-  Input.setPlayerScreenPos(W / 2, H / 2);
+  // The camera centres the player, so their screen position is the viewport centre.
+  Input.setPlayerScreenPos(Viewport.centreX(), Viewport.centreY());
   const move = Input.getMove();
   const moving = move.dx !== 0 || move.dy !== 0;
   const crouching = Input.isCrouching();

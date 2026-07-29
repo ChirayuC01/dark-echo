@@ -12,17 +12,23 @@ html, body {
 
 #wrap {
   position: relative;
-  /* Always fit within the viewport at the game's native 4:3 aspect ratio,
-     never exceeding 800x600 — works for any screen size or orientation
-     without relying on a fixed breakpoint. */
-  width: min(800px, 100vw, calc(100vh * 4 / 3));
-  height: min(600px, 100vh, calc(100vw * 3 / 4));
+  /* Phase 31: fill the entire screen. The game world stays 800x600, but the
+     *view* adapts to the device aspect (see js/viewport.js) — the camera reveals
+     a wider-but-shorter slice on wide phones, holding the visible world AREA
+     constant so no device gets an advantage. Nothing is stretched or cropped.
+     Previously this was locked to 4:3, which pillarboxed the game into ~60% of a
+     modern phone screen and left the side bars dead to touch.
+     100dvh tracks mobile browser chrome; 100vh is the fallback. */
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
 }
 
 canvas {
   display: block;
   width: 100%; height: 100%;
-  image-rendering: pixelated;
+  /* Phase 31: the canvas now renders at native device resolution, so the
+     upscaling hint that suited the old fixed 800x600 surface is gone. */
   touch-action: none;
 }
 
@@ -31,6 +37,12 @@ canvas {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   pointer-events: none;
+  /* Keep menu panels clear of notches, punch-holes and the gesture bar. */
+  padding:
+    env(safe-area-inset-top, 0px)
+    env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
 }
 
 #overlay.active { pointer-events: all; }
@@ -42,6 +54,11 @@ canvas {
   background: rgba(0,0,0,0.88);
   padding: 44px 52px;
   border: 1px solid rgba(255,255,255,0.1);
+  /* Phase 31: the overlay now spans the whole screen, so panels must cap
+     themselves rather than relying on a 4:3 wrapper to constrain them. */
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
 }
 
 .screen.visible { display: flex; }
@@ -84,7 +101,10 @@ canvas {
 .btn-danger:hover { color: #e0655a; border-color: rgba(224,101,90,0.7); }
 
 #hud {
-  position: absolute; bottom: 14px; left: 50%;
+  position: absolute;
+  /* Clear the gesture bar / home indicator on full-bleed phones. */
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
   transform: translateX(-50%);
   display: flex; align-items: center; gap: 20px;
   pointer-events: none; opacity: 0;
@@ -214,6 +234,23 @@ canvas {
   .howto-body { max-height: 62vh; }
   .kv { font-size: 0.68rem; }
   .lg-txt, .howto-tips, .howto-lead { font-size: 0.68rem; }
+}
+
+/* Short viewports — a phone held in landscape is WIDE (e.g. 915x412), so the
+   max-width mobile query above never matches it. Key off height instead, or the
+   menu panels overflow the screen. (Phase 31) */
+@media (max-height: 540px) {
+  .screen { padding: 14px 22px; gap: 9px; }
+  .screen h1 { font-size: 1.5rem; letter-spacing: 0.14em; }
+  .screen h2 { font-size: 1.05rem; }
+  .screen p  { font-size: 0.7rem; line-height: 1.5; }
+  .btn { margin-top: 2px; padding: 7px 20px; font-size: 0.72rem; }
+  .howto-body { max-height: 56vh; }
+  .howto-sec { margin-bottom: 12px; }
+  .howto-sec h3 { margin-bottom: 6px; }
+  .lg-ico { width: 26px; height: 26px; }
+  #levelselect-grid { max-height: 52vh; }
+  #achievement-gallery { display: none; } /* no room beside the pause buttons */
 }
 
 #levelselect-grid {

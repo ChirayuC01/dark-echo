@@ -9,19 +9,22 @@
 //   • STOMP — press-and-hold ON the feet, then LET GO → one pulse. Only fires
 //             when you're not walking (i.e. standing still), like the original.
 
+import { view } from './viewport.js';
+
 const keys = new Set();
 let _pulsePressed  = false;
 let _pausePressed  = false;
 let _crouching     = false;   // keyboard crouch (Shift / C)
 let _debugToggle   = false;
 
-const CANVAS_W = 800, CANVAS_H = 600;
+// Distances below are in CSS pixels of the live viewport (Phase 31 — the canvas
+// is no longer a fixed 800×600 surface, it fills the screen).
 const TAP_MAX_HOLD   = 160;   // ms — released before this (with little drag) = a sneak tap
-const DRAG_COMMIT    = 12;    // canvas px — dragging this far commits to walking immediately
+const DRAG_COMMIT    = 12;    // px — dragging this far commits to walking immediately
 const SNEAK_DECAY    = 320;   // ms — how long one sneak tap keeps the player crouch-stepping
-const STOMP_RADIUS   = 44;    // canvas px — pressing within this of the feet is a stomp, not a walk
+const STOMP_RADIUS   = 44;    // px — pressing within this of the feet is a stomp, not a walk
 const STOMP_MIN_HOLD = 110;   // ms — min press-on-feet time before release counts as a stomp
-const WALK_DEADZONE  = 8;     // canvas px — finger nearer than this to the feet = stop (no walk)
+const WALK_DEADZONE  = 8;     // px — finger nearer than this to the feet = stop (no walk)
 
 let canvasEl = null;
 let _playerX = -1000, _playerY = -1000; // player position in canvas space (set each frame)
@@ -33,11 +36,15 @@ const sneak = { active: false, dx: 0, dy: 0, until: 0 };
 // The stomp touch (started on the feet); fires a pulse on release.
 const stomp = { id: null, startTime: 0 };
 
+// Map a client point into the canvas's logical (CSS-pixel) drawing space.
+// The canvas now fills the viewport, so this is near-identity — the ratio is kept
+// so it stays correct if the CSS size and backing store ever diverge.
 function canvasToLocal(clientX, clientY) {
   const r = canvasEl.getBoundingClientRect();
+  if (!r.width || !r.height) return { x: clientX, y: clientY };
   return {
-    x: (clientX - r.left) / r.width  * CANVAS_W,
-    y: (clientY - r.top)  / r.height * CANVAS_H,
+    x: (clientX - r.left) / r.width  * view.w,
+    y: (clientY - r.top)  / r.height * view.h,
   };
 }
 
