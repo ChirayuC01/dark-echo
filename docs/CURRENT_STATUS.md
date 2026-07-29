@@ -18,14 +18,30 @@ RESONANCE is a complete, playable 20-level top-down stealth/horror game where **
 
 ## Active Phase
 
-**None active — Phase 25 (Play Store) deferred by owner.**
+**None active — next up: Phase 26 (Sound Grammar Fixes). Phase 25 (Play Store) deferred by owner.**
 
-> See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–25 specifications.  
+> See `docs/PRODUCTION_ROADMAP.md` for complete Phase 15–30 specifications.  
 > Phase 16 was skipped (wavefront visual not preferred). Phases 17–24 are complete.
 > **Phase 25 (Google Play submission) is deferred by owner decision** — the game is
 > feature-complete for the roadmap's gameplay scope but not yet considered fully
-> production-ready for a public store launch. Post-roadmap polish continues on
-> request (e.g. the footprint visuals below).
+> production-ready for a public store launch.
+
+### Dark Echo parity backlog (Phases 26–30, added 2026-07-27)
+
+An audit against the original Dark Echo design spec (20 mechanics) found
+**12 fully present · 5 partial · 3 missing**. The gaps are now planned as five
+phases in `docs/PRODUCTION_ROADMAP.md` (~12–19 days total):
+
+| Phase | Scope | Covers | Effort |
+|---|---|---|---|
+| **26** | Yellow exit + sound-activated switches | `SND-06`, `ENV-01`, `ENV-02` | 1–2 d |
+| **27** | Noise-magnitude model + sprint (**keystone**) | `PLR-04`, `AI-01` | 4–6 d |
+| **28** | Charge clap (variable-intensity pulse) | `PLR-05` | 2–3 d |
+| **29** | Throwable noise decoy | `PLR-06` | 4–6 d |
+| **30** | Zero-HUD immersion mode (**needs owner decision**) | `UI-01` | 1–2 d |
+
+Phase 27 is the keystone: 28, 29 and the meaning of sprint all depend on
+loudest-wins AI arbitration. Phase 26 is independent and the cheapest win.
 
 ---
 

@@ -2,6 +2,7 @@
 
 > **This document picks up where IMPLEMENTATION_ROADMAP.md ends.**  
 > Phases 0–14 are complete (v1.0.0). Phases 15–25 take the game from local prototype to commercial browser + Android product.  
+> Phases 26–30 close the remaining mechanical gaps against the original *Dark Echo* design spec.  
 > Read CURRENT_STATUS.md first in every new session to confirm which phase is active.
 
 ---
@@ -33,6 +34,37 @@ RESONANCE v1.0.0 is a fully working 10-level browser game. All core mechanics ar
 8. Performance hardening (Phase 23)
 9. Save system + achievements (Phase 24)
 10. Google Play submission (Phase 25)
+
+**Phases 26–30 address a different gap: *mechanical parity* with the original Dark Echo** — see the audit below.
+
+---
+
+## Dark Echo Parity Audit (2026-07-27)
+
+Audited the shipped code against the original Dark Echo Game Design Specification
+(20 mechanics). Result: **12 fully present · 5 partial · 3 missing.**
+
+Present and requiring no work: `PLR-01` footprint avatar · `PLR-02` sneak ·
+`PLR-03` normal walk · `SND-01` specular reflection (`R = D − 2(D·N)N`, 3 bounces) ·
+`SND-02` ray decay (energy 0.55/bounce + distance attenuation + time fade) ·
+`SND-03/04/05` white/red/blue coding · `AI-02` patrol/idle · `AI-03` instant-kill
+contact · `ENV-03` static lethal traps (Hazard/Crusher) · `AUD-01` HRTF spatial audio.
+
+| ID | Mechanic | Status | Gap | Phase |
+|---|---|---|---|---|
+| PLR-04 | Sprint Run | ❌ Missing | Only two noise tiers exist (crouch + walk). No loud/fast top rung to the risk-reward ladder. | **27** |
+| PLR-06 | Sound Noise Throw | ❌ Missing | No throwable decoy at all. Removes the "lure the beast away" puzzle vocabulary. | **29** |
+| UI-01 | Zero-HUD Interface | ❌ Missing | `#hud` persistently shows pulse bar, level label, crouch indicator. Original is chrome-free. | **30** |
+| PLR-05 | Charge Clap | ⚠️ Partial | 360° burst exists (`RAY_COUNT_PULSE 64`) but is fixed-intensity/binary — no hold-to-charge or variable radius. | **28** |
+| AI-01 | Sound Tracking | ⚠️ Partial | Enemies seek `ray.burstX/burstY` but there is **no loudness arbitration** — last-heard-wins, not loudest-wins. | **27** |
+| SND-06 | Colour: Yellow | ⚠️ Partial | Doors/keys/switches are yellow, but the **exit renders white** (`drawExit` → `rgba(225,238,255)`). | **26** |
+| ENV-01 | Yellow Exit Portal | ⚠️ Partial | Same root cause as SND-06 — exit works, but reads as "your sound" not "objective". | **26** |
+| ENV-02 | Switches / Doors | ⚠️ Partial | Triggers fire on **physical presence only** (`dist < 10`). Spec requires "presence **or sound waves**". | **26** |
+
+**Key dependency:** `PLR-04`, `PLR-06` and `PLR-05` are all downstream of `AI-01`.
+A decoy is meaningless unless AI arbitrates by *loudness* — otherwise a thrown noise
+and your own footstep compete on recency and the lure does nothing. Phase 27 therefore
+builds the shared noise-magnitude model first, and Phases 28–29 consume it.
 
 ---
 
@@ -597,6 +629,254 @@ Use Chrome DevTools Performance tab. Record a 10-second segment with full pulse 
 
 ---
 
+## Phase 26 — Sound Grammar Fixes (Yellow Exit + Sound-Activated Switches)
+**Status:** ⬜ Pending  
+**Goal:** Close the three colour/interaction spec violations: make the exit yellow, and let sound waves — not just the player's body — activate switches.  
+**Covers:** `SND-06`, `ENV-01`, `ENV-02`  
+**Depends on:** Nothing (fully independent — safe to do first)  
+**Estimated effort:** 1–2 days  
+**Risk:** Low
+
+### Why this first
+It is the cheapest parity win in the list and it fixes a *grammar* bug: today the
+exit is drawn in the same white as the player's own sound, so the objective reads
+as "you" instead of "goal". Every other yellow object already follows the rule.
+
+### Tasks
+- [ ] **Yellow exit** — `drawExit()` in `js/renderer.js`: swap the white
+      `rgba(225,238,255,…)` gradient + core dot for the canonical objective yellow
+      (`rgba(240,215,70,…)` fill, `rgba(245,225,110,…)` core), matching the existing
+      key/door/trigger palette. Keep the pulsing animation and the `revealedAt` hide.
+- [ ] Update the exit row in **`docs/PROJECT_MASTER_SPEC.md` §3** (currently documents
+      the exit as a white beacon) so the colour table stays truthful.
+- [ ] Update the **How to Play** legend (`play/index.html`): the "White — you" row
+      currently claims the exit is white; move the exit into the yellow row.
+- [ ] **Sound-activated switches** — in `processRayEntities()` (`js/game.js`), the
+      trigger loop currently only sets `tr.revealedAt`. Add activation: if a ray of
+      type `pulse` (and optionally `step` when loud enough) passes within
+      `TRIGGER_ACTIVATE_D` of an unfired trigger **and** the trigger is marked
+      `soundActivated: true`, fire it via the existing `fireTrigger(tr)` path.
+- [ ] Add `soundActivated` as an opt-in flag on trigger defs in `js/levels.js` so
+      existing presence-triggers keep working unchanged (no level regressions).
+- [ ] Author/retune at least one level to use a sound-activated switch — a switch
+      behind a gap the player cannot reach, opened by clapping at it. This is the
+      puzzle type the mechanic exists to enable.
+- [ ] Add `TRIGGER_ACTIVATE_D` + colour constants to `js/constants.js`.
+- [ ] Build, verify headless (exit renders yellow; sound-fired trigger opens its door), commit + push.
+
+### Files Modified
+- `js/renderer.js` — `drawExit()` colour
+- `js/game.js` — trigger activation from rays in `processRayEntities()`
+- `js/levels.js` — `soundActivated` flag + one puzzle using it
+- `js/constants.js` — activation radius
+- `play/index.html`, `docs/PROJECT_MASTER_SPEC.md` — legend/colour-table truth
+
+### Acceptance Criteria
+- [ ] Exit renders in objective-yellow, distinct from player sound, still hidden until revealed
+- [ ] All four colour classes are unambiguous on screen: white = you, blue = water, yellow = objective, red = danger
+- [ ] A pulse aimed at a `soundActivated` switch fires it without the player touching it
+- [ ] Presence-activated triggers still fire exactly as before (no level regressions across all 20 levels)
+- [ ] A trigger fires at most once (`tr.fired` guard holds under multi-ray bursts)
+
+---
+
+## Phase 27 — Noise Magnitude Model + Sprint
+**Status:** ⬜ Pending  
+**Goal:** Replace binary "heard / not heard" AI with a graded loudness model, and add the missing top rung of the movement ladder — sprint.  
+**Covers:** `PLR-04`, `AI-01`  
+**Depends on:** Nothing — but **Phases 28 and 29 depend on this**  
+**Estimated effort:** 4–6 days  
+**Risk:** Medium (touches enemy AI and the core movement/stealth balance of all 20 levels)
+
+### Why this is the keystone
+Right now every sound is equal to the AI and the *most recent* one wins. That makes
+loudness meaningless: a sprint can't be riskier than a walk, and a thrown decoy
+(Phase 29) can't out-compete the player's own footsteps. A single shared
+`loudness` value fixes all three mechanics at once.
+
+### Tasks
+- [ ] **Noise scale** — add a canonical loudness ladder to `js/constants.js`:
+      `NOISE_SNEAK` < `NOISE_WALK` < `NOISE_SPRINT` < `NOISE_CLAP`, with decoys
+      (Phase 29) slotting in. One number per emission, normalized 0–1.
+- [ ] Thread `loudness` through the emission path: `RaySystem.burst()` → `Ray.init()`
+      → the ray's `heardEntities` reporting, alongside the existing `quiet` flag
+      (`js/waves.js`). Loudness should be carried per-ray, like `burstX/burstY`.
+- [ ] **Loudest-wins arbitration** — give sound-hunting enemies (`ChaserEnemy`,
+      `BlindStalker`, step-aware `PatrolEnemy`) a `currentNoiseLevel`. On
+      `hearSound(x, y, loudness)`, only retarget if
+      `loudness >= this.currentNoiseLevel` **or** the previous cue has decayed.
+      Decay `currentNoiseLevel` over time so old loud sounds stop masking new ones.
+- [ ] **Sprint** — third movement tier in `js/entities.js` `Player.move()`:
+      `SPRINT_SPEED_MULT` (~1.6×), `SPRINT_INTERVAL_MULT` (more frequent steps),
+      `SPRINT_RAY_MULT` + `SPRINT_DIST_MULT` (more rays, travelling further),
+      emitting at `NOISE_SPRINT`.
+- [ ] **Sprint input** — keyboard: hold <kbd>Ctrl</kbd> (or double-tap a direction).
+      Touch: extend the Dark Echo model in `js/input.js` — hold *far* from the feet
+      = sprint, near = walk (radial distance already drives direction, so distance
+      is the natural intensity axis and needs no new gesture). Add `isSprinting()`
+      alongside `isCrouching()`.
+- [ ] Feed sprint into the footprint gait (`FOOTPRINT_STRIDE_PX` scales with speed
+      so sprint prints are spaced further apart) and into `Audio.playFootstepSurface`.
+- [ ] Rebalance: verify Act I levels are still passable and Act II is still hard —
+      sprint must be a *risk*, not a free win. Re-check the Phase 23 ray budget:
+      sprint raises peak ray counts, so confirm the pool cap and quality tiers hold.
+- [ ] Update **How to Play** with the third tier + the risk/reward framing.
+- [ ] Build, verify headless, commit + push.
+
+### Files Modified
+- `js/constants.js` — noise ladder + sprint tuning constants
+- `js/waves.js` — carry `loudness` per ray/burst
+- `js/entities.js` — sprint tier in `Player.move()`; `currentNoiseLevel` + decay on hunting enemies
+- `js/game.js` — pass loudness on every emission; sprint step interval/ray counts
+- `js/input.js` — sprint gesture (keyboard + touch), `isSprinting()`
+- `js/renderer.js` — stride spacing scales with speed
+- `play/index.html` — tutorial update
+
+### Acceptance Criteria
+- [ ] Three distinct, *felt* noise tiers: sneak (quiet, short reveal) → walk → sprint (loud, long reveal)
+- [ ] Sprinting reliably draws enemies from further away than walking; sneaking reliably does not
+- [ ] A louder sound overrides a quieter one already being tracked; a quieter one does **not** override a louder recent cue
+- [ ] Noise level decays so an enemy eventually re-acquires new, quieter sounds
+- [ ] All 20 levels remain completable; Act II remains harder than Act I
+- [ ] Frame rate holds at sprint-peak ray counts on the `low` quality tier
+
+---
+
+## Phase 28 — Charge Clap (Variable-Intensity Pulse)
+**Status:** ⬜ Pending  
+**Goal:** Turn the fixed binary pulse into a true *charge* clap — hold to build intensity, release to emit, trading loudness for reveal distance.  
+**Covers:** `PLR-05`  
+**Depends on:** **Phase 27** (consumes the noise-magnitude model)  
+**Estimated effort:** 2–3 days  
+**Risk:** Low-Medium (changes a core verb players already know)
+
+### Tasks
+- [ ] **Charge state** — hold <kbd>Space</kbd> (keyboard) / hold on the feet (touch,
+      the gesture already exists in `js/input.js`) to accumulate charge over
+      `CLAP_CHARGE_MS`; release to fire. Expose `getClapCharge()` (0–1).
+- [ ] Scale the burst by charge: `RAY_COUNT_PULSE`, `PULSE_RAY_MAX` and the Phase 27
+      `NOISE_CLAP` loudness all interpolate from a weak tap to a full-power clap.
+      A minimum charge floor prevents accidental zero-value taps.
+- [ ] **Charge feedback** without breaking the zero-HUD goal (Phase 30): show charge
+      *diegetically* — a tightening ring of light at the player's feet that brightens
+      as it builds, rather than a HUD meter.
+- [ ] Cooldown reform: scale `PULSE_COOLDOWN` with the charge actually spent, so
+      small taps recover fast and full claps cost the current 3.5s.
+- [ ] Audio: pitch/gain of `playPulse()` scales with charge; add a rising charge tone.
+- [ ] Reconcile with the touch model — `STOMP_MIN_HOLD` becomes the charge floor;
+      confirm walk/sneak/stomp disambiguation still holds (Phase 21.1 behaviour).
+- [ ] Update **How to Play**; build, verify headless, commit + push.
+
+### Files Modified
+- `js/input.js` — charge accumulation + `getClapCharge()`
+- `js/game.js` — charge-scaled burst, loudness, cooldown
+- `js/waves.js` — accept count/distance overrides from charge (already parameterized)
+- `js/renderer.js` — diegetic charge ring
+- `js/audio.js` — charge tone + charge-scaled clap
+- `js/constants.js` — charge timing/scaling constants
+
+### Acceptance Criteria
+- [ ] Holding longer produces a visibly larger reveal and a proportionally louder AI response
+- [ ] A minimum-charge tap is cheap and low-risk; a full clap is expensive and dangerous
+- [ ] Charge level is readable on screen without a HUD element
+- [ ] Touch controls still cleanly separate walk / sneak / clap (no misfires)
+- [ ] Cooldown feels proportional — no "spam tiny claps for free vision" exploit
+
+---
+
+## Phase 29 — Throwable Noise Decoy
+**Status:** ⬜ Pending  
+**Goal:** Add the missing distraction verb — throw a noise-maker to lure enemies away from your path.  
+**Covers:** `PLR-06`  
+**Depends on:** **Phase 27** (a decoy is inert without loudest-wins arbitration)  
+**Estimated effort:** 4–6 days  
+**Risk:** Medium (new entity + new aiming interaction on two input schemes)
+
+### Tasks
+- [ ] **`NoiseDecoy` entity** (`js/entities.js`): travels from the player to a target
+      point (arc or straight, wall-collision aware via `castRay`), lands, then emits
+      one or more bursts at `NOISE_DECOY` loudness — loud enough to out-compete the
+      player's own footsteps under the Phase 27 model.
+- [ ] Emission on landing routes through the normal `RaySystem.burst()` path so the
+      decoy reveals geometry *and* is heard by AI exactly like any other sound —
+      no special-case AI code.
+- [ ] **Aiming** — keyboard: hold a throw key to show an arc, release to throw.
+      Touch: needs a gesture that does not collide with walk/sneak/clap — evaluate
+      two-finger tap or a dedicated hold-then-drag; this is the main design risk and
+      should be prototyped before committing.
+- [ ] **Economy** — decoys must be finite or they trivialize stealth. Per-level
+      allowance (`def.decoys`) starting at ~2, or a slow recharge. Decide before
+      authoring levels.
+- [ ] Render the decoy in white (it is *your* sound, per the colour grammar), with
+      its in-flight position revealed only by the sound it makes.
+- [ ] Author decoy-dependent puzzles in late Act II — a corridor that is impossible
+      to cross until the stalker is pulled off it. This is the mechanic's purpose;
+      without a level that requires it, it is decoration.
+- [ ] Surface remaining decoy count diegetically (respect Phase 30's zero-HUD goal).
+- [ ] Update **How to Play**; build, verify headless, commit + push.
+
+### Files Modified
+- `js/entities.js` — `NoiseDecoy` class
+- `js/game.js` — throw handling, decoy update/emission, per-level allowance
+- `js/input.js` — aim + throw (keyboard and touch)
+- `js/renderer.js` — decoy + aiming arc rendering
+- `js/levels.js` — `decoys` allowance + decoy-gated puzzles
+- `js/audio.js` — impact/landing sound
+- `js/constants.js` — decoy speed, range, loudness, count
+
+### Acceptance Criteria
+- [ ] A thrown decoy reliably pulls sound-hunting enemies (Chaser, BlindStalker, step-aware Patrol) to its landing point
+- [ ] While enemies investigate the decoy, the player can cross a route that is otherwise impassable
+- [ ] The decoy out-competes the player's own quiet movement, but a player who then sprints re-takes AI attention (validates Phase 27)
+- [ ] Throwing cannot be triggered accidentally by walk/sneak/clap gestures on touch
+- [ ] Decoys are finite; the count is discoverable without a HUD meter
+- [ ] At least one late-Act-II level genuinely requires a decoy to solve
+
+---
+
+## Phase 30 — Zero-HUD Immersion Mode
+**Status:** ⬜ Pending — **needs an explicit owner decision before starting**  
+**Goal:** Match the original's chrome-free presentation by removing the persistent HUD, replacing each readout with a diegetic cue.  
+**Covers:** `UI-01`  
+**Depends on:** Phases 28–29 (their charge/decoy feedback must already be diegetic, or removing the HUD strands them)  
+**Estimated effort:** 1–2 days  
+**Risk:** Low technically — **but it is a deliberate usability trade**
+
+> **Decision required.** The current HUD (pulse cooldown bar, `LEVEL n / 20`, crouch
+> indicator) is a genuine usability gain that the original forgoes for immersion.
+> Recommended resolution: ship it as a **toggle** (default on for new players,
+> off for purists) rather than deleting the HUD outright — that satisfies the spec
+> without regressing readability. Confirm the approach before implementing.
+
+### Tasks
+- [ ] Decide: full removal vs. **toggle** (recommended) vs. auto-fade after N seconds.
+- [ ] **Pulse cooldown → diegetic**: replace `#pulse-bar` with the Phase 28 charge
+      ring at the player's feet; readiness shown by the ring reaching full brightness
+      (the existing `playPulseReady()` audio cue already covers the audio half).
+- [ ] **Crouch indicator → diegetic**: stance is already visible in the footprints
+      (crouched prints can be drawn smaller/fainter) — remove the text label.
+- [ ] **Level label → transient**: show `LEVEL n` only as a brief fade-in at level
+      start, then clear it.
+- [ ] Add the toggle to the pause menu + persist it in `js/save.js`
+      (`resonance_zero_hud`), consistent with the existing quality toggle.
+- [ ] Verify nothing becomes *unknowable*: charge state, pulse readiness, crouch
+      state and level identity must each still be discoverable in-game.
+- [ ] Build, verify headless, commit + push.
+
+### Files Modified
+- `play/index.html`, `css/style.css` — HUD toggle/removal
+- `js/renderer.js` — diegetic charge ring, crouched footprint styling, transient level title
+- `js/save.js` — persisted preference
+- `js/game.js`, `js/ui.js` — pause-menu toggle wiring
+
+### Acceptance Criteria
+- [ ] With zero-HUD active, no persistent UI overlays the play field
+- [ ] Pulse readiness, charge level, crouch state and current level all remain discoverable without the HUD
+- [ ] Preference persists across sessions and applies immediately when toggled
+- [ ] Achievement toasts and pause/death/level-complete screens are unaffected
+
+---
+
 ## Summary: Effort Estimate and Sequence
 
 ```
@@ -621,3 +901,37 @@ Total estimate:                       55–83 days  (~12–17 focused weeks)
 - Track C (Web): 15 → 22
 
 All tracks can proceed independently after Phase 15 is done.
+
+---
+
+## Summary: Dark Echo Parity (Phases 26–30)
+
+```
+Phase 26 — Sound grammar fixes        1–2 days    [independent — START HERE]
+Phase 27 — Noise magnitude + sprint   4–6 days    [independent — KEYSTONE]
+Phase 28 — Charge clap                2–3 days    [after 27]
+Phase 29 — Throwable noise decoy      4–6 days    [after 27]
+Phase 30 — Zero-HUD immersion mode    1–2 days    [after 28 + 29 · needs decision]
+─────────────────────────────────────────────────
+Parity total:                         12–19 days  (~3–4 focused weeks)
+```
+
+**Dependency graph:**
+
+```
+26 (grammar)  ──────────────── independent, cheapest win
+27 (noise + sprint) ──┬── 28 (charge clap)
+                      └── 29 (decoy)  ──┬── 30 (zero-HUD)
+                          28 ───────────┘
+```
+
+**Recommended order:** 26 → 27 → 28 → 29 → 30.
+
+- **26 first** — it is 1–2 days, depends on nothing, and fixes a colour-grammar bug
+  that actively misleads players today (the exit reads as "your sound").
+- **27 is the keystone** — 28, 29 and the *meaning* of sprint all collapse without
+  loudness arbitration. Do not start 28 or 29 before it.
+- **30 last, and only after an owner decision** — it trades usability for immersion,
+  and it depends on 28/29 having already moved their feedback on-screen diegetically.
+
+After Phase 30, all 20 mechanics in the original Dark Echo design spec are covered.
